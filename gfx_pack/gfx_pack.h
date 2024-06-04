@@ -10,6 +10,15 @@
  */
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"
+#include "hardware/spi.h"
+#include "hardware/pwm.h"
+#include "math.h"
+
+#define GFX_PACK_BUTTON_A 12
+#define GFX_PACK_BUTTON_B 13
+#define GFX_PACK_BUTTON_C 14
+#define GFX_PACK_BUTTON_D 15
+#define GFX_PACK_BUTTON_E 22
 
 /**
  * @brief Initializes the GFX Pack
@@ -18,8 +27,25 @@
 void gfx_pack_init(void);
 
 /**
- * @brief Switches on/off the backlight of the GFX Pack
+ * @brief Controls the brightness of display backlight
  * 
- * @param enable If the backlight should be turned on or off
+ * @param brightness Brightness of the backlight
  */
-void gfx_pack_enable_backlight(bool enable);
+void gfx_pack_set_backlight(uint8_t brightness);
+
+void command(uint8_t command, size_t len, const char* data);
+
+/**
+ * @brief Returns button status
+ * 
+ * @param GFX_PACK_BUTTON Button
+ * @return true when specified button is pressed
+ * @return false when specified button is not pressed
+ */
+bool gfx_pack_read_button(uint8_t GFX_PACK_BUTTON);
+
+/**
+ * @brief Resets the GFX Pack
+ * 
+ */
+void gfx_pack_reset(void);

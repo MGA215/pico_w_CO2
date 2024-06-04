@@ -31,6 +31,8 @@ int init(void);
  */
 int loop(void);
 
+void get_datetime();
+
 /**
  * @brief Converts datetime format to a string YYYY-MM-DD hh-mm-ss
  * 
@@ -40,3 +42,5 @@ int loop(void);
  * @return int negative if conversion failed, otherwise number of written characters (except null byte)
  */
 int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
+
+bool read_inputs(repeating_timer_t *rt);
