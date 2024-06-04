@@ -17,9 +17,26 @@
 #include "gfx_pack/gfx_pack.h"
 
 
-
+/**
+ * @brief Initializes pins, buses, modules; runs only once
+ * 
+ * @return int Value describing encountered error during initialization
+ */
 int init(void);
 
+/**
+ * @brief Main program loop
+ * 
+ * @return int Value describing encountered error during execution
+ */
 int loop(void);
 
+/**
+ * @brief Converts datetime format to a string YYYY-MM-DD hh-mm-ss
+ * 
+ * @param buf output buffer containing the datetime string
+ * @param buf_size max size of the buffer
+ * @param dt datetime struct read from RTC module
+ * @return int negative if conversion failed, otherwise number of written characters (except null byte)
+ */
 int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
