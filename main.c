@@ -1,4 +1,3 @@
-
 #include "main.h"
 
 /**
@@ -18,6 +17,8 @@ struct ds3231_rtc rtc;
 // value representing the interval between loop calls in ms
 uint32_t loop_interval = 1000;
 
+bool bgenable = true;
+
 int main()
 {
     init();
@@ -34,6 +35,8 @@ int init(void)
 
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
 
+    gfx_pack_init();
+
     loop_interval = 1000; // Setting the loop timer
 }
 
@@ -45,6 +48,8 @@ int loop(void)
     ds3231_get_datetime(&dt, &rtc);
     ds3231_datetime2str(dt_str, sizeof(dt_str), &dt);
     printf("[%s] Hello World!\n", dt_str);
+    gfx_pack_enable_backlight(bgenable);
+    bgenable = !bgenable;
 }
 
 int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)
