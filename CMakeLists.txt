@@ -42,7 +42,7 @@ pico_sdk_init()
 add_executable(pico_w_CO2 main.c )
 
 pico_set_program_name(pico_w_CO2 "pico_w_CO2")
-pico_set_program_version(pico_w_CO2 "0.1")
+pico_set_program_version(pico_w_CO2 "0.2")
 
 # Generate PIO header
 pico_generate_pio_header(pico_w_CO2 ${CMAKE_CURRENT_LIST_DIR}/blink.pio)
@@ -62,6 +62,7 @@ target_include_directories(pico_w_CO2 PRIVATE
 )
 
 add_subdirectory(ds3231)
+add_subdirectory(gfx_pack)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
@@ -70,6 +71,7 @@ target_link_libraries(pico_w_CO2
         hardware_timer
         hardware_clocks
         pico-ds3231
+        pico-gfx_pack
         )
 
 pico_add_extra_outputs(pico_w_CO2)
