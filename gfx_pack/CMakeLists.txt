@@ -15,4 +15,5 @@ target_sources(pico-gfx_pack
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/gfx_pack.c
   ${CMAKE_CURRENT_LIST_DIR}/gfx_pack.h
+  ${CMAKE_CURRENT_LIST_DIR}/monospace_font.c
 )

@@ -31,7 +31,13 @@ int init(void);
  */
 int loop(void);
 
-void get_datetime();
+/**
+ * @brief Get current datetime string value
+ * 
+ * @param datetime_str string the datetime is written to
+ * @param datetime_len length of the string
+ */
+void get_datetime(uint8_t* datetime_str, uint8_t datetime_len);
 
 /**
  * @brief Converts datetime format to a string YYYY-MM-DD hh-mm-ss
@@ -43,4 +49,22 @@ void get_datetime();
  */
 int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
 
+/**
+ * @brief Reads button inputs and reacts to them
+ * 
+ * @param rt timer structure
+ * @return true if the timer should continue
+ * @return false if the timer should stop
+ */
 bool read_inputs(repeating_timer_t *rt);
+
+/**
+ * @brief Updates the display
+ * 
+ * @param rt timer structure
+ * @return true if the timer should continue
+ * @return false if the timer should stop
+ */
+bool update_display();
+
+
