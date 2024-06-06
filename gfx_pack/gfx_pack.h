@@ -74,8 +74,13 @@ bool gfx_pack_write_char(point_t* position, char c);
  * 
  * @param position Position of the first letter of the text
  * @param text text to be written
- * @param text_len length of the text to write
  * @return true if text successfully written
  * @return false if part of the text could not be written
  */
-bool gfx_pack_write_text(point_t* position, char* text, uint8_t text_len);
+bool gfx_pack_write_text(point_t* position, char* text);
+
+/**
+ * @brief Clears the display
+ * 
+ */
+void gfx_pack_clear_display(void);

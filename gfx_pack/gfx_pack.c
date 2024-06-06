@@ -1,7 +1,7 @@
 #include "gfx_pack.h"
 #include "monospace_font.c"
-
-
+#include "string.h"
+#include <stdio.h>
 
 #define GFX_PACK_SPI spi0
 #define GFX_PACK_RESET_PIN 21
@@ -76,121 +76,87 @@ void command(uint8_t command, size_t len, const char* data);
 
 uint8_t* get_char_map(char c);
 
-void fill_framebuffer_temp(void);
-
 void gfx_pack_init(void)
 {
     spi_init(GFX_PACK_SPI, GFX_PACK_SPI_BAUDRATE);
 
     gpio_init(GFX_PACK_BUTTON_A); // Initialize GPIO pin for button A
-    gpio_set_function(GFX_PACK_BUTTON_A, GPIO_FUNC_SIO);
+    gpio_set_function(GFX_PACK_BUTTON_A, GPIO_FUNC_SIO); // Set function of the pin to IO pin
     gpio_set_dir(GFX_PACK_BUTTON_A, GPIO_IN); // Set in direction for the button A GPIO pin
     gpio_pull_up(GFX_PACK_BUTTON_A); // Pull button A GPIO pin up
 
     gpio_init(GFX_PACK_BUTTON_B); // Initialize GPIO pin for button B
-    gpio_set_function(GFX_PACK_BUTTON_B, GPIO_FUNC_SIO);
+    gpio_set_function(GFX_PACK_BUTTON_B, GPIO_FUNC_SIO); // Set function of the pin to IO pin
     gpio_set_dir(GFX_PACK_BUTTON_B, GPIO_IN); // Set in direction for the button B GPIO pin
     gpio_pull_up(GFX_PACK_BUTTON_B); // Pull button B GPIO pin up
 
     gpio_init(GFX_PACK_BUTTON_C); // Initialize GPIO pin for button C
-    gpio_set_function(GFX_PACK_BUTTON_C, GPIO_FUNC_SIO);
+    gpio_set_function(GFX_PACK_BUTTON_C, GPIO_FUNC_SIO); // Set function of the pin to IO pin
     gpio_set_dir(GFX_PACK_BUTTON_C, GPIO_IN); // Set in direction for the button C GPIO pin
     gpio_pull_up(GFX_PACK_BUTTON_C); // Pull button C GPIO pin up
 
     gpio_init(GFX_PACK_BUTTON_D); // Initialize GPIO pin for button D
-    gpio_set_function(GFX_PACK_BUTTON_D, GPIO_FUNC_SIO);
+    gpio_set_function(GFX_PACK_BUTTON_D, GPIO_FUNC_SIO); // Set function of the pin to IO pin
     gpio_set_dir(GFX_PACK_BUTTON_D, GPIO_IN); // Set in direction for the button D GPIO pin
     gpio_pull_up(GFX_PACK_BUTTON_D); // Pull button D GPIO pin up
 
     gpio_init(GFX_PACK_BUTTON_E); // Initialize GPIO pin for button E
-    gpio_set_function(GFX_PACK_BUTTON_E, GPIO_FUNC_SIO);
+    gpio_set_function(GFX_PACK_BUTTON_E, GPIO_FUNC_SIO); // Set function of the pin to IO pin
     gpio_set_dir(GFX_PACK_BUTTON_E, GPIO_IN); // Set in direction for the button E GPIO pin
     gpio_pull_up(GFX_PACK_BUTTON_E); // Pull button E GPIO pin up
 
-    gpio_init(GFX_PACK_RESET_PIN);
-    gpio_set_function(GFX_PACK_RESET_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(GFX_PACK_RESET_PIN, GPIO_OUT);
-    gpio_put(GFX_PACK_RESET_PIN, 1);
+    gpio_init(GFX_PACK_RESET_PIN); // Initialize GPIO pin for display reset
+    gpio_set_function(GFX_PACK_RESET_PIN, GPIO_FUNC_SIO); // Set function of the reset pin to IO pin
+    gpio_set_dir(GFX_PACK_RESET_PIN, GPIO_OUT); // Set direction of the reset pin to out
+    gpio_put(GFX_PACK_RESET_PIN, 1); // Put reset pin high
     
-    gpio_init(GFX_PACK_CHIP_SELECT_PIN);
-    gpio_set_function(GFX_PACK_CHIP_SELECT_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(GFX_PACK_CHIP_SELECT_PIN, GPIO_OUT);
-    gpio_put(GFX_PACK_CHIP_SELECT_PIN, 1);
+    gpio_init(GFX_PACK_CHIP_SELECT_PIN); // Initialize GPIO pin for display chip select
+    gpio_set_function(GFX_PACK_CHIP_SELECT_PIN, GPIO_FUNC_SIO); // Set function of the chip select pin to IO pin
+    gpio_set_dir(GFX_PACK_CHIP_SELECT_PIN, GPIO_OUT); // Set direction of the CS pin to out
+    gpio_put(GFX_PACK_CHIP_SELECT_PIN, 1); // Put CS pin high
 
-    gpio_init(GFX_PACK_DATA_COMMAND_PIN);
-    gpio_set_function(GFX_PACK_DATA_COMMAND_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(GFX_PACK_DATA_COMMAND_PIN, GPIO_OUT);
-    gpio_put(GFX_PACK_DATA_COMMAND_PIN, 0);
+    gpio_init(GFX_PACK_DATA_COMMAND_PIN); // Initialize GPIO pin for data/command
+    gpio_set_function(GFX_PACK_DATA_COMMAND_PIN, GPIO_FUNC_SIO); // Set function of the data/command pin to IO pin
+    gpio_set_dir(GFX_PACK_DATA_COMMAND_PIN, GPIO_OUT); // Set direction of the DC pin to out
+    gpio_put(GFX_PACK_DATA_COMMAND_PIN, 0); // Put DC pin low
 
-    gpio_init(GFX_PACK_MASTER_OUT_SLAVE_IN_PIN);
-    gpio_set_function(GFX_PACK_MASTER_OUT_SLAVE_IN_PIN, GPIO_FUNC_SPI);
-    gpio_set_function(GFX_PACK_SERIAL_CLOCK_PIN, GPIO_FUNC_SPI);
+    gpio_init(GFX_PACK_MASTER_OUT_SLAVE_IN_PIN); // Initialize GPIO pin for MOSI
+    gpio_set_function(GFX_PACK_MASTER_OUT_SLAVE_IN_PIN, GPIO_FUNC_SPI); // Set function of the MOSI pin to SPI pin
+    gpio_init(GFX_PACK_SERIAL_CLOCK_PIN); // Initialize GPIO pin for SCLK
+    gpio_set_function(GFX_PACK_SERIAL_CLOCK_PIN, GPIO_FUNC_SPI); // Set function of the SCLK pin to SPI pin
 
 
     gpio_init(GFX_PACK_BACKLIGHT_PIN); // Initialize GPIO pin for the backlight
-    pwm_config cfg = pwm_get_default_config();
-    pwm_set_wrap(pwm_gpio_to_slice_num(GFX_PACK_BACKLIGHT_PIN), 65535);
-    pwm_init(pwm_gpio_to_slice_num(GFX_PACK_BACKLIGHT_PIN), &cfg, true);
-    gpio_set_function(GFX_PACK_BACKLIGHT_PIN, GPIO_FUNC_PWM);
+    pwm_config cfg = pwm_get_default_config(); // Default PWM config
+    pwm_set_wrap(pwm_gpio_to_slice_num(GFX_PACK_BACKLIGHT_PIN), 65535); // Enable fine PWM
+    pwm_init(pwm_gpio_to_slice_num(GFX_PACK_BACKLIGHT_PIN), &cfg, true); // Initialize PWM for the display backlight
+    gpio_set_function(GFX_PACK_BACKLIGHT_PIN, GPIO_FUNC_PWM); // Set function of the backlight pin to PWM
     gpio_set_dir(GFX_PACK_BACKLIGHT_PIN, GPIO_OUT); // Set out direction for the GPIO pin for the backlight
-    gfx_pack_set_backlight(0);
+    gfx_pack_set_backlight(0); // Set backlight to 0
 
-    gfx_pack_reset();
+    gfx_pack_reset(); // Reset display
 
     gfx_pack_init_sequence(); // Perform initialization sequence
 
-    gfx_pack_set_backlight(255);
+    gfx_pack_clear_display(); // Clear display
+    gfx_pack_update(); // Refresh display
 
-    //fill_framebuffer_temp();
-    point_t position = {.x = 0, .y = 0};
-    for (int i = 0; i < 21; i++)
-    {
-        position.x = i;
-        gfx_pack_write_char(&position, 32 + i);
-    }
-    position.x = 0;
-    position.y = 1;
-    for (int i = 0; i < 21; i++)
-    {
-        position.x = i;
-        gfx_pack_write_char(&position, 53 + i);
-    }
-    position.x = 0;
-    position.y = 2;
-    for (int i = 0; i < 21; i++)
-    {
-        position.x = i;
-        gfx_pack_write_char(&position, 74 + i);
-    }
-    position.x = 0;
-    position.y = 3;
-    for (int i = 0; i < 21; i++)
-    {
-        position.x = i;
-        gfx_pack_write_char(&position, 95 + i);
-    }
-    position.x = 0;
-    position.y = 4;
-    for (int i = 0; i < 21; i++)
-    {
-        position.x = i;
-        gfx_pack_write_char(&position, 116 + i);
-    }
+    gfx_pack_set_backlight(255); // Turn backlight to max
 }
 
 void gfx_pack_init_sequence(void)
 {
     command(REG_BIAS_1_7, 0, NULL);
-    command(REG_SEG_DIR_NORMAL, 0, NULL);
-    command(REG_SETCOMREVERSE, 0, NULL);
+    command(REG_SEG_DIR_NORMAL, 0, NULL); // normal row direction
+    command(REG_SETCOMREVERSE, 0, NULL); // reverse column direction
     command(REG_DISPNORMAL, 0, NULL);
-    command(REG_SETSTARTLINE | 0x00, 0, NULL);
+    command(REG_SETSTARTLINE | 0x00, 0, NULL); // Set start line position
     command(REG_POWERCTRL, 0, NULL);
     command(REG_RATIO | 4, 0, NULL);
-    command(REG_DISPON, 0, NULL);
-    command(REG_SETCONTRAST, 0, NULL);
+    command(REG_DISPON, 0, NULL); // Turn display on
+    command(REG_SETCONTRAST, 0, NULL); // Set contrast
     command(30, 0, NULL); // defalut contrast level
-    command(REG_DISPRAM, 0, NULL);
+    command(REG_DISPRAM, 0, NULL); // Display RAM contents
 }
 
 void command(uint8_t command, size_t len, const char* data)
@@ -211,15 +177,15 @@ void command(uint8_t command, size_t len, const char* data)
 
 void gfx_pack_update(void)
 {
-    uint8_t pagebuffer[GFX_PACK_PAGE_SIZE];
+    uint8_t pagebuffer[GFX_PACK_PAGE_SIZE]; // Initialize page buffer
     uint8_t page_byte_selector, page_bit_selector;
 
     uint8_t max_page = GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT / 
                         (8 * GFX_PACK_PAGE_SIZE);
 
-    for (uint8_t page = 0; page < max_page; page++)
+    for (uint8_t page = 0; page < max_page; page++) // For each page
     {
-        for (uint16_t pixel_index = 0; pixel_index < (8 * GFX_PACK_PAGE_SIZE); pixel_index++)
+        for (uint16_t pixel_index = 0; pixel_index < (8 * GFX_PACK_PAGE_SIZE); pixel_index++) // For each pixel
         {
             page_byte_selector = pixel_index % GFX_PACK_PAGE_SIZE;
             page_bit_selector = pixel_index / GFX_PACK_PAGE_SIZE;
@@ -236,7 +202,7 @@ void gfx_pack_update(void)
 
         command(REG_ENTER_RMWMODE, 0, NULL); // Read Modify Write mode
         command(REG_SETPAGESTART | page, 0, NULL); // Page
-        command(REG_SETCOLL, 0, NULL);
+        command(REG_SETCOLL, 0, NULL); // Set current column
         command(REG_SETCOLH, 0, NULL);
 
         gpio_put(GFX_PACK_CHIP_SELECT_PIN, 0); // Enable communication
@@ -244,44 +210,29 @@ void gfx_pack_update(void)
         spi_write_blocking(GFX_PACK_SPI, (const uint8_t*)pagebuffer, sizeof(pagebuffer)); // Send page
         gpio_put(GFX_PACK_DATA_COMMAND_PIN, 0); // Return to command mode
         gpio_put(GFX_PACK_CHIP_SELECT_PIN, 1); // Disable communication
-        command(REG_EXIT_RMWMODE, 0, NULL);
-    }
-}
-
-void fill_framebuffer_temp(void)
-{
-    for (int i = 0; i < GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT; i++)
-    {
-        if (i % 2 == 0)
-        {
-            framebuffer[i / 8] |= (0b10000000 >> (i % 8)); 
-        }
-        else
-        {
-            framebuffer[i / 8] &= ~(0b10000000 >> (i % 8));
-        }
+        command(REG_EXIT_RMWMODE, 0, NULL); // Exit Read Modify Write mode
     }
 }
 
 bool gfx_pack_write_char(point_t* position, char c)
 {
     
-    uint8_t* char_map = get_char_map(c);
-    uint16_t start_row = position->y * GFX_PACK_CHAR_HEIGHT;
-    uint16_t start_byte_row = GFX_PACK_DISPLAY_WIDTH / 8 * start_row;
-    uint16_t start_col = position->x * GFX_PACK_CHAR_WIDTH;
-    if (position->x >= GFX_PACK_DISPLAY_WIDTH / GFX_PACK_CHAR_WIDTH ||
-        position->y >= GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT) false;
-    uint16_t start_byte = start_byte_row + start_col / 8;
-    uint8_t start_bit = start_col % 8;
-    for (int i = 0; i < GFX_PACK_CHAR_HEIGHT - 1; i++)
+    uint8_t* char_map = get_char_map(c); // Pixel map of the character
+    uint16_t start_row = position->y * GFX_PACK_CHAR_HEIGHT; // Start row in px
+    uint16_t start_byte_row = GFX_PACK_DISPLAY_WIDTH / 8 * start_row; // Starting byte of the row
+    uint16_t start_col = position->x * GFX_PACK_CHAR_WIDTH; // Start column in px
+    if ((position->x >= (GFX_PACK_DISPLAY_WIDTH / GFX_PACK_CHAR_WIDTH)) ||
+        (position->y >= (GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT))) return false; // if character outside of drawable area return false
+    uint16_t start_byte = start_byte_row + start_col / 8; // Start byte of the character
+    uint8_t start_bit = start_col % 8; // Start bit of the character
+    for (int i = 0; i < GFX_PACK_CHAR_HEIGHT - 1; i++) // For each character pixel column
     {
-        for (int j = 0; j < GFX_PACK_CHAR_WIDTH - 1; j++)
+        for (int j = 0; j < GFX_PACK_CHAR_WIDTH - 1; j++) // For each character pixel row
         {
-            uint8_t curr_bit = (start_bit + j) % 8;
-            uint16_t curr_byte = start_byte + i * GFX_PACK_DISPLAY_WIDTH / 8 + (start_bit + j) / 8;
-            if (curr_byte >= GFX_PACK_DISPLAY_HEIGHT * GFX_PACK_DISPLAY_WIDTH / 8) return false;
-            if (char_map[i] & (0b10000000 >> j))
+            uint8_t curr_bit = (start_bit + j) % 8; // Current bit 
+            uint16_t curr_byte = start_byte + i * GFX_PACK_DISPLAY_WIDTH / 8 + (start_bit + j) / 8; // Current byte
+            if (curr_byte >= GFX_PACK_DISPLAY_HEIGHT * GFX_PACK_DISPLAY_WIDTH / 8) return false; // If outside of buffer return false
+            if (char_map[i] & (0b10000000 >> j)) // Set bit value in buffer
             {
                 framebuffer[curr_byte] |= (0b10000000 >> curr_bit);
             }
@@ -291,25 +242,26 @@ bool gfx_pack_write_char(point_t* position, char c)
             }
         }
     }
-    return true;
+    return true; // Character successfully written to the buffer
 }
 
-bool gfx_pack_write_text(point_t* position, char* text, uint8_t text_len)
+bool gfx_pack_write_text(point_t* position, char* text)
 {
-    uint8_t text_pos = 0;
+    int text_len = strlen(text); // Length of the text to be written
+    uint8_t text_pos = 0; // Current character to be written
     while (text_pos < text_len)
     {
-        while (gfx_pack_write_char(position, text[text_pos]))
+        while (gfx_pack_write_char(position, text[text_pos])) // Write character until unable to
         {
-            position->x++;
-            text_pos++;
-            if (text_pos == text_len) break;
+            position->x++; // Increment column
+            text_pos++; // Increment text position
+            if (text_pos == text_len) break; // If end of the text break
         }
-        position->y++;
-        position->x = 0;
-        if (position->y >= GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT) return false;
+        position->y++; // Increment row
+        position->x = 0; // Set column to 0
+        if (position->y >= GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT) return false; // If row not writable return false
     }
-    return true;
+    return true; // Text written successfully
 }
 
 void gfx_pack_set_backlight(uint8_t brightness)
@@ -444,5 +396,11 @@ uint8_t* get_char_map(char c)
     }
 }
 
-
+void gfx_pack_clear_display(void)
+{
+    for (int i = 0; i < GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT / 8; i++) // For each byte in framebuffer
+    {
+        framebuffer[i] = 0; // Sets byte to 0
+    }
+}
 
