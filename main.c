@@ -17,6 +17,9 @@
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
 
+// structure containing sensor readings
+sensors_t sensor_readings;
+
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
 
@@ -28,6 +31,9 @@ uint32_t update_interval = 33;
 
 // gfx_pack backlight brightness
 uint8_t blight_brightness = 255;
+
+// string holding the datetime value
+uint8_t datetime_str[30]; 
 
 // gfx_pack backlight on
 bool blight_on = true;
@@ -43,18 +49,18 @@ int main()
     init(); // init function
     sleep_ms(1000);
 
-    // repeating_timer_t timer_RTC;
+    // repeating_timer_t timer_sensor;
 
     // // Initialize timer to read current time from RTC
-    // if (!add_repeating_timer_ms(-update_interval, update, NULL, &timer_RTC)) { // negative timeout means exact delay (rather than delay between callbacks)
-    //     printf("Failed to add timer for RTC reading\n");
+    // if (!add_repeating_timer_ms(update_interval, update, NULL, &timer_sensor)) { // negative timeout means exact delay (rather than delay between callbacks)
+    //     printf("Failed to add timer for sensor\n");
     //     return -2;
     // }
 
     while (true) {
-        update(); // update loop
-        loop(); // main loop
+        //update(); // update loop
         sleep_ms(loop_interval);
+        loop(); // main loop
     }
     return 0;
 }
@@ -65,17 +71,23 @@ int init(void)
 
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
     gfx_pack_init(); // initialize display
+    ee895_init();
 
-    loop_interval = 33; // Setting the loop timer
+
+    init_sensors();
+
+    loop_interval = 2000; // Setting the loop timer
 }
+
 
 int loop(void)
 {
-    uint8_t datetime_str[30]; // string holding the datetime value
-    get_datetime(datetime_str, sizeof(datetime_str)); // Retrieves current datetime
-    gfx_pack_clear_display(); // Clears the display
-    point_t position = {.x = 0, .y = 0}; // position of datetime string on display
-    gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
+    int32_t ret = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
+    if (ret != 0) printf("[ERROR] Failed reading from the sensor: %i\n", ret);
+    else
+    {
+        printf("Read values: CO2: %.0f ppm; temperature: %.2f °C; pressure: %.1f hPa\n", sensor_readings.ee895.co2, sensor_readings.ee895.temperature, sensor_readings.ee895.pressure);
+    }
     return 0;
 }
 
@@ -108,9 +120,15 @@ int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt
 
 void update()
 {
+    update_RTC(); // Updates datetime
     read_inputs(); // Updates button inputs
     update_display(); // Updates display
     return;
+}
+
+void update_RTC()
+{
+    get_datetime(datetime_str, sizeof(datetime_str)); // Retrieves current datetime
 }
 
 void read_inputs()
@@ -188,6 +206,38 @@ void read_inputs()
     return;
 }
 
+void write_display(void)
+{
+    gfx_pack_clear_display();
+    point_t position = {.x = 0, .y = 0}; // position of datetime string on display
+    gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
+    position.x = 0;
+    position.y = 1;
+    gfx_pack_write_text(&position, "E+E EE895");
+    position.x = 0;
+    position.y = 2;
+    if (sensor_readings.ee895.state != 0)
+    {
+        char buf[4];
+        memset(buf, 0x00, 4);
+        gfx_pack_write_text(&position, snprintf(buf, 4, "E%i", sensor_readings.ee895.state));
+    }
+    else
+    {
+        char buf[16];
+        memset(buf, 0x00, 16);
+        gfx_pack_write_text(&position, snprintf(buf, 16, "CO2: %.0f ppm", sensor_readings.ee895.co2));
+        position.x = 0;
+        position.y = 3;
+        memset(buf, 0x00, 16);
+        gfx_pack_write_text(&position, snprintf(buf, 16, "T: %4.2f °C", sensor_readings.ee895.temperature));
+        position.x = 0;
+        position.y = 3;
+        memset(buf, 0x00, 16);
+        gfx_pack_write_text(&position, snprintf(buf, 16, "p: %4.1f hPa", sensor_readings.ee895.pressure));
+    }
+}
+
 void update_display()
 {
     gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
@@ -195,3 +245,14 @@ void update_display()
     return;
 }
 
+void init_sensors(void)
+{
+    sensor_readings.ee895.co2 = .0f;
+    sensor_readings.ee895.pressure = .0f;
+    sensor_readings.ee895.temperature = .0f;
+}
+
+void read_sensors(void)
+{
+    sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
+}

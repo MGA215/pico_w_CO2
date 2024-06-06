@@ -10,7 +10,12 @@
 
 #include "ds3231/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
+#include "ee895/ee895.h"
 
+typedef struct sensors
+{
+    ee895_t ee895;
+} sensors_t;
 
 /**
  * @brief Initializes pins, buses, modules; runs only once
@@ -57,7 +62,20 @@ void read_inputs();
 void update_display();
 
 /**
+ * @brief Updates datetime from RTC
+ * 
+ */
+void update_RTC();
+
+/**
  * @brief Updates all components
  * 
  */
 void update();
+//bool update(repeating_timer_t* rt);
+
+/**
+ * @brief Initializes the sensors structure
+ * 
+ */
+void init_sensors(void);
