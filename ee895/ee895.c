@@ -1,13 +1,9 @@
 #include "ee895.h"
 
-#define EE895_SCL 5
-#define EE895_SDA 4
+#define EE895_I2C i2c0
 
 #define EE895_ADDR 0x5F
 #define EE895_MAX_REG_READ 8
-
-#define EE895_I2C_BAUD 100000
-#define EE895_I2C i2c0
 
 // CO2 range
 #define CO2_MIN_RANGE           0.0
@@ -109,19 +105,6 @@ uint16_t ntoh16(uint16_t network)
 uint32_t ntoh32(uint32_t network)
 {
     return (network >> 16) | ((network & 0x0000FFFF) << 16);
-}
-
-void ee895_init(void)
-{
-    gpio_init(EE895_SDA);
-    gpio_set_function(EE895_SDA, GPIO_FUNC_I2C);
-    gpio_pull_up(EE895_SDA);
-
-    gpio_init(EE895_SCL);
-    gpio_set_function(EE895_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(EE895_SCL);
-
-    i2c_init(EE895_I2C, EE895_I2C_BAUD);
 }
 
 uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len)

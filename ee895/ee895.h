@@ -13,12 +13,6 @@ typedef struct ee895
 } ee895_t;
 
 /**
- * @brief Initializes the EE895 sensor I2C
- * 
- */
-void ee895_init(void);
-
-/**
  * @brief Reads number of registers from the EE895
  * 
  * @param addr Address of the register to be read from

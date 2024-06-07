@@ -4,12 +4,10 @@
 #define DS3231_I2C_SDA_PIN 6
 #define DS3231_I2C_SCL_PIN 7
 
-/**
- * Initialization error codes
- * 0: Success
- * -1: Failed STDIO initialization
- * -2: Failed timer for reading sensors initialization
-*/
+#define I2C_SCL 5
+#define I2C_SDA 4
+#define I2C_DEFAULT i2c0
+#define I2C_BAUDRATE 100000
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -37,6 +35,9 @@ bool blight_on = true;
 
 // string holding the datetime value
 uint8_t datetime_str[30] = {0};
+
+// Sensor I2C actual baudrate
+uint32_t i2c_baud;
 
 
 /**
@@ -73,10 +74,10 @@ int init(void)
 
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
     gfx_pack_init(); // initialize display
-    ee895_init();
+    init_sensor_i2c(); // Initialize I2C for sensor communication
 
 
-    init_sensors();
+    init_sensors(); // initialize sensors structure
     update_display_buffer = true;
 
     loop_interval = 33; // Setting the loop timer
@@ -128,6 +129,7 @@ void update()
     {
         write_display(); // Writes data to be displayed to display frame buffer
         update_display(); // Updates display
+        update_display_buffer = false;
     }
     return;
 }
@@ -136,15 +138,15 @@ void update_RTC()
 {
     uint8_t loc_datetime_str[30] = {0};
     get_datetime(loc_datetime_str, sizeof(loc_datetime_str)); // Retrieves current datetime
-    if (memcmp(loc_datetime_str, datetime_str, 30) != 0) 
+    if (memcmp(loc_datetime_str, datetime_str, 30) != 0)  // If new datetime string
     {
-        memcpy(datetime_str, loc_datetime_str, 30);
+        memcpy(datetime_str, loc_datetime_str, 30); // Update datetime string
         update_display_buffer = true;
     }
 
 }
 
-void read_inputs()
+void read_inputs(void)
 {
     if (gfx_pack_read_button(GFX_PACK_BUTTON_A)) // Button A down
     {
@@ -208,7 +210,6 @@ void read_inputs()
             buttons_prev_state |= (0b1 << 4);
             gfx_pack_clear_display();
             update_display_buffer = true;
-            //gfx_pack_update();
         }
         // Button E down - repeat action
     }
@@ -222,9 +223,52 @@ void read_inputs()
 
 void write_display(void)
 {
-    gfx_pack_clear_display();
+    gfx_pack_clear_display(); // Clear display
     point_t position = {.x = 0, .y = 0}; // position of datetime string on display
     gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
+    write_display_ee895(); // Write ee895 readings to the display
+}
+
+void update_display(void)
+{
+    gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
+    gfx_pack_update(); // Update display
+    return;
+}
+
+void init_sensors(void)
+{
+    sensor_readings.ee895.co2 = .0f;
+    sensor_readings.ee895.pressure = .0f;
+    sensor_readings.ee895.temperature = .0f;
+    sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
+
+
+}
+
+void init_sensor_i2c(void)
+{
+    gpio_init(I2C_SDA); // Initialize data pin
+    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SDA);
+
+    gpio_init(I2C_SCL); // Initialize clock pin
+    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_SCL);
+
+    i2c_baud = i2c_init(I2C_DEFAULT, I2C_BAUDRATE); // Initialize I2C
+}
+
+bool read_sensors(repeating_timer_t *rt)
+{
+    sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure); // Read EE895 values
+    update_display_buffer = true;
+    return true;
+}
+
+void write_display_ee895(void)
+{
+    point_t position;
     position.x = 0;
     position.y = 1;
     gfx_pack_write_text(&position, "E+E EE895");
@@ -254,27 +298,4 @@ void write_display(void)
         snprintf(buf, 16, "p: %4.1f hPa", sensor_readings.ee895.pressure);
         gfx_pack_write_text(&position, buf);
     }
-    update_display_buffer = false;
-}
-
-void update_display()
-{
-    gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
-    gfx_pack_update(); // Update display
-    return;
-}
-
-void init_sensors(void)
-{
-    sensor_readings.ee895.co2 = .0f;
-    sensor_readings.ee895.pressure = .0f;
-    sensor_readings.ee895.temperature = .0f;
-    sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
-}
-
-bool read_sensors(repeating_timer_t *rt)
-{
-    sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
-    update_display_buffer = true;
-    return true;
 }

@@ -24,6 +24,12 @@ typedef struct sensors
 int init(void);
 
 /**
+ * @brief Initializes I2C for sensor communication
+ * 
+ */
+void init_sensor_i2c(void);
+
+/**
  * @brief Main program loop
  * 
  * @return int Value describing encountered error during execution
@@ -79,6 +85,22 @@ void update();
  */
 void init_sensors(void);
 
+/**
+ * @brief Prepares data to be displayed, writes data to the diaplay framebuffer
+ * 
+ */
 void write_display(void);
 
+/**
+ * @brief Reads data from sensors - timer callback
+ * 
+ * @param rt Timer structure
+ * @return true if the timer should continue
+ */
 bool read_sensors(repeating_timer_t *rt);
+
+/**
+ * @brief Writes data from the ee895 sensor to the display buffer
+ * 
+ */
+void write_display_ee895(void);
