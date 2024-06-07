@@ -1,0 +1,15 @@
+add_library(pico-common INTERFACE)
+
+target_include_directories(pico-common
+  INTERFACE
+)
+
+target_link_libraries(pico-common
+  INTERFACE
+)
+
+target_sources(pico-common
+  INTERFACE
+  ${CMAKE_CURRENT_LIST_DIR}/functions.c
+  ${CMAKE_CURRENT_LIST_DIR}/functions.h
+)

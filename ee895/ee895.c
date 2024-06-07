@@ -50,31 +50,6 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
-
-/**
- * @brief converts byte representation of a float to float
- * 
- * @param byte_value bytes of the float
- * @return float output value
- */
-float byte2float(uint32_t byte_value);
-
-/**
- * @brief Converts 16-bit value to the other endian
- * 
- * @param network Value to be converted
- * @return uint16_t Converted value
- */
-uint16_t ntoh16(uint16_t network);
-
-/**
- * @brief Swaps halves of a 32-bit value
- * 
- * @param network Value to be converted
- * @return uint16_t Converted value
- */
-uint32_t ntoh32(uint32_t network);
-
 /**
  * @brief Computes Modbus CRC for specified buffer
  * 
@@ -83,29 +58,6 @@ uint32_t ntoh32(uint32_t network);
  * @return uint16_t CRC value
  */
 uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len);
-
-float byte2float(uint32_t byte_value)
-{
-    uint8_t* bytes = (uint8_t*)&byte_value;
-    float output;
-
-    *((uint8_t*)(&output) + 3) = bytes[0];
-    *((uint8_t*)(&output) + 2) = bytes[1];
-    *((uint8_t*)(&output) + 1) = bytes[2];
-    *((uint8_t*)(&output) + 0) = bytes[3];
-
-    return output;
-}
-
-uint16_t ntoh16(uint16_t network)
-{
-    return (network >> 8) | ((network & 0x00FF) << 8);
-}
-
-uint32_t ntoh32(uint32_t network)
-{
-    return (network >> 16) | ((network & 0x0000FFFF) << 16);
-}
 
 uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len)
 {
@@ -145,10 +97,10 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(nreg); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, true)) < 0) return ret; // Write to slave
+    if ((ret = i2c_write_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, true, 1000)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
 
-    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false)) < 0) return ret; // Read from slave
+    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false, 1000)) < 0) return ret; // Read from slave
     if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_ERROR_READ_RESP; // Check valid command & number of registers
 
     if (ee895_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
@@ -167,11 +119,11 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false)) < 0) return ret; // Write to slave
+    if ((ret = i2c_write_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false, 1000)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
 
     memset(&commandBuffer[1], 0x00, 7);
-    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 6, false)) < 0) return ret; // Read from slave
+    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 6, false, 1000)) < 0) return ret; // Read from slave
 
     if (commandBuffer[1] != 0x06 || (*((uint16_t*)&commandBuffer[4])) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
     if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
@@ -260,7 +212,7 @@ int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf)
     int32_t ret;
     busy_wait_ms(250);
 
-    // u vybranych registru pridej cekani nez bude hodnota zmerena
+    // for specific registers add delay
     if (((addr >= REG_T_C_FLOAT) || ((addr + nreg) >= REG_T_C_FLOAT)) && (addr <= REG_P_PSI_FLOAT)) {
         busy_wait_ms(750);
     }

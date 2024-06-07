@@ -7,6 +7,7 @@ target_include_directories(pico-cdm7162
 target_link_libraries(pico-cdm7162
   INTERFACE
   hardware_i2c
+  pico-common
 )
 
 target_sources(pico-cdm7162
@@ -14,4 +15,5 @@ target_sources(pico-cdm7162
   ${CMAKE_CURRENT_LIST_DIR}/cdm7162.c
   ${CMAKE_CURRENT_LIST_DIR}/cdm7162.h
   ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
+  ${CMAKE_CURRENT_LIST_DIR}/../common/functions.h
 )

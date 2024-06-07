@@ -11,3 +11,7 @@
 #define EE895_ERROR_WRITE_RESP -104 // Error ee895 - write response is not valid
 #define EE895_ERROR_DATA_READY_TIMEOUT -105 // Error ee895 - Data was not ready for more than 1.25 s
 #define EE895_ERROR_RANGE -106 // Error ee895 - read data is out of range
+
+#define CDM7162_ERROR_WRITE_RESP -204 // Error CDM7162 - write response is not valid
+#define CDM7162_ERROR_DATA_READY_TIMEOUT -205 // Error cdm7162 - data was not ready for more than 1 s
+#define CDM7162_ERROR_RANGE -206 // Error cdm7162 - value is out of range

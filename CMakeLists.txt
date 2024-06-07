@@ -41,7 +41,7 @@ pico_sdk_init()
 add_executable(pico_w_CO2 main.c )
 
 pico_set_program_name(pico_w_CO2 "pico_w_CO2")
-pico_set_program_version(pico_w_CO2 "0.3")
+pico_set_program_version(pico_w_CO2 "0.4")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(pico_w_CO2 1)
@@ -61,6 +61,7 @@ add_subdirectory(ds3231)
 add_subdirectory(gfx_pack)
 add_subdirectory(ee895)
 add_subdirectory(cdm7162)
+add_subdirectory(common)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 

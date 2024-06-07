@@ -3,6 +3,7 @@
 #include "string.h"
 #include "error_codes.h"
 #include "math.h"
+#include "common/functions.h"
 
 typedef struct ee895
 {
@@ -37,6 +38,7 @@ int32_t ee895_write(uint16_t addr, uint16_t value);
  * @param co2 CO2 concentration in ppm
  * @param temperature Temperature in °C
  * @param pressure Pressure in hPa (mbar)
+ * @return int32_t Return code
  */
 int32_t ee895_get_value(float* co2, float* temperature, float* pressure);
 

@@ -10,10 +10,12 @@
 #include "ds3231/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
 #include "ee895/ee895.h"
+#include "cdm7162/cdm7162.h"
 
 typedef struct sensors
 {
     ee895_t ee895;
+    cdm7162_t cdm7162;
 } sensors_t;
 
 /**
