@@ -1,6 +1,3 @@
-//#include "float.h"
-#include "math.h"
-#include <stdio.h>
 #include "ee895.h"
 
 #define EE895_SCL 5
@@ -11,14 +8,6 @@
 
 #define EE895_I2C_BAUD 100000
 #define EE895_I2C i2c0
-
-#define EE895_REGISTERS_OUT_OF_RANGE -1
-#define EE895_COMMUNICATION_ERROR -2
-#define EE895_INVALID_RESPONSE -3
-#define EE895_WRITE_ERROR -4
-#define EE895_INVALID_CRC -5
-#define EE895_DATA_READY_TIMEOUT -6
-#define EE895_VALUE_OUT_OF_RANGE -7
 
 // CO2 range
 #define CO2_MIN_RANGE           0.0
@@ -165,7 +154,7 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
 {
     int32_t ret;
     uint8_t commandBuffer[(EE895_MAX_REG_READ * 2) + 8];
-    if (nreg < 1 || nreg > 8) return EE895_REGISTERS_OUT_OF_RANGE;
+    if (nreg < 1 || nreg > 8) return EE895_ERROR_NREG_REG;
 
     commandBuffer[0] = EE895_ADDR; // Slave address
     commandBuffer[1] = 0x03; // Read multiple holding registers
@@ -173,13 +162,13 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(nreg); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, true)) < 0) return EE895_COMMUNICATION_ERROR; // Write to slave
+    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, true)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
 
-    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false)) < 0) return EE895_COMMUNICATION_ERROR; // Read from slave
-    if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_INVALID_RESPONSE; // Check valid command & number of registers
+    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false)) < 0) return ret; // Read from slave
+    if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_ERROR_READ_RESP; // Check valid command & number of registers
 
-    if (ee895_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_INVALID_CRC; // Check CRC
+    if (ee895_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
     memcpy(buf, &commandBuffer[3], nreg * 2); // Copy to output buffer
     return 0;
 }
@@ -195,14 +184,14 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false)) < 0) return EE895_COMMUNICATION_ERROR; // Write to slave
+    if ((ret = i2c_write_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
 
     memset(&commandBuffer[1], 0x00, 7);
-    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 6, false)) < 0) return EE895_COMMUNICATION_ERROR; // Read from slave
+    if ((ret = i2c_read_blocking(EE895_I2C, EE895_ADDR, &commandBuffer[1], 6, false)) < 0) return ret; // Read from slave
 
-    if (commandBuffer[1] != 0x06 || (*((uint16_t*)&commandBuffer[4])) != value) return EE895_WRITE_ERROR; // Check valid command & value
-    if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_INVALID_CRC; // Check CRC
+    if (commandBuffer[1] != 0x06 || (*((uint16_t*)&commandBuffer[4])) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
+    if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
 
     return 0;
 }
@@ -232,7 +221,7 @@ int32_t ee895_get_value(float* co2, float* temperature, float* pressure)
             *co2 = NAN;
             *temperature = NAN;
             *pressure = NAN;
-            return EE895_DATA_READY_TIMEOUT;
+            return EE895_ERROR_DATA_READY_TIMEOUT;
         }
     }
     ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer);
@@ -248,7 +237,7 @@ int32_t ee895_get_value(float* co2, float* temperature, float* pressure)
     {
         *temperature = NAN;
         *pressure = NAN;
-        return EE895_VALUE_OUT_OF_RANGE;
+        return EE895_ERROR_RANGE;
     }
     *temperature = val;
 
@@ -267,7 +256,7 @@ int32_t ee895_get_value(float* co2, float* temperature, float* pressure)
         *co2 = NAN;
         *temperature = NAN;
         *pressure = NAN;
-        return EE895_VALUE_OUT_OF_RANGE;
+        return EE895_ERROR_RANGE;
     }
     *co2 = val;
 

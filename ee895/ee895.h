@@ -1,6 +1,8 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "string.h"
+#include "error_codes.h"
+#include "math.h"
 
 typedef struct ee895
 {

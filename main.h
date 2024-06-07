@@ -3,10 +3,9 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
-
-#define DS3231_I2C_PORT i2c1
-#define DS3231_I2C_SDA_PIN 6
-#define DS3231_I2C_SCL_PIN 7
+#include "error_codes.h"
+#include <stdlib.h>
+#include <string.h>
 
 #include "ds3231/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
@@ -79,3 +78,7 @@ void update();
  * 
  */
 void init_sensors(void);
+
+void write_display(void);
+
+bool read_sensors(repeating_timer_t *rt);

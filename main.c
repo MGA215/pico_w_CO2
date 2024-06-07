@@ -1,17 +1,14 @@
 #include "main.h"
-#include <stdlib.h>
-#include <string.h>
+
+#define DS3231_I2C_PORT i2c1
+#define DS3231_I2C_SDA_PIN 6
+#define DS3231_I2C_SCL_PIN 7
+
 /**
  * Initialization error codes
  * 0: Success
  * -1: Failed STDIO initialization
- * -2: Failed timer for reading inputs initialization
- * -3: Failed display timer initialization
-*/
-
-/**
- * Initialization function for the project
- * returns: 0 if successful init, otherwise value, see the error codes map
+ * -2: Failed timer for reading sensors initialization
 */
 
 // structure containing info about the RTC module
@@ -23,20 +20,24 @@ sensors_t sensor_readings;
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
 
+// Should the display buffer be updated with new data
+bool update_display_buffer;
+
 // value representing the interval between loop calls in ms
 uint32_t loop_interval = 33;
 
-// value representing the interval between button input reads in ms
-uint32_t update_interval = 33;
+// value representing the interval between sensor readings
+uint32_t sensor_read_interval_ms = 15000;
 
 // gfx_pack backlight brightness
 uint8_t blight_brightness = 255;
 
-// string holding the datetime value
-uint8_t datetime_str[30]; 
-
 // gfx_pack backlight on
 bool blight_on = true;
+
+// string holding the datetime value
+uint8_t datetime_str[30] = {0};
+
 
 /**
  * @brief Sets RTC's datetime, modify datetime inside
@@ -44,21 +45,22 @@ bool blight_on = true;
  */
 void set_datetime(void);
 
+
 int main()
 {
     init(); // init function
     sleep_ms(1000);
 
-    // repeating_timer_t timer_sensor;
+    repeating_timer_t timer_sensor;
 
-    // // Initialize timer to read current time from RTC
-    // if (!add_repeating_timer_ms(update_interval, update, NULL, &timer_sensor)) { // negative timeout means exact delay (rather than delay between callbacks)
-    //     printf("Failed to add timer for sensor\n");
-    //     return -2;
-    // }
+    // Initialize timer to read current time from RTC
+    if (!add_repeating_timer_ms(-sensor_read_interval_ms, read_sensors, NULL, &timer_sensor)) { // negative timeout means exact delay (rather than delay between callbacks)
+        printf("Failed to add timer for sensor reading\n");
+        return -2;
+    }
 
     while (true) {
-        //update(); // update loop
+        update(); // update loop
         sleep_ms(loop_interval);
         loop(); // main loop
     }
@@ -75,19 +77,19 @@ int init(void)
 
 
     init_sensors();
+    update_display_buffer = true;
 
-    loop_interval = 2000; // Setting the loop timer
+    loop_interval = 33; // Setting the loop timer
 }
-
 
 int loop(void)
 {
-    int32_t ret = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
-    if (ret != 0) printf("[ERROR] Failed reading from the sensor: %i\n", ret);
-    else
-    {
-        printf("Read values: CO2: %.0f ppm; temperature: %.2f °C; pressure: %.1f hPa\n", sensor_readings.ee895.co2, sensor_readings.ee895.temperature, sensor_readings.ee895.pressure);
-    }
+    // int32_t ret = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
+    // if (ret != 0) printf("[ERROR] Failed reading from the sensor: %i\n", ret);
+    // else
+    // {
+    //     printf("Read values: CO2: %.0f ppm; temperature: %.2f °C; pressure: %.1f hPa\n", sensor_readings.ee895.co2, sensor_readings.ee895.temperature, sensor_readings.ee895.pressure);
+    // }
     return 0;
 }
 
@@ -122,13 +124,24 @@ void update()
 {
     update_RTC(); // Updates datetime
     read_inputs(); // Updates button inputs
-    update_display(); // Updates display
+    if (update_display_buffer)
+    {
+        write_display(); // Writes data to be displayed to display frame buffer
+        update_display(); // Updates display
+    }
     return;
 }
 
 void update_RTC()
 {
-    get_datetime(datetime_str, sizeof(datetime_str)); // Retrieves current datetime
+    uint8_t loc_datetime_str[30] = {0};
+    get_datetime(loc_datetime_str, sizeof(loc_datetime_str)); // Retrieves current datetime
+    if (memcmp(loc_datetime_str, datetime_str, 30) != 0) 
+    {
+        memcpy(datetime_str, loc_datetime_str, 30);
+        update_display_buffer = true;
+    }
+
 }
 
 void read_inputs()
@@ -194,6 +207,7 @@ void read_inputs()
         {
             buttons_prev_state |= (0b1 << 4);
             gfx_pack_clear_display();
+            update_display_buffer = true;
             //gfx_pack_update();
         }
         // Button E down - repeat action
@@ -220,22 +234,27 @@ void write_display(void)
     {
         char buf[4];
         memset(buf, 0x00, 4);
-        gfx_pack_write_text(&position, snprintf(buf, 4, "E%i", sensor_readings.ee895.state));
+        snprintf(buf, 4, "E%i", sensor_readings.ee895.state);
+        gfx_pack_write_text(&position, buf);
     }
     else
     {
         char buf[16];
         memset(buf, 0x00, 16);
-        gfx_pack_write_text(&position, snprintf(buf, 16, "CO2: %.0f ppm", sensor_readings.ee895.co2));
+        snprintf(buf, 16, "CO2: %.0f ppm", sensor_readings.ee895.co2);
+        gfx_pack_write_text(&position, buf);
         position.x = 0;
         position.y = 3;
         memset(buf, 0x00, 16);
-        gfx_pack_write_text(&position, snprintf(buf, 16, "T: %4.2f °C", sensor_readings.ee895.temperature));
+        snprintf(buf, 16, "T: %4.2f |C", sensor_readings.ee895.temperature); // C char does not support ° symbol
+        gfx_pack_write_text(&position, buf);
         position.x = 0;
-        position.y = 3;
+        position.y = 4;
         memset(buf, 0x00, 16);
-        gfx_pack_write_text(&position, snprintf(buf, 16, "p: %4.1f hPa", sensor_readings.ee895.pressure));
+        snprintf(buf, 16, "p: %4.1f hPa", sensor_readings.ee895.pressure);
+        gfx_pack_write_text(&position, buf);
     }
+    update_display_buffer = false;
 }
 
 void update_display()
@@ -250,9 +269,12 @@ void init_sensors(void)
     sensor_readings.ee895.co2 = .0f;
     sensor_readings.ee895.pressure = .0f;
     sensor_readings.ee895.temperature = .0f;
+    sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
 }
 
-void read_sensors(void)
+bool read_sensors(repeating_timer_t *rt)
 {
     sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure);
+    update_display_buffer = true;
+    return true;
 }
