@@ -100,7 +100,18 @@ void write_display(void);
 bool read_sensors(repeating_timer_t *rt);
 
 /**
- * @brief Writes data from the ee895 sensor to the display buffer
+ * @brief Displays information from sensor
  * 
+ * @param sensor_name String containing name of sensor
+ * @param state State of sensor
+ * @param co2 Should CO2 be displayed
+ * @param co2_value CO2 value
+ * @param temp Should temperature be displayed
+ * @param temp_value Temperature value
+ * @param pressure Should pressure be displayed
+ * @param pressure_value Pressure value
  */
-void write_display_ee895(void);
+void write_display_sensor(uint8_t* sensor_name, int state, 
+        bool co2, float co2_value, 
+        bool temp, float temp_value, 
+        bool pressure, float pressure_value);

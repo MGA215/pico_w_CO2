@@ -9,6 +9,8 @@
 #define I2C_DEFAULT i2c0
 #define I2C_BAUDRATE 100000
 
+#define CONNECTED_SENSORS 4
+
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
 
@@ -38,6 +40,9 @@ uint8_t datetime_str[30] = {0};
 
 // Sensor I2C actual baudrate
 uint32_t i2c_baud;
+
+// INdex of currently displayed sensor
+uint8_t display_sensor = 0;
 
 
 /**
@@ -118,7 +123,8 @@ void get_datetime(uint8_t* datetime_str, uint8_t datetime_len)
 
 int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)
 {
-    return snprintf(buf, buf_size, "%04u-%02u-%02u %02u:%02u:%02u", dt->year, dt->month, dt->day, dt->hour, dt->minutes, dt->seconds); // Conversion of the datetime struct to date time string
+    return snprintf(buf, buf_size, "%04u-%02u-%02u %02u:%02u:%02u", dt->year, dt->month, dt->day, 
+                    dt->hour, dt->minutes, dt->seconds); // Conversion of the datetime struct to date time string
 }
 
 void update()
@@ -153,6 +159,7 @@ void read_inputs(void)
         if ((buttons_prev_state & (0b1 << 0)) == 0) // Button A pressed - single action
         {
             blight_on = !blight_on; // Turn backlight off
+            gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
             buttons_prev_state |= (0b1 << 0);
         }
         // Button A down - repeat action
@@ -170,6 +177,7 @@ void read_inputs(void)
         }
         // Button B down - repeat action
         if (blight_brightness > 5) blight_brightness -= 5; // Decrease backlight brightness
+        gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
     }
     else // Button B up
     {
@@ -184,6 +192,7 @@ void read_inputs(void)
         }
         // Button C down - repeat action
         if (blight_brightness < 251) blight_brightness += 5; // Increase backlight brightness
+        gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
     }
     else // Button C up
     {
@@ -195,6 +204,8 @@ void read_inputs(void)
         if ((buttons_prev_state & (0b1 << 3)) == 0) // Button D pressed - single action
         {
             buttons_prev_state |= (0b1 << 3);
+            if (--display_sensor >= CONNECTED_SENSORS) display_sensor = CONNECTED_SENSORS - 1;
+            update_display_buffer = true;
         }
         // Button D down - repeat action
     }
@@ -208,7 +219,7 @@ void read_inputs(void)
         if ((buttons_prev_state & (0b1 << 4)) == 0) // Button E pressed - single action
         {
             buttons_prev_state |= (0b1 << 4);
-            gfx_pack_clear_display();
+            if (++display_sensor >= CONNECTED_SENSORS) display_sensor = 0;
             update_display_buffer = true;
         }
         // Button E down - repeat action
@@ -226,12 +237,31 @@ void write_display(void)
     gfx_pack_clear_display(); // Clear display
     point_t position = {.x = 0, .y = 0}; // position of datetime string on display
     gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
-    write_display_ee895(); // Write ee895 readings to the display
+    switch (display_sensor)
+    {
+        case 0: 
+        {
+            write_display_sensor("E+E EE895", sensor_readings.ee895.state, 
+                                    true, sensor_readings.ee895.co2, 
+                                    true, sensor_readings.ee895.temperature, 
+                                    true, sensor_readings.ee895.pressure); // Write ee895 readings to the display
+            break; 
+        }
+        default: 
+        {
+            position.x = 0;
+            position.y = 1;
+            uint8_t buf[18];
+            memset(buf, 0x00, 18);
+            snprintf(buf, 18, "ERR_NO_SENSOR %i", display_sensor); // Write error no sensor to display
+            gfx_pack_write_text(&position, buf);
+            break;
+        }
+    }
 }
 
 void update_display(void)
 {
-    gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
     gfx_pack_update(); // Update display
     return;
 }
@@ -261,41 +291,60 @@ void init_sensor_i2c(void)
 
 bool read_sensors(repeating_timer_t *rt)
 {
-    sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, &sensor_readings.ee895.temperature, &sensor_readings.ee895.pressure); // Read EE895 values
+    sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, 
+                                                  &sensor_readings.ee895.temperature, 
+                                                  &sensor_readings.ee895.pressure); // Read EE895 values
+    
     update_display_buffer = true;
     return true;
 }
 
-void write_display_ee895(void)
+void write_display_sensor(uint8_t* sensor_name, int state, 
+        bool co2, float co2_value, 
+        bool temp, float temp_value, 
+        bool pressure, float pressure_value)
 {
     point_t position;
     position.x = 0;
     position.y = 1;
-    gfx_pack_write_text(&position, "E+E EE895");
+    gfx_pack_write_text(&position, sensor_name);
     position.x = 0;
     position.y = 2;
-    if (sensor_readings.ee895.state != 0)
+    if (state != 0)
     {
-        char buf[4];
+        uint8_t buf[4];
         memset(buf, 0x00, 4);
-        snprintf(buf, 4, "E%i", sensor_readings.ee895.state);
+        snprintf(buf, 4, "E%i", state);
         gfx_pack_write_text(&position, buf);
     }
     else
     {
-        char buf[16];
+        uint8_t buf[16];
         memset(buf, 0x00, 16);
-        snprintf(buf, 16, "CO2: %.0f ppm", sensor_readings.ee895.co2);
-        gfx_pack_write_text(&position, buf);
-        position.x = 0;
-        position.y = 3;
-        memset(buf, 0x00, 16);
-        snprintf(buf, 16, "T: %4.2f |C", sensor_readings.ee895.temperature); // C char does not support ° symbol
-        gfx_pack_write_text(&position, buf);
-        position.x = 0;
-        position.y = 4;
-        memset(buf, 0x00, 16);
-        snprintf(buf, 16, "p: %4.1f hPa", sensor_readings.ee895.pressure);
-        gfx_pack_write_text(&position, buf);
+        if (co2)
+        {
+            snprintf(buf, 16, "CO2: %.0f ppm", co2_value);
+            gfx_pack_write_text(&position, buf);
+            position.x = 0;
+            position.y = 3;
+            memset(buf, 0x00, 16);
+        }
+        if (temp)
+        {
+            snprintf(buf, 16, "T: %4.2f |C", temp_value); // C char does not support ° symbol
+            gfx_pack_write_text(&position, buf);
+            position.x = 0;
+            position.y = 4;
+            memset(buf, 0x00, 16);
+
+        }
+        if (pressure)
+        {
+            snprintf(buf, 16, "p: %4.1f hPa", pressure_value);
+            gfx_pack_write_text(&position, buf);
+            position.x = 0;
+            position.y = 5;
+            memset(buf, 0x00, 16);
+        }
     }
 }

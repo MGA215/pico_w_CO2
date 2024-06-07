@@ -60,6 +60,7 @@ target_include_directories(pico_w_CO2 PRIVATE
 add_subdirectory(ds3231)
 add_subdirectory(gfx_pack)
 add_subdirectory(ee895)
+add_subdirectory(cdm7162)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
@@ -67,6 +68,7 @@ target_link_libraries(pico_w_CO2
         pico-ds3231
         pico-gfx_pack
         pico-ee895
+        pico-cdm7162
         )
 
 pico_add_extra_outputs(pico_w_CO2)
