@@ -1,4 +1,5 @@
 #include "sunrise.h"
+#include "stdio.h"
 
 #define SUNRISE_ADDR 0x68
 #define SUNRISE_I2C i2c0
@@ -132,11 +133,11 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
     command_buffer[0] = addr;
     memcpy(&command_buffer[1], buf, len);
     wake_up();
-    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, command_buffer, len + 1, true, 1000)) < 0) return ret;
-    busy_wait_ms(2);
-    uint8_t resp[len];
-    if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, resp, len, false, 1000)) < 0) return ret;
-    if (memcmp(buf, resp, len)) return SUNRISE_ERROR_WRITE_RESP;
+    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, command_buffer, len + 1, false, 1000)) < 0) return ret;
+    busy_wait_ms(12);
+    // uint8_t resp[len];
+    // if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, resp, len, false, 1000)) < 0) return ret;
+    // if (memcmp(buf, resp, len)) return SUNRISE_ERROR_WRITE_RESP;
     return SUCCESS;
 }
 
@@ -146,8 +147,9 @@ int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
     wake_up();
     if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, &addr, 1, true, 1000)) < 0) return ret;
     
-    busy_wait_ms(2);
+    busy_wait_us(100);
     if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, buf, num_bytes, false, 1000)) < 0) return ret;
+    busy_wait_ms(1);
     return SUCCESS;
 }
 
@@ -156,6 +158,7 @@ int sunrise_reset(void)
     int32_t ret;
     uint8_t data = 0xFF;
     if ((ret = sunrise_write(REG_SOFT_RESET, &data, 1)) != 0) return ret;
+    busy_wait_ms(200);
     return SUCCESS;
 }
 
@@ -164,12 +167,12 @@ int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samp
 {
     uint8_t command_buffer[11];
     command_buffer[0] = (uint8_t)single_meas_mode;
-    *((uint16_t*)&command_buffer[1]) = meas_period;
-    *((uint16_t*)&command_buffer[3]) = meas_samples;
-    *((uint16_t*)&command_buffer[5]) = abc_period;
+    *((uint16_t*)&command_buffer[1]) = ntoh16(meas_period);
+    *((uint16_t*)&command_buffer[3]) = ntoh16(meas_samples);
+    *((uint16_t*)&command_buffer[5]) = ntoh16(abc_period);
     command_buffer[7] = 0x00;
     command_buffer[8] = 0x00;
-    *((uint16_t*)&command_buffer[9]) = abc_target_value;
+    *((uint16_t*)&command_buffer[9]) = ntoh16(abc_target_value);
 
     uint8_t buf[11];
 
@@ -203,7 +206,8 @@ int init_meter_control(bool nRDY_en, bool abc_en, bool static_iir_en, bool dyn_i
 
 int get_error(uint16_t error_reg)
 {
-    if (error_reg & 0x0001) return SUNRISE_ERROR_FATAL;
+    if (error_reg == 0) return SUCCESS;
+    else if (error_reg & 0x0001) return SUNRISE_ERROR_FATAL;
     else if (error_reg & 0x0002) return SUNRISE_ERROR_I2C;
     else if (error_reg & 0x0004) return SUNRISE_ERROR_ALGORITHM;
     else if (error_reg & 0x0008) return SUNRISE_ERROR_CAL;
@@ -217,7 +221,7 @@ int get_error(uint16_t error_reg)
     else return SUNRISE_ERROR_SENSOR_GENERAL;
 }
 
-int sunrise_read_value(int* co2, float* temperature)
+int sunrise_get_value(int* co2, float* temperature)
 {
     uint8_t buf[10];
     int32_t ret, i;
@@ -228,19 +232,15 @@ int sunrise_read_value(int* co2, float* temperature)
         busy_wait_ms(300);
         if ((ret = sunrise_read(REG_ERR_H, buf, 10)) != 0) return ret;
         if (i > 64) return SUNRISE_ERROR_DATA_READY_TIMEOUT;
-        ret = get_error(*((uint16_t*)&buf[0]));
+        ret = get_error(ntoh16(*((uint16_t*)&buf[0])));
         if (ret == 0) break;
         else if (ret == SUNRISE_ERROR_DATA_READY_TIMEOUT) i++;
         else return ret;
     }
 
-    if ((buf[0] & 0x07) || buf[1])
-    {
-        return get_error(*((uint16_t*)&buf[0]));
-    }
-    *co2 = (int)(*((uint16_t*)&buf[6]));
-    *temperature = *((uint16_t*)&buf[8]) / 100.0f;
-
+    *co2 = (int)(ntoh16(*((uint16_t*)&buf[6])));
+    *temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f;
+    return SUCCESS;
 }
 
 int sunrise_single_meas(int* co2, float* temperature, uint8_t* state_reg, uint8_t state_reg_len_bytes, bool no_state)
@@ -262,22 +262,26 @@ int sunrise_single_meas(int* co2, float* temperature, uint8_t* state_reg, uint8_
         uint8_t buf[state_reg_len_bytes + 1];
         buf[0] = 0x01;
         memcpy(&buf[1], state_reg, state_reg_len_bytes);
-        sunrise_write(REG_START_SINGLE_MEAS_MIR, buf, state_reg_len_bytes + 1);
+        if ((ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, buf, state_reg_len_bytes + 1)) != 0)
+        {
+            if (SUNRISE_EN != INT32_MAX) gpio_put(SUNRISE_EN, 0);
+            return ret;
+        }
     }
     busy_wait_ms(2);
-    if ((ret = sunrise_read_value(co2, temperature)) != 0)
+    if ((ret = sunrise_get_value(co2, temperature)) != 0)
     {
         if (SUNRISE_EN != INT32_MAX) gpio_put(SUNRISE_EN, 0);
         return ret;
     }
-    if ((ret = sunrise_read(REG_ABC_TIME_MIR_H, state_reg, 24))) 
+    if ((ret = sunrise_read(REG_ABC_TIME_MIR_H, state_reg, 24)) != 0) return ret;
     if (SUNRISE_EN != INT32_MAX) gpio_put(SUNRISE_EN, 0);
     return SUCCESS;
 }
 
 void wake_up(void)
 {
-    i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, NULL, 0, false, 100);
+    int32_t ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, NULL, 0, false, 100);
 }
 
 

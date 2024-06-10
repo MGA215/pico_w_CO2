@@ -11,12 +11,13 @@
 #include "gfx_pack/gfx_pack.h"
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
-#include "sunrise/sunrise.c"
+#include "sunrise/sunrise.h"
 
 typedef struct sensors
 {
     ee895_t ee895;
     cdm7162_t cdm7162;
+    sunrise_t sunrise;
 } sensors_t;
 
 /**

@@ -2,6 +2,14 @@
 #include "hardware/i2c.h"
 #include "string.h"
 #include "../error_codes.h"
+#include "../common/functions.h"
+
+typedef struct sunrise
+{
+    float temperature;
+    int co2;
+    int state;
+} sunrise_t;
 
 
 /**
@@ -57,7 +65,7 @@ int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samp
  * @param temperature Temperature of the chip
  * @return int Return code
  */
-int sunrise_read_value(int* co2, float* temperature);
+int sunrise_get_value(int* co2, float* temperature);
 
 /**
  * @brief Performs single measurement (cannot use b/c EN pin is not accessible)

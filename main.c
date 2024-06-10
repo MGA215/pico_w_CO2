@@ -7,7 +7,7 @@
 #define I2C_SCL 5
 #define I2C_SDA 4
 #define I2C_DEFAULT i2c0
-#define I2C_BAUDRATE 100000
+#define I2C_BAUDRATE 10000
 
 #define CONNECTED_SENSORS 4
 
@@ -54,7 +54,8 @@ void set_datetime(void);
 
 int main()
 {
-    init(); // init function
+    int32_t ret;
+    if ((ret = init()) != 0) return ret; // init function
     sleep_ms(1000);
 
     repeating_timer_t timer_sensor;
@@ -62,30 +63,34 @@ int main()
     // Initialize timer to read current time from RTC
     if (!add_repeating_timer_ms(-sensor_read_interval_ms, read_sensors, NULL, &timer_sensor)) { // negative timeout means exact delay (rather than delay between callbacks)
         printf("Failed to add timer for sensor reading\n");
-        return -2;
+        return ERROR_TIMER_SENSORS_INIT;
     }
 
     while (true) {
         update(); // update loop
         sleep_ms(loop_interval);
-        loop(); // main loop
+        if ((ret = loop()) != 0) return ret; // main loop
     }
-    return 0;
+    return SUCCESS;
 }
 
 int init(void)
 {
-    if (!stdio_init_all()) return -1; // Initializing STDIO
+    int32_t ret;
+    if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
 
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
-    cdm7162_init(false); // Initialize CDM7162 sensor
+    //if ((ret = cdm7162_init(false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize CDM7162 sensor
+    sunrise_reset();
+    if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize SUNRISE sensor
 
     init_sensors(); // initialize sensors structure
     update_display_buffer = true;
 
     loop_interval = 33; // Setting the loop timer
+    return SUCCESS;
 }
 
 int loop(void)
@@ -96,7 +101,7 @@ int loop(void)
     // {
     //     printf("Read values: CO2: %i ppm\n", sensor_readings.cdm7162.co2);
     // }
-    return 0;
+    return SUCCESS;
 }
 
 void set_datetime(void)
@@ -254,6 +259,14 @@ void write_display(void)
                                     false, 0.0f, false, 0.0f); // Write CDM7162 readings to the display
             break;
         }
+        case 2: 
+        {
+            write_display_sensor("Senseair SUNRISE", sensor_readings.sunrise.state,
+                                    true, (float)sensor_readings.sunrise.co2,
+                                    true, sensor_readings.sunrise.temperature,
+                                    false, 0.0f); // Write SUNRISE readings to the display
+            break;
+        }
         default: 
         {
             position.x = 0;
@@ -282,6 +295,10 @@ void init_sensors(void)
 
     sensor_readings.cdm7162.co2 = 0;
     sensor_readings.cdm7162.state = ERROR_SENSOR_NOT_INITIALIZED;
+
+    sensor_readings.sunrise.co2 = 0;
+    sensor_readings.sunrise.temperature = .0f;
+    sensor_readings.sunrise.state = ERROR_SENSOR_NOT_INITIALIZED;
 }
 
 void init_sensor_i2c(void)
@@ -302,7 +319,9 @@ bool read_sensors(repeating_timer_t *rt)
     sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, 
                                                   &sensor_readings.ee895.temperature, 
                                                   &sensor_readings.ee895.pressure); // Read EE895 values
-    sensor_readings.cdm7162.state = cdm7162_get_value(&sensor_readings.cdm7162.co2); // Read CDM7162 values
+    //sensor_readings.cdm7162.state = cdm7162_get_value(&sensor_readings.cdm7162.co2); // Read CDM7162 values
+    sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
+                                                        &sensor_readings.sunrise.temperature); // Read SUNRISE values
     update_display_buffer = true;
     return true;
 }

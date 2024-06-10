@@ -1,10 +1,22 @@
 #define SUCCESS 0
+
+// Main Errors
 #define ERROR_STDIO_INIT 1 // Error initializing STDIO
 #define ERROR_TIMER_SENSORS_INIT 2 // Error initializing sensor timer
 #define ERROR_SENSOR_NOT_INITIALIZED 3 // Error sensor is not initialized
 
-// PICO ERRORS
+// PICO Errors
+#define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
+#define PICO_ERROR_GENERIC -2 // Error PICO - Generic error
+#define PICO_ERROR_NO_DATA -3 // Error PICO - No data
+#define PICO_ERROR_NOT_PERMITTED -4 // Error PICO - Permission denied
+#define PICO_ERROR_INVALID_ARG -5 // Error PICO - Invalid argument
+#define PICO_ERROR_IO -6 // Error PICO - IO error
+#define PICO_ERROR_BADAUTH -7 // Error PICO - Authorization failed
+#define PICO_ERROR_CONNECT_FAILED -8 // Error PICO - Failed to establish connection
+#define PICO_ERROR_INSUFFICIENT_RESOURCES -9 // Error PICO - Insufficient resources (memory, storage)
 
+// EE895 Errors
 #define EE895_ERROR_NREG_REG -101 // Error ee895 - specified number of registers is invalid
 #define EE895_ERROR_READ_RESP -102 // Error ee895 - read response is not valid
 #define EE895_ERROR_INVALID_CRC -103 // Error ee895 - response CRC is not valid
@@ -12,10 +24,12 @@
 #define EE895_ERROR_DATA_READY_TIMEOUT -105 // Error ee895 - Data was not ready for more than 1.25 s
 #define EE895_ERROR_RANGE -106 // Error ee895 - read data is out of range
 
+// CDM7162 Errors
 #define CDM7162_ERROR_WRITE_RESP -204 // Error CDM7162 - write response is not valid
 #define CDM7162_ERROR_DATA_READY_TIMEOUT -205 // Error cdm7162 - data was not ready for more than 1 s
 #define CDM7162_ERROR_RANGE -206 // Error cdm7162 - value is out of range
 
+// SUNRISE Errors
 #define SUNRISE_ERROR_WRITE_RESP -304 // Error SUNRISE - write response is not valid
 #define SUNRISE_ERROR_DATA_READY_TIMEOUT -305 // Error SUNRISE - data not ready
 #define SUNRISE_ERROR_FATAL -307 // Error SUNRISE - failed initialization
