@@ -45,3 +45,20 @@
 #define SUNRISE_ERROR_SENSOR_GENERAL -317 // Error SUNRISE - general sensor error
 #define SUNRISE_ERROR_WRONG_STATE -318 // Error SUNRISE - invalid buffer for reading/writing current state in single meas mode
 #define SUNRISE_ERROR_NO_SINGLE_MEAS_MODE -319 // Error SUNRISE - sensor is not in a single measurement mode
+
+// SUNLIGHT Errors
+#define SUNLIGHT_ERROR_WRITE_RESP -304 // Error SUNLIGHT - write response is not valid
+#define SUNLIGHT_ERROR_DATA_READY_TIMEOUT -305 // Error SUNLIGHT - data not ready
+#define SUNLIGHT_ERROR_FATAL -307 // Error SUNLIGHT - failed initialization
+#define SUNLIGHT_ERROR_I2C -308 // Error SUNLIGHT - invalid address access
+#define SUNLIGHT_ERROR_ALGORITHM -309 // Error SUNLIGHT - corrupted parameters detected
+#define SUNLIGHT_ERROR_CAL -310 // Error SUNLIGHT - calibration failed
+#define SUNLIGHT_ERROR_SELF_DIAG -311 // Error SUNLIGHT - internal failure
+#define SUNLIGHT_ERROR_OUT_OF_RANGE -312 // Error SUNLIGHT - CO2, temperature or set pressure out of range
+#define SUNLIGHT_ERROR_MEMORY -313 // Error SUNLIGHT - memory operation error
+#define SUNLIGHT_ERROR_LOW_INTERNAL_VOLTAGE -314 // Error SUNLIGHT - low internal regulated voltage
+#define SUNLIGHT_ERROR_MEASUREMENT_TIMEOUT -315 // Error SUNLIGHT - unable to complete measurement in time
+#define SUNLIGHT_ERROR_ABNORMAL_SIGNAL_LEVEL -316 // Error SUNLIGHT - invalid measurement sample detected
+#define SUNLIGHT_ERROR_SENSOR_GENERAL -317 // Error SUNLIGHT - general sensor error
+#define SUNLIGHT_ERROR_WRONG_STATE -318 // Error SUNLIGHT - invalid buffer for reading/writing current state in single meas mode
+#define SUNLIGHT_ERROR_NO_SINGLE_MEAS_MODE -319 // Error SUNLIGHT - sensor is not in a single measurement mode

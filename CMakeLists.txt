@@ -63,6 +63,7 @@ add_subdirectory(ee895)
 add_subdirectory(cdm7162)
 add_subdirectory(common)
 add_subdirectory(sunrise)
+add_subdirectory(sunlight)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
@@ -72,6 +73,7 @@ target_link_libraries(pico_w_CO2
         pico-ee895
         pico-cdm7162
         pico-sunrise
+        pico-sunlight
         )
 
 pico_add_extra_outputs(pico_w_CO2)

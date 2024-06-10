@@ -4,43 +4,43 @@
 #include "../error_codes.h"
 #include "../common/functions.h"
 
-typedef struct sunrise
+typedef struct sunlight
 {
     float temperature;
     int co2;
     int state;
-} sunrise_t;
+} sunlight_t;
 
 
 /**
- * @brief Writes data to the SUNRISE sensor to specified address
+ * @brief Writes data to the SUNLIGHT sensor to specified address
  * 
  * @param addr Register address
  * @param buf Data to be sent
  * @param len Length of the data
  * @return int Return code
  */
-int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len);
+int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len);
 
 /**
- * @brief Reads data from the SUNRISE sensor
+ * @brief Reads data from the SUNLIGHT sensor
  * 
  * @param addr Register address to be read from
  * @param buf Data buffer
  * @param num_bytes Number of bytes to read
  * @return int Return code
  */
-int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
+int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
 
 /**
  * @brief Resets the sensor (soft reset)
  * 
  * @return int Return code
  */
-int sunrise_reset(void);
+int sunlight_reset(void);
 
 /**
- * @brief Initializes SUNRISE sensor
+ * @brief Initializes SUNLIGHT sensor
  * 
  * @param single_meas_mode if single measurement mode should be enabled
  * @param meas_period period of continuous measurement
@@ -55,7 +55,7 @@ int sunrise_reset(void);
  * @param invert_nRDY invert nRDY pin - high during measurement (default disabled)
  * @return int Return code
  */
-int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samples, uint16_t abc_period, uint16_t abc_target_value, 
+int sunlight_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samples, uint16_t abc_period, uint16_t abc_target_value, 
     bool nRDY_en, bool abc_en, bool static_iir_en, bool dyn_iir_en, bool pressure_comp, bool invert_nRDY);
 
 /**
@@ -65,7 +65,7 @@ int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samp
  * @param temperature Temperature of the chip
  * @return int Return code
  */
-int sunrise_get_value(int* co2, float* temperature);
+int sunlight_get_value(int* co2, float* temperature);
 
 /**
  * @brief Performs single measurement (cannot use b/c EN pin is not accessible)
@@ -77,7 +77,7 @@ int sunrise_get_value(int* co2, float* temperature);
  * @param no_state if no previous state available
  * @return int Return code
  */
-int sunrise_single_meas(int* co2, float* temperature, uint8_t* state_reg, uint8_t state_reg_len_bytes, bool no_state);
+int sunlight_single_meas(int* co2, float* temperature, uint8_t* state_reg, uint8_t state_reg_len_bytes, bool no_state);
 
 
 

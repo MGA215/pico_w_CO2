@@ -83,8 +83,8 @@ int init(void)
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
     //if ((ret = cdm7162_init(false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize CDM7162 sensor
-    sunrise_reset();
-    if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize SUNRISE sensor
+    // if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize SUNRISE sensor
+    if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0 && ret != PICO_ERROR_TIMEOUT) return ret; // Initialize SUNLIGHT sensor
 
     init_sensors(); // initialize sensors structure
     update_display_buffer = true;
@@ -267,6 +267,14 @@ void write_display(void)
                                     false, 0.0f); // Write SUNRISE readings to the display
             break;
         }
+        case 3:
+        {
+            write_display_sensor("Senseair SUNLIGHT", sensor_readings.sunlight.state,
+                                    true, (float)sensor_readings.sunlight.co2,
+                                    true, sensor_readings.sunlight.temperature,
+                                    false, 0.0f); // Write SUNLIGHT readings to the display
+            break;
+        }
         default: 
         {
             position.x = 0;
@@ -299,6 +307,10 @@ void init_sensors(void)
     sensor_readings.sunrise.co2 = 0;
     sensor_readings.sunrise.temperature = .0f;
     sensor_readings.sunrise.state = ERROR_SENSOR_NOT_INITIALIZED;
+
+    sensor_readings.sunlight.co2 = 0;
+    sensor_readings.sunlight.temperature = .0f;
+    sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;
 }
 
 void init_sensor_i2c(void)
@@ -320,8 +332,10 @@ bool read_sensors(repeating_timer_t *rt)
                                                   &sensor_readings.ee895.temperature, 
                                                   &sensor_readings.ee895.pressure); // Read EE895 values
     //sensor_readings.cdm7162.state = cdm7162_get_value(&sensor_readings.cdm7162.co2); // Read CDM7162 values
-    sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
-                                                        &sensor_readings.sunrise.temperature); // Read SUNRISE values
+    // sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
+    //                                                 &sensor_readings.sunrise.temperature); // Read SUNRISE values
+    sensor_readings.sunlight.state = sunlight_get_value(&sensor_readings.sunlight.co2,
+                                                    &sensor_readings.sunlight.temperature); // Read SUNLIGHT values
     update_display_buffer = true;
     return true;
 }
