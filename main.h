@@ -11,6 +11,7 @@
 #include "gfx_pack/gfx_pack.h"
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
+#include "sunrise/sunrise.c"
 
 typedef struct sensors
 {
