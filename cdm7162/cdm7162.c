@@ -36,7 +36,7 @@ int32_t cdm7162_write(uint8_t addr, uint8_t value)
 {
     int32_t ret;
     uint8_t buf[2] = {addr, value};
-    if ((ret = i2c_write_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, buf, 1, true, 1000)) < 0) return ret;
+    if ((ret = i2c_write_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, buf, 2, true, 1000)) < 0) return ret;
     busy_wait_ms(2);
     if ((ret = i2c_read_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, &buf[0], 1, false, 1000)) < 0) return ret;
     if (buf[0] != value) return CDM7162_ERROR_WRITE_RESP;
