@@ -60,3 +60,10 @@ int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf);
  * @return int32_t Return code
  */
 int32_t ee895_write_reg(uint16_t addr, uint16_t value);
+
+/**
+ * @brief Initializes the EE895 sensor
+ * 
+ * @return int32_t Return code
+ */
+int32_t ee895_init(void);

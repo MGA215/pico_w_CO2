@@ -233,3 +233,7 @@ int32_t ee895_write_reg(uint16_t addr, uint16_t value)
     return ret;
 }
 
+int32_t ee895_init(void)
+{
+    return SUCCESS;
+}

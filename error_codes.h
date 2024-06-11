@@ -4,10 +4,12 @@
 #define ERROR_STDIO_INIT 1 // Error initializing STDIO
 #define ERROR_TIMER_SENSORS_INIT 2 // Error initializing sensor timer
 #define ERROR_SENSOR_NOT_INITIALIZED 3 // Error sensor is not initialized
+#define ERROR_SENSOR_INIT_FAILED 4 // Error sensor initialization failed
+#define ERROR_NO_MEAS 5 // Error No measurement has been performed yet
 
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
-#define PICO_ERROR_GENERIC -2 // Error PICO - Generic error
+#define PICO_ERROR_GENERIC -2 // Error PICO - Generic error (might be sensor disconnected)
 #define PICO_ERROR_NO_DATA -3 // Error PICO - No data
 #define PICO_ERROR_NOT_PERMITTED -4 // Error PICO - Permission denied
 #define PICO_ERROR_INVALID_ARG -5 // Error PICO - Invalid argument

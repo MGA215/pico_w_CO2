@@ -74,6 +74,7 @@ target_link_libraries(pico_w_CO2
         pico-cdm7162
         pico-sunrise
         pico-sunlight
+        hardware_exception
         )
 
 pico_add_extra_outputs(pico_w_CO2)
