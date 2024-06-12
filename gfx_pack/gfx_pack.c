@@ -165,7 +165,7 @@ void command(uint8_t command, size_t len, const char* data)
     gpio_put(GFX_PACK_DATA_COMMAND_PIN, 0); // Command mode
     spi_write_blocking(GFX_PACK_SPI, &command, 1); // Send command
     gpio_put(GFX_PACK_CHIP_SELECT_PIN, 1); // Disable GFX Communication
-    sleep_us(100);
+    busy_wait_us(100);
 
     if (data) { // Send data
         gpio_put(GFX_PACK_CHIP_SELECT_PIN, 0); // Enable GFX Communication

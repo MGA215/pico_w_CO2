@@ -132,85 +132,131 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     return 0;
 }
 
-int32_t ee895_get_value(float* co2, float* temperature, float* pressure)
+void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
-    int32_t i, ret;
-
-    busy_wait_ms(750);
-
-    i = 0;
-    while (true)
+    int32_t ret;
+    static int32_t i = 0;
+    switch(ee895->meas_state)
     {
-        ret = ee895_read(REG_STATUS, 1, tempBuffer);
-        if (ret != 0) 
+        case EE895_MEAS_FINISHED: ee895->state = SUCCESS;
+        case EE895_MEAS_START:
         {
-            *co2 = NAN;
-            *temperature = NAN;
-            *pressure = NAN;
-            return ret;
+            // Power on
+            *wake_time = make_timeout_time_ms(750);
+            ee895->meas_state = EE895_READ_STATUS;
+            i = 0;
+            *enable_sensor_irq = false;
+            ee895->state = SUCCESS;
+            return;
         }
-        if (tempBuffer[1] & 0x01) break;
-        busy_wait_ms(25);
-        if (i++ > 20)
+        case EE895_READ_STATUS:
         {
-            *co2 = NAN;
-            *temperature = NAN;
-            *pressure = NAN;
-            return EE895_ERROR_DATA_READY_TIMEOUT;
+            ret = ee895_read(REG_STATUS, 1, tempBuffer);
+            if (ret != 0) 
+            {
+                ee895->co2 = NAN;
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                *enable_sensor_irq = true;
+                ee895->state = ret;
+                return;
+            }
+            if (tempBuffer[1] & 0x01)
+            {
+                ee895->meas_state = EE895_READ_VALUE;
+                ee895->state = SUCCESS;
+                return;
+            }
+            if (i++ > 20)
+            {
+                ee895->co2 = NAN;
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                *enable_sensor_irq = true;
+                return;
+            }
+            *wake_time = make_timeout_time_ms(25);
+            ee895->state = SUCCESS;
+            return;
+        }
+        case EE895_READ_VALUE:
+        {
+            ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer);
+            if (ret != 0) 
+            {
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = ret;
+                *enable_sensor_irq = true;
+                return;
+            }
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
+            float val = byte2float(*((uint32_t*)&tempBuffer[0]));
+            if (val < T_MIN_RANGE || val > T_MAX_RANGE)
+            {
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->co2 = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = EE895_ERROR_RANGE;
+                *enable_sensor_irq = true;
+                return;
+            }
+            ee895->temperature = val;
+
+            ret = ee895_read(REG_CO2_RAW_FLOAT, 2, tempBuffer);
+            if (ret != 0) 
+            {
+                ee895->co2 = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = ret;
+                *enable_sensor_irq = true;
+                return;
+            }
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
+            val = byte2float(*((uint32_t*)&tempBuffer[0]));
+            if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
+            {
+                ee895->co2 = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = EE895_ERROR_RANGE;
+                *enable_sensor_irq = true;
+                return;
+            }
+            ee895->co2 = val;
+
+            ret = ee895_read(REG_P_MBAR_FLOAT, 2, tempBuffer);
+            if (ret != 0) 
+            {
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = ret;
+                *enable_sensor_irq = true;
+                return;
+            }
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
+            val = byte2float(*((uint32_t*)&tempBuffer[0]));
+            ee895->pressure = val;
+            ee895->meas_state = EE895_MEAS_FINISHED;
+            *enable_sensor_irq = true;
+            *wake_time = make_timeout_time_ms(INT32_MAX);
+            ee895->state = SUCCESS;
+            return;
         }
     }
-    ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer);
-    if (ret != 0) 
-    {
-        *temperature = NAN;
-        *pressure = NAN;
-        return ret;
-    }
-    *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-    float val = byte2float(*((uint32_t*)&tempBuffer[0]));
-    if (val < T_MIN_RANGE || val > T_MAX_RANGE)
-    {
-        *temperature = NAN;
-        *pressure = NAN;
-        return EE895_ERROR_RANGE;
-    }
-    *temperature = val;
-
-    ret = ee895_read(REG_CO2_RAW_FLOAT, 2, tempBuffer);
-    if (ret != 0) 
-    {
-        *co2 = NAN;
-        *temperature = NAN;
-        *pressure = NAN;
-        return ret;
-    }
-    *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-    val = byte2float(*((uint32_t*)&tempBuffer[0]));
-    if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
-    {
-        *co2 = NAN;
-        *temperature = NAN;
-        *pressure = NAN;
-        return EE895_ERROR_RANGE;
-    }
-    *co2 = val;
-
-    ret = ee895_read(REG_P_MBAR_FLOAT, 2, tempBuffer);
-    if (ret != 0) 
-    {
-        *pressure = NAN;
-        return ret;
-    }
-    *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-    val = byte2float(*((uint32_t*)&tempBuffer[0]));
-    *pressure = val;
-    return 0;
 }
 
 int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf)
 {
     int32_t ret;
+    // Bus lock, power on
     busy_wait_ms(250);
 
     // for specific registers add delay
@@ -222,24 +268,27 @@ int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf)
     }
 
     ret = ee895_read(addr, nreg, buf);
+    // Bus unlock, power off
     return ret;
 }
 
 int32_t ee895_write_reg(uint16_t addr, uint16_t value)
 {
     int32_t ret;
+    // Bus lock, power on
     busy_wait_ms(250);
     ret = ee895_write(addr, value);
     busy_wait_ms(10);
+    // Bus unlock, power off
     return ret;
 }
 
 int32_t ee895_init(void)
 {
     int32_t ret;
-    uint8_t fw_read_name[16];
-    if ((ret = ee895_read_reg(REG_SER_NR, 8, fw_read_name)) != 0) return ret;
-    printf("%s\n", fw_read_name);
+    // uint8_t fw_read_name[16];
+    // if ((ret = ee895_read_reg(REG_SER_NR, 8, fw_read_name)) != 0) return ret;
+    // printf("%s\n", fw_read_name);
     // if (strcmp(&fw_read_name[2], "EE895") != 0) return ERROR_UNKNOWN_SENSOR;
     return SUCCESS;
 }

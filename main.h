@@ -103,7 +103,7 @@ void write_display(void);
  * @param rt Timer structure
  * @return true if the timer should continue
  */
-bool read_sensors(repeating_timer_t *rt);
+void read_sensors();
 
 /**
  * @brief Displays information from sensor
@@ -121,3 +121,6 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         bool co2, float co2_value, 
         bool temp, float temp_value, 
         bool pressure, float pressure_value);
+
+
+void read_sensors_irq();

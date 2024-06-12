@@ -23,8 +23,8 @@ uint8_t buttons_prev_state = 0;
 // Should the display buffer be updated with new data
 bool update_display_buffer;
 
-// value representing the interval between loop calls in ms
-uint32_t loop_interval = 33;
+// value representing the interval between display draws in ms
+uint32_t display_interval = 33;
 
 // value representing the interval between sensor readings
 uint32_t sensor_read_interval_ms = 15000;
@@ -44,6 +44,15 @@ uint32_t i2c_baud;
 // INdex of currently displayed sensor
 uint8_t display_sensor = 0;
 
+bool enable_sensor_irq = false;
+
+absolute_time_t sensor_process_data_time;
+bool sensor_process_data_start;
+
+absolute_time_t process_update_time;
+
+absolute_time_t sensor_start_measurement_time;
+
 
 /**
  * @brief Sets RTC's datetime, modify datetime inside
@@ -51,24 +60,16 @@ uint8_t display_sensor = 0;
  */
 void set_datetime(void);
 
+void read_sensors_start();
+
 
 int main()
 {
     int32_t ret;
     if ((ret = init()) != 0) return ret; // init function
-    sleep_ms(1000);
-
-    repeating_timer_t timer_sensor;
-
-    // Initialize timer to read current time from RTC
-    if (!add_repeating_timer_ms(-sensor_read_interval_ms, read_sensors, NULL, &timer_sensor)) { // negative timeout means exact delay (rather than delay between callbacks)
-        printf("Failed to add timer for sensor reading\n");
-        return ERROR_TIMER_SENSORS_INIT;
-    }
 
     while (true) {
-        update(); // update loop
-        sleep_ms(loop_interval);
+        sleep_ms(1);
         if ((ret = loop()) != 0) return ret; // main loop
     }
     return SUCCESS;
@@ -85,36 +86,39 @@ int init(void)
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
 
-    // ret = ee895_init(); // Initialize EE895 sensor
-    // if (ret == ERROR_UNKNOWN_SENSOR) sensor_readings.ee895.state = ret;
-    // else if (ret != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED;
-    // else sensor_readings.ee895.state = ERROR_NO_MEAS;
+    ret = ee895_init(); // Initialize EE895 sensor
+    sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     
     // if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
     // else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
 
-    ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false); // Initialize SUNRISE sensor
-    if (ret == ERROR_UNKNOWN_SENSOR) sensor_readings.sunrise.state = ret;
-    else if (ret != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED;
-    else sensor_readings.sunrise.state = ERROR_NO_MEAS;
+    // ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false); // Initialize SUNRISE sensor
+    // if (ret == ERROR_UNKNOWN_SENSOR) sensor_readings.sunrise.state = ret;
+    // else if (ret != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED;
+    // else sensor_readings.sunrise.state = ERROR_NO_MEAS;
 
     // if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;  // Initialize SUNLIGHT sensor
     // else sensor_readings.sunlight.state = ERROR_NO_MEAS;
     
     update_display_buffer = true;
 
-    loop_interval = 33; // Setting the loop timer
+    enable_sensor_irq = true;
+
+    sensor_process_data_time = make_timeout_time_ms(INT32_MAX);
+    sensor_process_data_start = false;
+    process_update_time = make_timeout_time_ms(display_interval);
+    sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms);
+
+    //loop_interval = 33; // Setting the loop timer
+    sleep_ms(1000); // Init wait
     return SUCCESS;
 }
 
 int loop(void)
 {
-    // int32_t ret = cdm7162_get_value(&sensor_readings.cdm7162.co2);
-    // if (ret != 0) printf("[ERROR] Failed reading from the sensor: %i\n", ret);
-    // else
-    // {
-    //     printf("Read values: CO2: %i ppm\n", sensor_readings.cdm7162.co2);
-    // }
+    if (time_reached(sensor_start_measurement_time)) read_sensors_start(); // Start measurement
+    if (time_reached(process_update_time)) update(); // Update display & buttons
+    if (time_reached(sensor_process_data_time) || sensor_process_data_start) read_sensors(); // Read sensors if waiting for measurement or (sensor interrupt and interrupts enabled)
     return SUCCESS;
 }
 
@@ -156,6 +160,7 @@ void update()
         update_display(); // Updates display
         update_display_buffer = false;
     }
+    process_update_time = make_timeout_time_ms(display_interval);
     return;
 }
 
@@ -314,6 +319,7 @@ void init_sensors(void)
     sensor_readings.ee895.pressure = .0f;
     sensor_readings.ee895.temperature = .0f;
     sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor_readings.ee895.meas_state = EE895_MEAS_FINISHED;
 
     sensor_readings.cdm7162.co2 = 0;
     sensor_readings.cdm7162.state = ERROR_SENSOR_NOT_INITIALIZED;
@@ -340,20 +346,42 @@ void init_sensor_i2c(void)
     i2c_baud = i2c_init(I2C_DEFAULT, I2C_BAUDRATE); // Initialize I2C
 }
 
-bool read_sensors(repeating_timer_t *rt)
+void read_sensors_start()
+{
+    if (enable_sensor_irq) // Measurement initialization
+    {
+        sensor_readings.ee895.meas_state = EE895_MEAS_START; // Start measurement .. ToDo: add more sensors
+
+        sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement in sensor_read_interval_ms time
+        sensor_process_data_start = true; // Enable reading from the sensor
+    }
+    else 
+    {
+        sensor_start_measurement_time = make_timeout_time_ms(100); // if cannot process - check after 100 ms
+    }
+}
+
+void read_sensors()
 {
     int32_t ret;
-    // if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED)
-    // {
-    //     sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, 
-    //                                                 &sensor_readings.ee895.temperature, 
-    //                                                 &sensor_readings.ee895.pressure); // Read EE895 values
-    // }
-    // else
-    // {
-    //     if ((ret = ee895_init()) != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-    //     else sensor_readings.ee895.state = ERROR_NO_MEAS;
-    // }
+    sensor_process_data_start = false; // Disable reading start condition
+
+    if (sensor_readings.ee895.meas_state) // If in measurement cycle EE895
+    {
+        if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+        {
+            ee895_get_value(&sensor_process_data_time, &enable_sensor_irq, &sensor_readings.ee895); // Read EE895 values
+        }
+        else // Try initializing the sensor
+        {
+            if ((ret = ee895_init()) != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
+            else sensor_readings.ee895.state = ERROR_NO_MEAS;
+        }
+    }
+    else if (false) // If in measurement cycle _____: ToDo
+    {
+
+    }
 
     // if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED)
     // {
@@ -365,16 +393,16 @@ bool read_sensors(repeating_timer_t *rt)
     //     else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
     // }
 
-    if (sensor_readings.sunrise.state != ERROR_SENSOR_INIT_FAILED)
-    {
-        sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
-                                                        &sensor_readings.sunrise.temperature); // Read SUNRISE values
-    }
-    else
-    {
-        if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNRISE sensor
-        else sensor_readings.sunrise.state = ERROR_NO_MEAS;
-    }
+    // if (sensor_readings.sunrise.state != ERROR_SENSOR_INIT_FAILED)
+    // {
+    //     sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
+    //                                                     &sensor_readings.sunrise.temperature); // Read SUNRISE values
+    // }
+    // else
+    // {
+    //     if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNRISE sensor
+    //     else sensor_readings.sunrise.state = ERROR_NO_MEAS;
+    // }
     
     // if (sensor_readings.sunlight.state != ERROR_SENSOR_INIT_FAILED)
     // {
@@ -387,8 +415,8 @@ bool read_sensors(repeating_timer_t *rt)
     //     else sensor_readings.sunlight.state = ERROR_NO_MEAS;
     // }
 
-    update_display_buffer = true;
-    return true;
+    update_display_buffer = true; // Update display
+    return;
 }
 
 void write_display_sensor(uint8_t* sensor_name, int state, 
@@ -399,24 +427,29 @@ void write_display_sensor(uint8_t* sensor_name, int state,
     point_t position;
     position.x = 0;
     position.y = 1;
-    gfx_pack_write_text(&position, sensor_name);
+    gfx_pack_write_text(&position, sensor_name); // Write sensor name
+    
     position.x = 0;
     position.y = 2;
-    if (state != 0)
+
+    if (state != 0) // If sensor in invalid state
     {
         uint8_t buf[6];
-        memset(buf, 0x00, 6);
+        
         snprintf(buf, 6, "E%i", state);
-        gfx_pack_write_text(&position, buf);
+        gfx_pack_write_text(&position, buf); // Write error code (sensor state)
+        position.x = 0;
+        position.y = 3;
     }
     else
     {
         uint8_t buf[16];
         memset(buf, 0x00, 16);
+
         if (co2)
         {
             snprintf(buf, 16, "CO2: %.0f ppm", co2_value);
-            gfx_pack_write_text(&position, buf);
+            gfx_pack_write_text(&position, buf); // Write co2 concentration
             position.x = 0;
             position.y = 3;
             memset(buf, 0x00, 16);
@@ -424,7 +457,7 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         if (temp)
         {
             snprintf(buf, 16, "T: %4.2f |C", temp_value); // C char does not support ° symbol
-            gfx_pack_write_text(&position, buf);
+            gfx_pack_write_text(&position, buf); // Write temperature
             position.x = 0;
             position.y = 4;
             memset(buf, 0x00, 16);
@@ -433,7 +466,7 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         if (pressure)
         {
             snprintf(buf, 16, "p: %4.1f hPa", pressure_value);
-            gfx_pack_write_text(&position, buf);
+            gfx_pack_write_text(&position, buf); // Write pressure
             position.x = 0;
             position.y = 5;
             memset(buf, 0x00, 16);
