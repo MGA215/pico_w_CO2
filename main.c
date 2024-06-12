@@ -7,7 +7,7 @@
 #define I2C_SCL 5
 #define I2C_SDA 4
 #define I2C_DEFAULT i2c0
-#define I2C_BAUDRATE 10000
+#define I2C_BAUDRATE 40000
 
 #define CONNECTED_SENSORS 4
 
@@ -85,17 +85,21 @@ int init(void)
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
 
-    if ((ret = ee895_init()) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-    else sensor_readings.ee895.state = ERROR_NO_MEAS;
+    // ret = ee895_init(); // Initialize EE895 sensor
+    // if (ret == ERROR_UNKNOWN_SENSOR) sensor_readings.ee895.state = ret;
+    // else if (ret != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED;
+    // else sensor_readings.ee895.state = ERROR_NO_MEAS;
     
-    if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-    else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
+    // if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
+    // else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
 
-    if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNRISE sensor
+    ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false); // Initialize SUNRISE sensor
+    if (ret == ERROR_UNKNOWN_SENSOR) sensor_readings.sunrise.state = ret;
+    else if (ret != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED;
     else sensor_readings.sunrise.state = ERROR_NO_MEAS;
 
-    if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNLIGHT sensor
-    else sensor_readings.sunlight.state = ERROR_NO_MEAS;
+    // if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;  // Initialize SUNLIGHT sensor
+    // else sensor_readings.sunlight.state = ERROR_NO_MEAS;
     
     update_display_buffer = true;
 
@@ -339,27 +343,27 @@ void init_sensor_i2c(void)
 bool read_sensors(repeating_timer_t *rt)
 {
     int32_t ret;
-    if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED)
-    {
-        sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, 
-                                                    &sensor_readings.ee895.temperature, 
-                                                    &sensor_readings.ee895.pressure); // Read EE895 values
-    }
-    else
-    {
-        if ((ret = ee895_init()) != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-        else sensor_readings.ee895.state = ERROR_NO_MEAS;
-    }
+    // if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED)
+    // {
+    //     sensor_readings.ee895.state = ee895_get_value(&sensor_readings.ee895.co2, 
+    //                                                 &sensor_readings.ee895.temperature, 
+    //                                                 &sensor_readings.ee895.pressure); // Read EE895 values
+    // }
+    // else
+    // {
+    //     if ((ret = ee895_init()) != 0) sensor_readings.ee895.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
+    //     else sensor_readings.ee895.state = ERROR_NO_MEAS;
+    // }
 
-    if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED)
-    {
-        sensor_readings.cdm7162.state = cdm7162_get_value(&sensor_readings.cdm7162.co2); // Read CDM7162 values
-    }
-    else
-    {
-        if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-        else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
-    }
+    // if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED)
+    // {
+    //     sensor_readings.cdm7162.state = cdm7162_get_value(&sensor_readings.cdm7162.co2); // Read CDM7162 values
+    // }
+    // else
+    // {
+    //     if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
+    //     else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
+    // }
 
     if (sensor_readings.sunrise.state != ERROR_SENSOR_INIT_FAILED)
     {
@@ -372,16 +376,16 @@ bool read_sensors(repeating_timer_t *rt)
         else sensor_readings.sunrise.state = ERROR_NO_MEAS;
     }
     
-    if (sensor_readings.sunlight.state != ERROR_SENSOR_INIT_FAILED)
-    {
-        sensor_readings.sunlight.state = sunlight_get_value(&sensor_readings.sunlight.co2,
-                                                        &sensor_readings.sunlight.temperature); // Read SUNLIGHT values
-    }
-    else
-    {
-        if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNLIGHT sensor
-        else sensor_readings.sunlight.state = ERROR_NO_MEAS;
-    }
+    // if (sensor_readings.sunlight.state != ERROR_SENSOR_INIT_FAILED)
+    // {
+    //     sensor_readings.sunlight.state = sunlight_get_value(&sensor_readings.sunlight.co2,
+    //                                                     &sensor_readings.sunlight.temperature); // Read SUNLIGHT values
+    // }
+    // else
+    // {
+    //     if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNLIGHT sensor
+    //     else sensor_readings.sunlight.state = ERROR_NO_MEAS;
+    // }
 
     update_display_buffer = true;
     return true;

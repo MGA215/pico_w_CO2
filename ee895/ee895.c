@@ -1,4 +1,5 @@
 #include "ee895.h"
+#include <stdio.h>
 
 #define EE895_I2C i2c0
 
@@ -114,7 +115,7 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     uint8_t commandBuffer[2 * EE895_MAX_REG_READ + 8];
 
     commandBuffer[0] = EE895_ADDR; // Slave address
-    commandBuffer[1] = 0x03; // Read multiple holding registers
+    commandBuffer[1] = 0x06; // Write multiple holding registers
     *((uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
     *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
@@ -235,5 +236,10 @@ int32_t ee895_write_reg(uint16_t addr, uint16_t value)
 
 int32_t ee895_init(void)
 {
+    int32_t ret;
+    uint8_t fw_read_name[16];
+    if ((ret = ee895_read_reg(REG_SER_NR, 8, fw_read_name)) != 0) return ret;
+    printf("%s\n", fw_read_name);
+    // if (strcmp(&fw_read_name[2], "EE895") != 0) return ERROR_UNKNOWN_SENSOR;
     return SUCCESS;
 }

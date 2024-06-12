@@ -6,6 +6,7 @@
 #define ERROR_SENSOR_NOT_INITIALIZED 3 // Error sensor is not initialized
 #define ERROR_SENSOR_INIT_FAILED 4 // Error sensor initialization failed
 #define ERROR_NO_MEAS 5 // Error No measurement has been performed yet
+#define ERROR_UNKNOWN_SENSOR 6 // Error Sensor identification failed - unknown sensor
 
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached

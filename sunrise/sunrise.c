@@ -147,7 +147,7 @@ int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
     sr_wake_up();
     if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, &addr, 1, true, 1000)) < 0) return ret;
     
-    busy_wait_us(100);
+    busy_wait_us(1000);
     if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, buf, num_bytes, false, 1000)) < 0) return ret;
     busy_wait_ms(1);
     return SUCCESS;
@@ -165,6 +165,12 @@ int sunrise_reset(void)
 int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samples, uint16_t abc_period, uint16_t abc_target_value, 
     bool nRDY_en, bool abc_en, bool static_iir_en, bool dyn_iir_en, bool pressure_comp, bool invert_nRDY)
 {
+    int32_t ret;
+    uint8_t buf[16];
+    if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret;
+    if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
+    memset(buf, 0x00, 16);
+
     uint8_t command_buffer[11];
     command_buffer[0] = (uint8_t)single_meas_mode;
     *((uint16_t*)&command_buffer[1]) = ntoh16(meas_period);
@@ -174,14 +180,12 @@ int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samp
     command_buffer[8] = 0x00;
     *((uint16_t*)&command_buffer[9]) = ntoh16(abc_target_value);
 
-    uint8_t buf[11];
-
-    int32_t ret;
+    if ((ret = sr_init_meter_control(nRDY_en, abc_en, static_iir_en, dyn_iir_en, pressure_comp, invert_nRDY)) != 0) return ret;
+    
     if ((ret = sunrise_read(REG_MEAS_MODE, buf, 11)) != 0) return ret;
     if (memcmp(buf, command_buffer, 11) == 0) return SUCCESS;
     if ((ret = sunrise_write(REG_MEAS_MODE, command_buffer, 11)) != 0) return ret;
 
-    if ((ret = sr_init_meter_control(nRDY_en, abc_en, static_iir_en, dyn_iir_en, pressure_comp, invert_nRDY)) != 0) return ret;
 
     sunrise_reset();
     return SUCCESS;
