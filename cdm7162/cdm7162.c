@@ -107,40 +107,111 @@ int32_t cdm7162_set_default_atm_pressure(void)
     return cdm7162_set_atm_pressure(1013);
 }
 
-int32_t cdm7162_get_value(uint16_t* co2)
+void cdm7162_get_value(cdm7162_t* cdm7162)
 {
-    int32_t ret, i;
+    int32_t i, ret;
     uint8_t buf[2];
-    i = 0;
-    while (true)
+    switch (cdm7162->meas_state)
     {
-        if ((ret = cdm7162_read(REG_STATUS, &buf[0], 1)) != 0)
+        case CDM7162_MEAS_FINISHED: // Measurement finished
         {
-            *co2 = -1;
-            return ret;
-        }    
-        if ((buf[0] & (0b1 << 7)) == 0) break;
-        if (i > 20)
-        {
-            *co2 = -1;
-            return CDM7162_ERROR_DATA_READY_TIMEOUT;
+            // Power off
+            cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
+            return;
         }
-        busy_wait_ms(25);
-        i++;
+        case CDM7162_MEAS_START: // Measurement started
+        {
+            // Power on
+            cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
+            cdm7162->meas_state = CDM7162_READ_STATUS; // Next step - read status
+            i = 0; // Initialize read status timeout iterator
+            return;
+        }
+        case CDM7162_READ_STATUS:
+        {
+            ret = cdm7162_read(REG_STATUS, &buf[0], 1);
+            if (ret != 0)
+            {
+                cdm7162->co2 = INT16_MAX;
+                cdm7162->state = ret;
+                cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+                return;
+            }    
+            if ((buf[0] & (0b1 << 7)) == 0)
+            {
+                cdm7162->meas_state = CDM7162_READ_VALUE;
+                return;
+            }
+            if (i++ > 20)
+            {
+                cdm7162->co2 = INT16_MAX;
+                cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+                cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT;
+                return;
+            }
+            cdm7162->wake_time = make_timeout_time_ms(25);
+            cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT;
+            return;
+        }
+        case CDM7162_READ_VALUE:
+        {
+            ret = cdm7162_read(REG_CO2_L, buf, 2);
+            if (ret != 0)
+            {
+                cdm7162->co2 = INT16_MAX;
+                cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+                cdm7162->state = ret;
+                return;
+            }
+            uint16_t val = *((uint16_t*)&buf[0]);
+            if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
+            {
+                cdm7162->co2 = INT16_MAX;
+                cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+                cdm7162->state = CDM7162_ERROR_RANGE;
+                return;
+            }
+            cdm7162->co2 = val;
+            cdm7162->state = SUCCESS;
+            cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+            return;
+        }
     }
-    busy_wait_ms(100);
-    ret = cdm7162_read(REG_CO2_L, buf, 2);
-    if (ret != 0)
-    {
-        *co2 = -1;
-        return ret;
-    }
-    uint16_t val = *((uint16_t*)&buf[0]);
-    if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
-    {
-        *co2 = -1;
-        return CDM7162_ERROR_RANGE;
-    }
-    *co2 = val;
-    return SUCCESS;
+
+
+
+    // int32_t ret, i;
+    // uint8_t buf[2];
+    // i = 0;
+    // while (true)
+    // {
+    //     if ((ret = cdm7162_read(REG_STATUS, &buf[0], 1)) != 0)
+    //     {
+    //         *co2 = -1;
+    //         return ret;
+    //     }    
+    //     if ((buf[0] & (0b1 << 7)) == 0) break;
+    //     if (i > 20)
+    //     {
+    //         *co2 = -1;
+    //         return CDM7162_ERROR_DATA_READY_TIMEOUT;
+    //     }
+    //     busy_wait_ms(25);
+    //     i++;
+    // }
+    // busy_wait_ms(100);
+    // ret = cdm7162_read(REG_CO2_L, buf, 2);
+    // if (ret != 0)
+    // {
+    //     *co2 = -1;
+    //     return ret;
+    // }
+    // uint16_t val = *((uint16_t*)&buf[0]);
+    // if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
+    // {
+    //     *co2 = -1;
+    //     return CDM7162_ERROR_RANGE;
+    // }
+    // *co2 = val;
+    // return SUCCESS;
 }

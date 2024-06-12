@@ -1,5 +1,4 @@
 #include "ee895.h"
-#include <stdio.h>
 
 #define EE895_I2C i2c0
 
@@ -139,107 +138,109 @@ void ee895_get_value(ee895_t* ee895)
     static int32_t i = 0;
     switch(ee895->meas_state)
     {
-        case EE895_MEAS_FINISHED:
+        case EE895_MEAS_FINISHED: // Measurement finished
         {
-            ee895->wake_time = make_timeout_time_ms(INT32_MAX);
+            // Power off
+            ee895->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
-        case EE895_MEAS_START:
+        case EE895_MEAS_START: // Measurement started
         {
             // Power on
-            ee895->wake_time = make_timeout_time_ms(750);
-            ee895->meas_state = EE895_READ_STATUS;
-            i = 0;
+            ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
+            ee895->meas_state = EE895_READ_STATUS; // Next step - read status
+            i = 0; // Initialize read status timeout iterator
             return;
         }
-        case EE895_READ_STATUS:
+        case EE895_READ_STATUS: // Reading status
         {
-            ret = ee895_read(REG_STATUS, 1, tempBuffer);
-            if (ret != 0) 
+            ret = ee895_read(REG_STATUS, 1, tempBuffer); // Reading status register
+            if (ret != 0) // On invalid read
             {
-                ee895->co2 = NAN;
+                ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = ret;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            if (tempBuffer[1] & 0x01)
+            if (tempBuffer[1] & 0x01) // On data ready
             {
-                ee895->meas_state = EE895_READ_VALUE;
+                ee895->meas_state = EE895_READ_VALUE; // Next step - read values
                 return;
             }
-            if (i++ > 20)
+            if (i++ > 20) // On timeout
             {
-                ee895->co2 = NAN;
+                ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
-                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT;
-                ee895->meas_state = EE895_MEAS_FINISHED;
+                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
                 return;
             }
-            ee895->wake_time = make_timeout_time_ms(25);
-            ee895->state = EE895_ERROR_DATA_READY_TIMEOUT;
+            ee895->wake_time = make_timeout_time_ms(25); // Check status after 25 ms
+            ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set state
             return;
         }
-        case EE895_READ_VALUE:
+        case EE895_READ_VALUE: // Reading values
         {
-            ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer);
-            if (ret != 0) 
+            ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
+            if (ret != 0) // On invalid read
             {
-                ee895->temperature = NAN;
-                ee895->pressure = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = ret;
-                return;
-            }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-            float val = byte2float(*((uint32_t*)&tempBuffer[0]));
-            if (val < T_MIN_RANGE || val > T_MAX_RANGE)
-            {
-                ee895->temperature = NAN;
+                ee895->temperature = NAN; // Set values to NaN
                 ee895->pressure = NAN;
                 ee895->co2 = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = EE895_ERROR_RANGE;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Measurement finished
+                ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            ee895->temperature = val;
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32
+            float val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            if (val < T_MIN_RANGE || val > T_MAX_RANGE) // Check float range
+            {
+                ee895->temperature = NAN; // Set values to NaN
+                ee895->pressure = NAN;
+                ee895->co2 = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                ee895->state = EE895_ERROR_RANGE; // Set state
+                return;
+            }
+            ee895->temperature = val; // Assign value
 
-            ret = ee895_read(REG_CO2_RAW_FLOAT, 2, tempBuffer);
-            if (ret != 0) 
+            ret = ee895_read(REG_CO2_RAW_FLOAT, 2, tempBuffer); // Read co2
+            if (ret != 0) // On invalid read
             {
-                ee895->co2 = NAN;
+                ee895->co2 = NAN; // Set values to NaN
                 ee895->pressure = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = ret;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Measurement finished
+                ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-            val = byte2float(*((uint32_t*)&tempBuffer[0]));
-            if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
+            val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // Check float range
             {
-                ee895->co2 = NAN;
+                ee895->co2 = NAN; // Set values to NaN
                 ee895->pressure = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = EE895_ERROR_RANGE;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                ee895->state = EE895_ERROR_RANGE; // Set state
                 return;
             }
-            ee895->co2 = val;
+            ee895->co2 = val; // Assign value
 
-            ret = ee895_read(REG_P_MBAR_FLOAT, 2, tempBuffer);
-            if (ret != 0) 
+            ret = ee895_read(REG_P_MBAR_FLOAT, 2, tempBuffer); // Read pressure
+            if (ret != 0) // On invalid read
             {
-                ee895->pressure = NAN;
-                ee895->meas_state = EE895_MEAS_FINISHED;
-                ee895->state = ret;
+                ee895->pressure = NAN; // Set value to NaN
+                ee895->meas_state = EE895_MEAS_FINISHED; // Measurement finished
+                ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
-            val = byte2float(*((uint32_t*)&tempBuffer[0]));
-            ee895->pressure = val;
-            ee895->meas_state = EE895_MEAS_FINISHED;
-            ee895->state = SUCCESS;
+            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
+            val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            ee895->pressure = val; // Assign value
+            ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+            ee895->state = SUCCESS; // Set state
             return;
         }
     }

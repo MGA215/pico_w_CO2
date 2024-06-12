@@ -2,6 +2,7 @@
 #include "hardware/i2c.h"
 #include "error_codes.h"
 #include "common/functions.h"
+#include "math.h"
 
 typedef enum cdm7162_read_value_state
 {
@@ -9,13 +10,14 @@ typedef enum cdm7162_read_value_state
     CDM7162_MEAS_START = 1,
     CDM7162_READ_STATUS = 2,
     CDM7162_READ_VALUE = 3,
-    CDM7162_RESET = 4
 } cdm7162_meas_state_e;
 
 typedef struct cdm7162
 {
     uint16_t co2;
     int state;
+    cdm7162_meas_state_e meas_state;
+    absolute_time_t wake_time;
 } cdm7162_t;
 
 
@@ -81,4 +83,4 @@ int32_t cdm7162_set_default_atm_pressure(void);
  * @param co2 CO2 concentration in ppm
  * @return int32_t Return code
  */
-int32_t cdm7162_get_value(uint16_t* co2);
+void cdm7162_get_value(cdm7162_t* cdm7162);
