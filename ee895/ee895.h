@@ -20,6 +20,7 @@ typedef struct ee895
     float pressure;
     int state;
     ee895_meas_state_e meas_state;
+    absolute_time_t wake_time;
 } ee895_t;
 
 /**
@@ -49,7 +50,7 @@ int32_t ee895_write(uint16_t addr, uint16_t value);
  * @param pressure Pressure in hPa (mbar)
  * @return int32_t Return code
  */
-void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_t* ee895);
+void ee895_get_value(ee895_t* ee895);
 
 /**
  * @brief Reads number of registers from the EE895 with timing

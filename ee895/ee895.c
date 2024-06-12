@@ -132,22 +132,24 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     return 0;
 }
 
-void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_t* ee895)
+void ee895_get_value(ee895_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
     int32_t ret;
     static int32_t i = 0;
     switch(ee895->meas_state)
     {
-        case EE895_MEAS_FINISHED: ee895->state = SUCCESS;
+        case EE895_MEAS_FINISHED:
+        {
+            ee895->wake_time = make_timeout_time_ms(INT32_MAX);
+            return;
+        }
         case EE895_MEAS_START:
         {
             // Power on
-            *wake_time = make_timeout_time_ms(750);
+            ee895->wake_time = make_timeout_time_ms(750);
             ee895->meas_state = EE895_READ_STATUS;
             i = 0;
-            *enable_sensor_irq = false;
-            ee895->state = SUCCESS;
             return;
         }
         case EE895_READ_STATUS:
@@ -159,14 +161,12 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
-                *enable_sensor_irq = true;
                 ee895->state = ret;
                 return;
             }
             if (tempBuffer[1] & 0x01)
             {
                 ee895->meas_state = EE895_READ_VALUE;
-                ee895->state = SUCCESS;
                 return;
             }
             if (i++ > 20)
@@ -176,11 +176,10 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->pressure = NAN;
                 ee895->state = EE895_ERROR_DATA_READY_TIMEOUT;
                 ee895->meas_state = EE895_MEAS_FINISHED;
-                *enable_sensor_irq = true;
                 return;
             }
-            *wake_time = make_timeout_time_ms(25);
-            ee895->state = SUCCESS;
+            ee895->wake_time = make_timeout_time_ms(25);
+            ee895->state = EE895_ERROR_DATA_READY_TIMEOUT;
             return;
         }
         case EE895_READ_VALUE:
@@ -192,7 +191,6 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->pressure = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
                 ee895->state = ret;
-                *enable_sensor_irq = true;
                 return;
             }
             *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
@@ -204,7 +202,6 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->co2 = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
                 ee895->state = EE895_ERROR_RANGE;
-                *enable_sensor_irq = true;
                 return;
             }
             ee895->temperature = val;
@@ -216,7 +213,6 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->pressure = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
                 ee895->state = ret;
-                *enable_sensor_irq = true;
                 return;
             }
             *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
@@ -227,7 +223,6 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->pressure = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
                 ee895->state = EE895_ERROR_RANGE;
-                *enable_sensor_irq = true;
                 return;
             }
             ee895->co2 = val;
@@ -238,15 +233,12 @@ void ee895_get_value(absolute_time_t* wake_time, bool* enable_sensor_irq, ee895_
                 ee895->pressure = NAN;
                 ee895->meas_state = EE895_MEAS_FINISHED;
                 ee895->state = ret;
-                *enable_sensor_irq = true;
                 return;
             }
             *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0]));
             val = byte2float(*((uint32_t*)&tempBuffer[0]));
             ee895->pressure = val;
             ee895->meas_state = EE895_MEAS_FINISHED;
-            *enable_sensor_irq = true;
-            *wake_time = make_timeout_time_ms(INT32_MAX);
             ee895->state = SUCCESS;
             return;
         }

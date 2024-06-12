@@ -65,7 +65,7 @@ int32_t cdm7162_init(bool pressure_corr)
 
     if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret;
     busy_wait_ms(100);
-    if (((buf & 0b100) >> 2) == 1) return SUCCESS;
+    if (((buf & 0b100) >> 2) == pressure_corr) return SUCCESS;
 
     uint8_t func_settings = 0;
     if (pressure_corr) func_settings |= (0b1 << 2);

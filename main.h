@@ -123,4 +123,6 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         bool pressure, float pressure_value);
 
 
-void read_sensors_irq();
+void sensor_timer_vector_update(void);
+
+void read_sensors_start();
