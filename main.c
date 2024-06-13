@@ -94,10 +94,7 @@ int init(void)
     init_sensor_i2c(); // Initialize I2C for sensor communication
 
     init_sensors(); // initialize sensors
-    
-    // ret = cdm7162_init(false);
-    // sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Initialize CDM7162 sensor
-    
+        
     update_display_buffer = true;
 
     process_update_time = make_timeout_time_ms(display_interval);
@@ -315,25 +312,20 @@ void init_sensors(void)
 {
     int32_t ret;
 
-    sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
-    sensor_readings.cdm7162.state = ERROR_SENSOR_NOT_INITIALIZED;
-    sensor_readings.sunrise.state = ERROR_SENSOR_NOT_INITIALIZED;
-    sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;
-
     ee895_init_struct(&(sensor_readings.ee895));
-    ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
-    sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    sensor_readings.cdm7162.co2 = 0;
-    sensor_readings.cdm7162.state = ERROR_SENSOR_NOT_INITIALIZED;
-    sensor_readings.cdm7162.meas_state = (cdm7162_meas_state_e)0;
-    sensor_readings.cdm7162.wake_time = make_timeout_time_ms(INT32_MAX);
-
+    cdm7162_init_struct(&(sensor_readings.cdm7162));
     sunrise_init_struct(&(sensor_readings.sunrise));
+    sunlight_init_struct(&(sensor_readings.sunlight));
+
+    // ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
+    // sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+
+    ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
+    sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+
     // ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
     // sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
-    sunlight_init_struct(&(sensor_readings.sunlight));
     // ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
     // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 }
@@ -394,36 +386,35 @@ void read_sensors()
 {
     int32_t ret;
 
-    if (sensor_timer_vector & (0b1 << 0)) // If EE895 should react to a timer reached
-    {
-        sensor_timer_vector &= ~(0b1 << 0); // clear ee895 timer reached bit
-        if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
-        {
-            ee895_get_value(&sensor_readings.ee895); // Read EE895 values
-        }
-        else // Try initializing the sensor
-        {
-            ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
-            sensor_readings.ee895.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-        }
-        if (sensor_readings.ee895.meas_state == EE895_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 0); // If measurement completed clear sensor measurement bit
-    }
-    // if (sensor_timer_vector & (0b1 << 1)) // If cdm7162 should react to a timer reached
+    // if (sensor_timer_vector & (0b1 << 0)) // If EE895 should react to a timer reached
     // {
-    //     sensor_timer_vector &= ~(0b1 << 1); // clear cdm7162 timer reached bit
-    //     if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+    //     sensor_timer_vector &= ~(0b1 << 0); // clear ee895 timer reached bit
+    //     if (sensor_readings.ee895.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
     //     {
-    //         cdm7162_get_value(&sensor_readings.cdm7162); // Read CDM7162 values
+    //         ee895_get_value(&sensor_readings.ee895); // Read EE895 values
     //     }
     //     else // Try initializing the sensor
     //     {
-    //         if ((ret = cdm7162_init(false)) != 0) sensor_readings.cdm7162.state = ERROR_SENSOR_INIT_FAILED; // Initialize CDM7162 sensor
-    //         else sensor_readings.cdm7162.state = ERROR_NO_MEAS;
-    //         sensor_readings.cdm7162.meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
-    //         sensor_readings.cdm7162.wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer - wait for next measurement cycle
+    //         ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
+    //         sensor_readings.ee895.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     //     }
-    //     if (sensor_readings.cdm7162.meas_state == CDM7162_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 1); // If measurement completed clear sensor measurement bit
+    //     if (sensor_readings.ee895.meas_state == EE895_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 0); // If measurement completed clear sensor measurement bit
     // }
+
+    if (sensor_timer_vector & (0b1 << 1)) // If cdm7162 should react to a timer reached
+    {
+        sensor_timer_vector &= ~(0b1 << 1); // clear cdm7162 timer reached bit
+        if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+        {
+            cdm7162_get_value(&sensor_readings.cdm7162); // Read CDM7162 values
+        }
+        else // Try initializing the sensor
+        {
+            ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
+            sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+        }
+        if (sensor_readings.cdm7162.meas_state == CDM7162_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 1); // If measurement completed clear sensor measurement bit
+    }
 
     // if (sensor_timer_vector & (0b1 << 2)) // If SUNRISE should react to a timer reached
     // {
@@ -456,8 +447,8 @@ void read_sensors()
     // }
     if (true) // Must set corresponding bit for the currently active sensor
     {
-        sensor_measurement_vector &= (0b1 << 0);
-        sensor_timer_vector &= (0b1 << 0);
+        sensor_measurement_vector &= (0b10 << 0);
+        sensor_timer_vector &= (0b10 << 0);
     }
 
     update_display_buffer = true; // Update display

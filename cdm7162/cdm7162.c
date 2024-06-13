@@ -22,6 +22,13 @@
 #define CO2_MIN_RANGE 0
 #define CO2_MAX_RANGE 10000
 
+/**
+ * @brief Sets device operation mode to power down
+ * 
+ * @return int32_t Return code
+ */
+int32_t cdm7162_deinit(void); // DO NOT USE
+
 int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
     int32_t ret;
@@ -51,12 +58,13 @@ int32_t cdm7162_reset(void)
     return SUCCESS;
 }
 
-int32_t cdm7162_init(bool pressure_corr)
+int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
 {
     int32_t ret;
     uint8_t buf;
+    cdm7162_init_struct(cdm7162);
     if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) return ret;
-    busy_wait_ms(100);
+    busy_wait_ms(10);
     if (buf != 0x06)
     {
         if ((ret = cdm7162_write(REG_OP_MODE, 0x06)) != 0) return ret;
@@ -64,13 +72,35 @@ int32_t cdm7162_init(bool pressure_corr)
     }
 
     if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret;
-    busy_wait_ms(100);
-    if (((buf & 0b100) >> 2) == pressure_corr) return SUCCESS;
+    busy_wait_ms(10);
+
+    if (((buf & 0b100) >> 2) == (bool)(config->pressure_corr) &&
+        ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
+        ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
+        ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
+        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) return SUCCESS;
 
     uint8_t func_settings = 0;
-    if (pressure_corr) func_settings |= (0b1 << 2);
+    if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
+    if (config->pressure_corr) func_settings |= (0b1 << 2);
+    if (config->PWM_range_high) func_settings |= (0b1 << 3);
+    if (config->long_term_adj_2) func_settings |= (0b1 << 4);
+    if (config->long_term_adj_1) func_settings |= (0b1 << 5);
     if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) return ret;
     busy_wait_ms(100);
+    return SUCCESS;
+}
+
+int32_t cdm7162_read_config(cdm7162_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf;
+    if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret;
+    config->enable_PWM_pin = buf & (0b1 << 0);
+    config->pressure_corr = buf & (0b1 << 2);
+    config->PWM_range_high = buf & (0b1 << 3);
+    config->long_term_adj_2 = buf & (0b1 << 4);
+    config->long_term_adj_1 = buf & (0b1 << 5);
     return SUCCESS;
 }
 
@@ -176,41 +206,12 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
             return;
         }
     }
+}
 
-
-
-    // int32_t ret, i;
-    // uint8_t buf[2];
-    // i = 0;
-    // while (true)
-    // {
-    //     if ((ret = cdm7162_read(REG_STATUS, &buf[0], 1)) != 0)
-    //     {
-    //         *co2 = -1;
-    //         return ret;
-    //     }    
-    //     if ((buf[0] & (0b1 << 7)) == 0) break;
-    //     if (i > 20)
-    //     {
-    //         *co2 = -1;
-    //         return CDM7162_ERROR_DATA_READY_TIMEOUT;
-    //     }
-    //     busy_wait_ms(25);
-    //     i++;
-    // }
-    // busy_wait_ms(100);
-    // ret = cdm7162_read(REG_CO2_L, buf, 2);
-    // if (ret != 0)
-    // {
-    //     *co2 = -1;
-    //     return ret;
-    // }
-    // uint16_t val = *((uint16_t*)&buf[0]);
-    // if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE)
-    // {
-    //     *co2 = -1;
-    //     return CDM7162_ERROR_RANGE;
-    // }
-    // *co2 = val;
-    // return SUCCESS;
+void cdm7162_init_struct(cdm7162_t* cdm7162)
+{
+    cdm7162->co2 = 0;
+    cdm7162->meas_state = CDM7162_MEAS_FINISHED;
+    cdm7162->state = ERROR_SENSOR_NOT_INITIALIZED;
+    cdm7162->wake_time = make_timeout_time_ms(INT32_MAX);
 }

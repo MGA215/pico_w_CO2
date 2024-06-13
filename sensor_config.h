@@ -32,3 +32,11 @@ static ee895_config_t sensor_ee895_config = {
     .meas_period = 15,
     .single_meas_mode = false
 };
+
+static cdm7162_config_t sensor_cdm7162_config = {
+    .enable_PWM_pin = false,
+    .long_term_adj_1 = false,
+    .long_term_adj_2 = false,
+    .pressure_corr = false,
+    .PWM_range_high = false
+};

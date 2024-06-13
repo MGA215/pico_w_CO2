@@ -12,6 +12,15 @@ typedef enum cdm7162_read_value_state
     CDM7162_READ_VALUE = 3
 } cdm7162_meas_state_e;
 
+typedef struct cdm7162_config
+{
+    bool enable_PWM_pin;
+    bool PWM_range_high;
+    bool pressure_corr;
+    bool long_term_adj_1;
+    bool long_term_adj_2;
+} cdm7162_config_t;
+
 typedef struct cdm7162
 {
     uint16_t co2;
@@ -53,14 +62,7 @@ int32_t cdm7162_reset(void);
  * @param pressure_corr if pressure correction should be enabled
  * @return int32_t Return code
  */
-int32_t cdm7162_init(bool pressure_corr);
-
-/**
- * @brief Sets device operation mode to power down
- * 
- * @return int32_t Return code
- */
-int32_t cdm7162_deinit(void);
+int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config);
 
 /**
  * @brief Sets atmospheric pressure for pressure correction
@@ -84,3 +86,19 @@ int32_t cdm7162_set_default_atm_pressure(void);
  * @return int32_t Return code
  */
 void cdm7162_get_value(cdm7162_t* cdm7162);
+
+/**
+ * @brief Initilaizes the CDM7162 sensor structure
+ * 
+ * @param cdm7162 Sensor structure
+ */
+void cdm7162_init_struct(cdm7162_t* cdm7162);
+
+/**
+ * @brief Reads CDM7162 sensor config
+ * 
+ * @param config CDM7162 config structure the read configuration will be saved to
+ * @return int32_t Return code
+ */
+int32_t cdm7162_read_config(cdm7162_config_t* config);
+
