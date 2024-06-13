@@ -167,18 +167,15 @@ int sunrise_reset(void)
 int sunrise_init(sunrise_t* sunrise, sunrise_config_t* config)
 {
     int32_t ret;
+    
+    sunrise_init_struct(sunrise);
+
     uint8_t buf[16];
     if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
     if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
 
     if ((ret = sr_write_config(config)) != 0) return ret;
 
-    sunrise->co2 = 0;
-    sunrise->temperature = 0;
-    sunrise->state = ERROR_SENSOR_NOT_INITIALIZED;
-    sunrise->meas_state = (sunrise_meas_state_e)0;
-    sunrise->wake_time = make_timeout_time_ms(INT32_MAX);
-    memset(sunrise->state_reg, 0x00, 24);
     sunrise->config = config;
 
     sunrise_reset();
@@ -355,7 +352,7 @@ void sunrise_get_value(sunrise_t* sunrise)
                 sunrise->state = ret;
                 return;
             }
-            if (i++ > 32) // ToDo: implement number of samples
+            if (i++ > (sunrise->config->meas_samples))
             {
                 sunrise->meas_state = SUNRISE_MEAS_FINISHED;
                 sunrise->co2 = INT16_MAX;
@@ -410,4 +407,12 @@ void sr_wake_up(void)
     int32_t ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, NULL, 0, false, 100);
 }
 
-
+void sunrise_init_struct(sunrise_t* sunrise)
+{
+    sunrise->co2 = 0;
+    sunrise->temperature = 0;
+    sunrise->state = ERROR_SENSOR_NOT_INITIALIZED;
+    sunrise->meas_state = (sunrise_meas_state_e)0;
+    sunrise->wake_time = make_timeout_time_ms(INT32_MAX);
+    memset(sunrise->state_reg, 0x00, 24);
+}

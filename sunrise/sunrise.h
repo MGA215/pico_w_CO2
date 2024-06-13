@@ -93,8 +93,12 @@ void sunrise_get_value(sunrise_t* sunrise);
  */
 int sunrise_read_config(sunrise_config_t* config);
 
-
-
+/**
+ * @brief Initializes the SUNRISE sensor structure
+ * 
+ * @param sunrise sensor structure
+ */
+void sunrise_init_struct(sunrise_t* sunrise);
 
 
 

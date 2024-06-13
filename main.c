@@ -92,19 +92,14 @@ int init(void)
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
-    
-    init_sensors(); // initialize sensors structure
+
+    init_sensors(); // initialize sensors
 
     // ret = ee895_init(); // Initialize EE895 sensor
     // sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     
     // ret = cdm7162_init(false);
     // sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Initialize CDM7162 sensor
-
-    sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    // ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false);
-    // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     
     update_display_buffer = true;
 
@@ -114,7 +109,6 @@ int init(void)
     sensor_timer_vector = 0; // No sensor individual timer is running
     sensor_measurement_vector = 0; // No sensor is measuring
 
-    //loop_interval = 33; // Setting the loop timer
     sleep_ms(1000); // Init wait
     return SUCCESS;
 }
@@ -189,8 +183,8 @@ void read_inputs(void)
     {
         if ((buttons_prev_state & (0b1 << 0)) == 0) // Button A pressed - single action
         {
-            blight_on = !blight_on; // Turn backlight off
-            gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
+            // blight_on = !blight_on; // Turn backlight off
+            // gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
             buttons_prev_state |= (0b1 << 0);
         }
         // Button A down - repeat action
@@ -322,6 +316,13 @@ void update_display(void)
 
 void init_sensors(void)
 {
+    int32_t ret;
+
+    sensor_readings.ee895.state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor_readings.cdm7162.state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor_readings.sunrise.state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;
+
     sensor_readings.ee895.co2 = .0f;
     sensor_readings.ee895.pressure = .0f;
     sensor_readings.ee895.temperature = .0f;
@@ -334,12 +335,13 @@ void init_sensors(void)
     sensor_readings.cdm7162.meas_state = (cdm7162_meas_state_e)0;
     sensor_readings.cdm7162.wake_time = make_timeout_time_ms(INT32_MAX);
 
-    sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
+    sunrise_init_struct(&(sensor_readings.sunrise));
+    ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
+    sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
-
-    sensor_readings.sunlight.co2 = 0;
-    sensor_readings.sunlight.temperature = .0f;
-    sensor_readings.sunlight.state = ERROR_SENSOR_NOT_INITIALIZED;
+    sunlight_init_struct(&(sensor_readings.sunlight));
+    // ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
+    // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 }
 
 void init_sensor_i2c(void)
@@ -359,11 +361,12 @@ void read_sensors_start()
 {
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
     {
-        // sensor_readings.ee895.meas_state = EE895_MEAS_START; // Start measurement .. ToDo: add more sensors
-        // sensor_readings.cdm7162.meas_state = CDM7162_MEAS_START; // Start CDM7162 measurement
+        sensor_readings.ee895.meas_state = EE895_MEAS_START; // Start measurement .. ToDo: add more sensors
+        sensor_readings.cdm7162.meas_state = CDM7162_MEAS_START; // Start CDM7162 measurement
         sensor_readings.sunrise.meas_state = SUNRISE_MEAS_START; // Start SUNRISE measurement
+        sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
         
-        sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement in sensor_read_interval_ms time
+        sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
         sensor_timer_vector |= ~(0b0);
         sensor_measurement_vector |= ~(0b0);
     }
@@ -386,6 +389,10 @@ void sensor_timer_vector_update(void)
     if (time_reached(sensor_readings.sunrise.wake_time))
     {
         sensor_timer_vector |= (0b1 << 2);
+    }
+    if (time_reached(sensor_readings.sunlight.wake_time))
+    {
+        sensor_timer_vector |= (0b1 << 3);
     }
 }
 
@@ -434,41 +441,30 @@ void read_sensors()
         }
         else // Try initializing the sensor
         {
-            sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
+            ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
             sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-            sensor_readings.sunrise.meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
-            sensor_readings.sunrise.wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer - wait for next measurement cycle
         }
         if (sensor_readings.sunrise.meas_state == SUNRISE_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 2); // If measurement completed clear sensor measurement bit
     }
+    // if (sensor_timer_vector & (0b1 << 3)) // If SUNLIGHT should react to a timer reached
+    // {
+    //     sensor_timer_vector &= ~(0b1 << 3); // clear SUNLIGHT timer reached bit
+    //     if (sensor_readings.sunlight.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+    //     {
+    //         sunlight_get_value(&sensor_readings.sunlight); // Read SUNLIGHT values
+    //     }
+    //     else // Try initializing the sensor
+    //     {
+    //         ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
+    //         sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    //     }
+    //     if (sensor_readings.sunlight.meas_state == SUNLIGHT_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 3); // If measurement completed clear sensor measurement bit
+    // }
     if (true)
     {
         sensor_measurement_vector &= (0b100 << 0);
         sensor_timer_vector &= (0b100 << 0);
     }
-
-
-    // if (sensor_readings.sunrise.state != ERROR_SENSOR_INIT_FAILED)
-    // {
-    //     sensor_readings.sunrise.state = sunrise_get_value(&sensor_readings.sunrise.co2,
-    //                                                     &sensor_readings.sunrise.temperature); // Read SUNRISE values
-    // }
-    // else
-    // {
-    //     if ((ret = sunrise_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunrise.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNRISE sensor
-    //     else sensor_readings.sunrise.state = ERROR_NO_MEAS;
-    // }
-    
-    // if (sensor_readings.sunlight.state != ERROR_SENSOR_INIT_FAILED)
-    // {
-    //     sensor_readings.sunlight.state = sunlight_get_value(&sensor_readings.sunlight.co2,
-    //                                                     &sensor_readings.sunlight.temperature); // Read SUNLIGHT values
-    // }
-    // else
-    // {
-    //     if ((ret = sunlight_init(false, 14, 8, 0, 400, false, false, true, true, false, false)) != 0) sensor_readings.sunlight.state = ERROR_SENSOR_INIT_FAILED; // Initialize SUNLIGHT sensor
-    //     else sensor_readings.sunlight.state = ERROR_NO_MEAS;
-    // }
 
     update_display_buffer = true; // Update display
     return;

@@ -64,4 +64,4 @@
 #define SUNLIGHT_ERROR_ABNORMAL_SIGNAL_LEVEL -316 // Error SUNLIGHT - invalid measurement sample detected
 #define SUNLIGHT_ERROR_SENSOR_GENERAL -317 // Error SUNLIGHT - general sensor error
 #define SUNLIGHT_ERROR_WRONG_STATE -318 // Error SUNLIGHT - invalid buffer for reading/writing current state in single meas mode
-#define SUNLIGHT_ERROR_NO_SINGLE_MEAS_MODE -319 // Error SUNLIGHT - sensor is not in a single measurement mode
+#define SUNLIGHT_ERROR_WRONG_MODE -319 // Error SUNLIGHT - sensor is in a wrong mode

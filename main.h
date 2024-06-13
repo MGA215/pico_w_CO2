@@ -88,7 +88,7 @@ void update();
 //bool update(repeating_timer_t* rt);
 
 /**
- * @brief Initializes the sensors structure
+ * @brief Initializes sensors
  * 
  */
 void init_sensors(void);
