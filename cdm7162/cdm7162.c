@@ -150,7 +150,6 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
                 return;
             }
             cdm7162->wake_time = make_timeout_time_ms(25);
-            cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT;
             return;
         }
         case CDM7162_READ_VALUE:

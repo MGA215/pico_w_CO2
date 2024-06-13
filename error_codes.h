@@ -47,7 +47,7 @@
 #define SUNRISE_ERROR_ABNORMAL_SIGNAL_LEVEL -316 // Error SUNRISE - invalid measurement sample detected
 #define SUNRISE_ERROR_SENSOR_GENERAL -317 // Error SUNRISE - general sensor error
 #define SUNRISE_ERROR_WRONG_STATE -318 // Error SUNRISE - invalid buffer for reading/writing current state in single meas mode
-#define SUNRISE_ERROR_NO_SINGLE_MEAS_MODE -319 // Error SUNRISE - sensor is not in a single measurement mode
+#define SUNRISE_ERROR_WRONG_MODE -319 // Error SUNRISE - sensor is in a wrong mode
 
 // SUNLIGHT Errors
 #define SUNLIGHT_ERROR_WRITE_RESP -304 // Error SUNLIGHT - write response is not valid

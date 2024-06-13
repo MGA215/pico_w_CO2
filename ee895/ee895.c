@@ -179,7 +179,6 @@ void ee895_get_value(ee895_t* ee895)
                 return;
             }
             ee895->wake_time = make_timeout_time_ms(25); // Check status after 25 ms
-            ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set state
             return;
         }
         case EE895_READ_VALUE: // Reading values
@@ -279,9 +278,8 @@ int32_t ee895_write_reg(uint16_t addr, uint16_t value)
 int32_t ee895_init(void)
 {
     int32_t ret;
-    // uint8_t fw_read_name[16];
-    // if ((ret = ee895_read_reg(REG_SER_NR, 8, fw_read_name)) != 0) return ret;
-    // printf("%s\n", fw_read_name);
-    // if (strcmp(&fw_read_name[2], "EE895") != 0) return ERROR_UNKNOWN_SENSOR;
+    uint8_t fw_read_name[16];
+    if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) return ret;
+    if (strcmp(fw_read_name, "EE895") != 0) return ERROR_UNKNOWN_SENSOR;
     return SUCCESS;
 }

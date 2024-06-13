@@ -9,7 +9,7 @@ typedef enum cdm7162_read_value_state
     CDM7162_MEAS_FINISHED = 0,
     CDM7162_MEAS_START = 1,
     CDM7162_READ_STATUS = 2,
-    CDM7162_READ_VALUE = 3,
+    CDM7162_READ_VALUE = 3
 } cdm7162_meas_state_e;
 
 typedef struct cdm7162

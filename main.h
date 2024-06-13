@@ -14,6 +14,8 @@
 #include "sunrise/sunrise.h"
 #include "sunlight/sunlight.h"
 
+#include "sensor_config.h"
+
 typedef struct sensors
 {
     ee895_t ee895;

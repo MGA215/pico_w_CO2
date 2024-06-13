@@ -3,12 +3,42 @@
 #include "string.h"
 #include "../error_codes.h"
 #include "../common/functions.h"
+#include "math.h"
+
+typedef enum sunrise_read_value_state
+{
+    SUNRISE_MEAS_FINISHED = 0,
+    SUNRISE_MEAS_START = 1,
+    SUNRISE_READ_MODE = 2,
+    SUNRISE_WRITE_MEAS_CMD = 3,
+    SUNRISE_READ_VALUE = 4,
+    SUNRISE_READ_STATUS = 5
+} sunrise_meas_state_e;
+
+typedef struct sunrise_config
+{
+    bool single_meas_mode;
+    uint16_t meas_period;
+    uint16_t meas_samples;
+    uint16_t abc_period;
+    uint16_t abc_target_value;
+    bool enable_nRDY;
+    bool enable_ABC;
+    bool enable_static_IIR;
+    bool enable_dynamic_IIR;
+    bool enable_pressure_comp;
+    bool invert_nRDY;
+} sunrise_config_t;
 
 typedef struct sunrise
 {
     float temperature;
-    int co2;
+    int16_t co2;
     int state;
+    sunrise_meas_state_e meas_state;
+    absolute_time_t wake_time;
+    uint8_t state_reg[24];
+    sunrise_config_t* config;
 } sunrise_t;
 
 
@@ -42,43 +72,26 @@ int sunrise_reset(void);
 /**
  * @brief Initializes SUNRISE sensor
  * 
- * @param single_meas_mode if single measurement mode should be enabled
- * @param meas_period period of continuous measurement
- * @param meas_samples number of samples per measurement
- * @param abc_period period of abc calibration - set to 0 to disable abc calibration
- * @param abc_target_value target value of the abc calibration
- * @param nRDY_en enable nRDY pin (default enabled)
- * @param abc_en enable ABC calibration (default enabled)
- * @param static_iir_en enable static IIR filter (default enabled)
- * @param dyn_iir_en enable dynamic IIR filter (default enabled)
- * @param pressure_comp enable pressure compensation (default disabled)
- * @param invert_nRDY invert nRDY pin - high during measurement (default disabled)
+ * @param sunrise Output SUNRISE sensor structure
+ * @param config Configuration of the SUNRISE sensor to be written
  * @return int Return code
  */
-int sunrise_init(bool single_meas_mode, uint16_t meas_period, uint16_t meas_samples, uint16_t abc_period, uint16_t abc_target_value, 
-    bool nRDY_en, bool abc_en, bool static_iir_en, bool dyn_iir_en, bool pressure_comp, bool invert_nRDY);
+int sunrise_init(sunrise_t* sunrise, sunrise_config_t* config);
 
 /**
- * @brief Reads values from the sensor
+ * @brief Reads measured values from the sensor
  * 
- * @param co2 CO2 concentration
- * @param temperature Temperature of the chip
- * @return int Return code
+ * @param sunrise SUNRISE sensor structure
  */
-int sunrise_get_value(int* co2, float* temperature);
+void sunrise_get_value(sunrise_t* sunrise);
 
 /**
- * @brief Performs single measurement (cannot use b/c EN pin is not accessible)
+ * @brief Reads SUNRISE sensor configuration
  * 
- * @param co2 CO2 concentration
- * @param temperature Temperature of the chip
- * @param state_reg Previous state of the sensor, outputs new state
- * @param state_reg_len_bytes Length of the state buffer - must be 24 bytes
- * @param no_state if no previous state available
+ * @param config SUNRISE config structure the read configuration will be saved to
  * @return int Return code
  */
-int sunrise_single_meas(int* co2, float* temperature, uint8_t* state_reg, uint8_t state_reg_len_bytes, bool no_state);
-
+int sunrise_read_config(sunrise_config_t* config);
 
 
 
