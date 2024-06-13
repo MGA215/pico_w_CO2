@@ -25,3 +25,10 @@ static sunlight_config_t sensor_sunlight_config = {
     .meas_samples = 8,
     .single_meas_mode = false
 };
+
+static ee895_config_t sensor_ee895_config = {
+    .offset = 0,
+    .filter_coeff = 4,
+    .meas_period = 15,
+    .single_meas_mode = false
+};

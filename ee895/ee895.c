@@ -1,4 +1,5 @@
 #include "ee895.h"
+#include <stdio.h>
 
 #define EE895_I2C i2c0
 
@@ -58,6 +59,14 @@
  * @return uint16_t CRC value
  */
 uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len);
+
+/**
+ * @brief Writes configuration to the sensor
+ * 
+ * @param config Configuration to write
+ * @return int32_t Return code
+ */
+int32_t ee_write_config(ee895_config_t* config);
 
 uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len)
 {
@@ -120,12 +129,12 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
     if ((ret = i2c_write_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false, 1000)) < 0) return ret; // Write to slave
-    busy_wait_ms(2);
+    busy_wait_ms(3);
 
     memset(&commandBuffer[1], 0x00, 7);
-    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 6, false, 1000)) < 0) return ret; // Read from slave
+    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false, 1000)) < 0) return ret; // Read from slave
 
-    if (commandBuffer[1] != 0x06 || (*((uint16_t*)&commandBuffer[4])) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
+    if (commandBuffer[1] != 0x06 || (ntoh16(*((uint16_t*)&commandBuffer[4]))) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
     if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
 
     return 0;
@@ -148,8 +157,54 @@ void ee895_get_value(ee895_t* ee895)
         {
             // Power on
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
-            ee895->meas_state = EE895_READ_STATUS; // Next step - read status
+            if (ee895->config->single_meas_mode) 
+            {
+                ee895->meas_state = EE895_READ_TRIGGER_RDY; // If single measurement mode - read trigger ready
+            }
+            else ee895->meas_state = EE895_READ_STATUS; // Next step - read status
             i = 0; // Initialize read status timeout iterator
+            return;
+        }
+        case EE895_READ_TRIGGER_RDY:
+        {
+            ret = ee895_read(REG_STATUS, 1, tempBuffer); // Read status register
+            if (ret != 0) // On invalid read
+            {
+                ee895->co2 = NAN; // Set values to NaN
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                ee895->state = ret; // Set sensor state to return value
+                return;
+            }
+            if (tempBuffer[1] & 0x02) // On trigger ready
+            {
+                ret = ee895_write(REG_MEAS_TRIGGER, 1); // Send trigger
+                printf("Sending trigger...\n");
+                if (ret != 0) // On invalid write
+                {
+                    ee895->co2 = NAN; // Set values to NaN
+                    ee895->temperature = NAN;
+                    ee895->pressure = NAN;
+                    ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                    ee895->state = ret; // Set sensor state to return value
+                    return;
+                }
+                ee895->wake_time = make_timeout_time_ms(300); // Wait for the measurement
+                ee895->meas_state = EE895_READ_STATUS; // Next step - read status
+                i = 0; // Reset iterator
+                return;
+            }
+            if (i++ > 20) // If timeout
+            {
+                ee895->co2 = NAN; // Set values to NaN
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                ee895->meas_state = EE895_MEAS_FINISHED; // Finished measurement
+                return;
+            }
+            ee895->wake_time = make_timeout_time_ms(25); // Check next in 25 ms
             return;
         }
         case EE895_READ_STATUS: // Reading status
@@ -275,11 +330,76 @@ int32_t ee895_write_reg(uint16_t addr, uint16_t value)
     return ret;
 }
 
-int32_t ee895_init(void)
+int32_t ee895_init(ee895_t* ee895, ee895_config_t* config)
 {
     int32_t ret;
+
+    ee895_init_struct(ee895);
+
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) return ret;
     if (strcmp(fw_read_name, "EE895") != 0) return ERROR_UNKNOWN_SENSOR;
+
+    if ((ret = ee_write_config(config)) != 0) return ret;
+
+    ee895->config = config;
+
     return SUCCESS;
 }
+
+int32_t ee_write_config(ee895_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf[6] = {0};
+
+    bool single_meas_mode = config->single_meas_mode ? 1 : 0; // just to be sure - true in C doesnt have to be 1
+
+    if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret;
+    int16_t meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0]));
+    int16_t filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2]));
+    int16_t offset = (int16_t)ntoh16(*((uint16_t*)&buf[4]));
+
+    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret;
+
+    if (meas_period != config->meas_period * 10) {
+        if ((ret = ee895_write_reg(REG_MEAS_INTERVAL, (uint16_t)config->meas_period * 10)) != 0) return ret;
+    }
+    if (filter_coeff != config->filter_coeff) {
+        if ((ret = ee895_write_reg(REG_MEAS_FILTER, (uint16_t)config->filter_coeff)) != 0) return ret;
+    }
+    if (offset != config->offset) 
+    {
+        if ((ret = ee895_write_reg(REG_MEAS_OFFSET, (uint16_t)config->offset)) != 0) return ret;
+    }
+    if (ntoh16(*((uint16_t*)&buf[0])) != single_meas_mode)
+    {
+        if ((ret = ee895_write_reg(REG_MEAS_MODE, (uint16_t)single_meas_mode)) != 0) return ret;
+    }
+    return SUCCESS;
+}
+
+void ee895_init_struct(ee895_t* ee895)
+{
+    ee895->co2 = .0f;
+    ee895->pressure = .0f;
+    ee895->temperature = .0f;
+    ee895->state = ERROR_SENSOR_NOT_INITIALIZED;
+    ee895->meas_state = (ee895_meas_state_e)0;
+    ee895->wake_time = make_timeout_time_ms(INT32_MAX);
+}
+
+int32_t ee895_read_config(ee895_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf[6] = {0};
+
+    if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret;
+    config->meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0]));
+    config->filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2]));
+    config->offset = (int16_t)ntoh16(*((uint16_t*)&buf[4]));
+
+    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret;
+    config->single_meas_mode = (bool)ntoh16(*((uint16_t*)&buf[0]));
+    return SUCCESS;
+}
+
