@@ -113,4 +113,10 @@ int sunlight_read_config(sunlight_config_t* config);
  */
 void sunlight_init_struct(sunlight_t* sunlight);
 
-
+/**
+ * @brief Switches sensor power [on] if not controlled globally
+ * 
+ * @param sunlight Sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+void sunlight_power(sunlight_t* sunlight, bool on);

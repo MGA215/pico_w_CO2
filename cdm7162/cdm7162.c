@@ -63,6 +63,9 @@ int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
     int32_t ret;
     uint8_t buf;
     cdm7162_init_struct(cdm7162); // Initialize CDM7162 structure
+    cdm7162->config = config; // Save config
+    cdm7162_power(cdm7162, true); // Power on
+
     if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) return ret; // Read operation mode
     busy_wait_ms(10);
     if (buf != 0x06) // If not in measurement mode
@@ -88,6 +91,7 @@ int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
     if (config->long_term_adj_1) func_settings |= (0b1 << 5);
     if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) return ret; // Set functions
     busy_wait_ms(100);
+    cdm7162_power(cdm7162, false); // Power off
     return SUCCESS;
 }
 
@@ -139,29 +143,20 @@ int32_t cdm7162_set_default_atm_pressure(void)
 
 void cdm7162_get_value(cdm7162_t* cdm7162)
 {
-    int32_t i, ret;
+    int32_t ret;
+    static int32_t i;
     uint8_t buf[2];
     switch (cdm7162->meas_state)
     {
         case CDM7162_MEAS_FINISHED: // Measurement finished
         {
-            if (!cdm7162->config->power_global_control)
-            {
-                // Read power vector
-                // Check if bit turned off
-                // Write power vector
-            }
+            cdm7162_power(cdm7162, false); // Power off
             cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
             return;
         }
         case CDM7162_MEAS_START: // Measurement started
         {
-            if (!cdm7162->config->power_global_control)
-            {
-                // Read power vector - possibly not needed
-                // Check if bit turned on
-                // Write power vector
-            }
+            cdm7162_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = CDM7162_READ_STATUS; // Next step - read status
             i = 0; // Initialize read status timeout iterator

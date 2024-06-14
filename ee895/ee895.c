@@ -340,6 +340,7 @@ int32_t ee895_init(ee895_t* ee895, ee895_config_t* config)
 {
     int32_t ret;
 
+    ee895->config = config; // Save configuration
     ee_power(ee895, true); // Power on
 
     ee895_init_struct(ee895); // Initialize structure
@@ -361,8 +362,6 @@ int32_t ee895_init(ee895_t* ee895, ee895_config_t* config)
         ee_power(ee895, false); // Power off
         return ret;
     }
-
-    ee895->config = config; // Save configuration
 
     ee_power(ee895, false); // Power off
 

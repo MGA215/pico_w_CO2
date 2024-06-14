@@ -263,7 +263,8 @@ int sr_get_error(uint16_t error_reg)
 
 void sunrise_get_value(sunrise_t* sunrise)
 {
-    int32_t ret, i;
+    int32_t ret;
+    static int32_t i;
 
     switch (sunrise->meas_state)
     {
