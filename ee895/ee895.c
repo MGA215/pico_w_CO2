@@ -328,7 +328,7 @@ int32_t ee895_write_reg(uint16_t addr, uint16_t value)
 
 void ee895_power(ee895_t* ee895, bool on)
 {
-    if (!ee895->config->power_global_control)
+    if (!ee895->config->power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

@@ -223,7 +223,7 @@ void cdm7162_init_struct(cdm7162_t* cdm7162)
 
 void cdm7162_power(cdm7162_t* cdm7162, bool on)
 {
-    if (!cdm7162->config->power_global_control)
+    if (!cdm7162->config->power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

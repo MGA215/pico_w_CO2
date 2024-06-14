@@ -135,8 +135,8 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
     uint8_t command_buffer[len + 1];
     command_buffer[0] = addr;
     memcpy(&command_buffer[1], buf, len);
-    sr_wake_up();
-    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, command_buffer, len + 1, false, 1000)) < 0) return ret;
+    sr_wake_up(); // Wake up sensor
+    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, command_buffer, len + 1, false, 1000)) < 0) return ret; // Write data to sensor
     busy_wait_ms(12);
     // uint8_t resp[len];
     // if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, resp, len, false, 1000)) < 0) return ret;
@@ -147,11 +147,11 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
 int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
 {
     int32_t ret;
-    sr_wake_up();
-    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, &addr, 1, true, 1000)) < 0) return ret;
+    sr_wake_up(); // Wake sensor up
+    if ((ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, &addr, 1, true, 1000)) < 0) return ret; // Write address to read from
     
     busy_wait_us(1000);
-    if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, buf, num_bytes, false, 1000)) < 0) return ret;
+    if ((ret = i2c_read_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, buf, num_bytes, false, 1000)) < 0) return ret; // Read data from sensor
     busy_wait_ms(1);
     return SUCCESS;
 }
@@ -160,7 +160,7 @@ int sunrise_reset(void)
 {
     int32_t ret;
     uint8_t data = 0xFF;
-    if ((ret = sunrise_write(REG_SOFT_RESET, &data, 1)) != 0) return ret;
+    if ((ret = sunrise_write(REG_SOFT_RESET, &data, 1)) != 0) return ret; // Send reset command to sensor
     return SUCCESS;
 }
 
@@ -168,17 +168,22 @@ int sunrise_init(sunrise_t* sunrise, sunrise_config_t* config)
 {
     int32_t ret;
     
-    sunrise_init_struct(sunrise);
+    sunrise_init_struct(sunrise); // Initialize sensor structure
+
+    sunrise->config = config; // Save sensor config
+
+    sunrise_power(sunrise, true); // Power on
 
     uint8_t buf[16];
     if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
     if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
 
-    if ((ret = sr_write_config(config)) != 0) return ret;
+    if ((ret = sr_write_config(config)) != 0) return ret; // Write configuration
 
-    sunrise->config = config;
+    sunrise_reset(); // Reset sensor
 
-    sunrise_reset();
+    sunrise_power(sunrise, false); // Power off
+
     return SUCCESS;
 }
 
@@ -187,18 +192,18 @@ int sr_write_config(sunrise_config_t* config)
     int32_t ret;
     uint8_t buf[11] = {0};
     uint8_t command_buf[11] = {0};
-    command_buf[0] = (uint8_t)config->single_meas_mode;
+    command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
     *((uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
     *((uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
     *((uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
 
     *((uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
 
-    if ((ret = sr_write_meter_control(config)) != 0) return ret;
+    if ((ret = sr_write_meter_control(config)) != 0) return ret; // Write meter control register
 
-    if ((ret = sunrise_read(REG_MEAS_MODE, buf, 11)) != 0) return ret;
-    if (memcmp(buf, command_buf, 11) == 0) return SUCCESS;
-    if ((ret = sunrise_write(REG_MEAS_MODE, command_buf, 11)) != 0) return ret;
+    if ((ret = sunrise_read(REG_MEAS_MODE, buf, 11)) != 0) return ret; // Read measurement registers
+    if (memcmp(buf, command_buf, 11) == 0) return SUCCESS; // If registers already set return SUCCESS
+    if ((ret = sunrise_write(REG_MEAS_MODE, command_buf, 11)) != 0) return ret; // Write measurement registers
     return SUCCESS;
 }
 
@@ -207,15 +212,15 @@ int sunrise_read_config(sunrise_config_t* config)
     int32_t ret;
     uint8_t buf[11] = {0};
     uint8_t data = 0;
-    if ((ret = sunrise_read(REG_MEAS_MODE, buf, 11)) != 0) return ret;
-    config->single_meas_mode = (bool)buf[0];
+    if ((ret = sunrise_read(REG_MEAS_MODE, buf, 11)) != 0) return ret; // Read measurement registers
+    config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
     config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
     config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
     config->abc_period = ntoh16(*((uint16_t*)&buf[5]));
     config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
 
-    if ((ret = sunrise_read(REG_METER_CONTROL, &data, 1)) != 0) return ret;
-    config->enable_nRDY = data & 0b1 << 0;
+    if ((ret = sunrise_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
+    config->enable_nRDY = data & 0b1 << 0; // Save meter control data
     config->enable_ABC = data & 0b1 << 1;
     config->enable_static_IIR = data & 0b1 << 2;
     config->enable_dynamic_IIR = data & 0b1 << 3;
@@ -227,7 +232,7 @@ int sunrise_read_config(sunrise_config_t* config)
 
 int sr_write_meter_control(sunrise_config_t* config)
 {
-    uint8_t data = 0;
+    uint8_t data = 0; // Prepare command
     data |= config->enable_nRDY;
     data |= config->enable_ABC << 1;
     data |= config->enable_static_IIR << 2;
@@ -237,10 +242,10 @@ int sr_write_meter_control(sunrise_config_t* config)
 
     uint8_t buf;
     int32_t ret;
-    if ((ret = sunrise_read(REG_METER_CONTROL, &buf, 1)) != 0) return ret;
-    if (data == buf) return SUCCESS;
+    if ((ret = sunrise_read(REG_METER_CONTROL, &buf, 1)) != 0) return ret; // Read meter control register
+    if (data == buf) return SUCCESS; // If already set return SUCCESS
 
-    if ((ret = sunrise_write(REG_METER_CONTROL, &data, 1)) != 0) return ret;
+    if ((ret = sunrise_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
     return SUCCESS;
 }
 
@@ -268,146 +273,136 @@ void sunrise_get_value(sunrise_t* sunrise)
 
     switch (sunrise->meas_state)
     {
-        case SUNRISE_MEAS_FINISHED:
+        case SUNRISE_MEAS_FINISHED: // Measurement finished
         {
-            if (!sunrise->config->power_global_control)
-            {
-                // Read power vector
-                // Check if bit turned off
-                // Write power vector
-            }
-            sunrise->wake_time = make_timeout_time_ms(INT32_MAX);
+            sunrise_power(sunrise, false); // Power off
+            sunrise->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
-        case SUNRISE_MEAS_START:
+        case SUNRISE_MEAS_START: // Measurement started
         {
-            if (!sunrise->config->power_global_control)
-            {
-                // Read power vector - possibly not needed
-                // Check if bit turned on
-                // Write power vector
-            }
-            sunrise->wake_time = make_timeout_time_ms(100);
-            sunrise->meas_state = SUNRISE_READ_MODE;
-            i = 0;
+            sunrise_power(sunrise, true); // Power on
+            sunrise->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
+            sunrise->meas_state = SUNRISE_READ_MODE; // Next step - read mode
+            i = 0; // Initialize iterator value
             return;
         }
-        case SUNRISE_READ_MODE:
+        case SUNRISE_READ_MODE: // Reading mode
         {
             uint8_t data;
-            ret = sunrise_read(REG_MEAS_MODE, &data, 1);
-            if (ret != 0)
+            ret = sunrise_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
+            if (ret != 0) // On invalid read
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
-                sunrise->state = ret;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
+                sunrise->state = ret; // Output return state
                 return;
             }
-            if (!((sunrise->config->single_meas_mode && data == 0x01) || (!sunrise->config->single_meas_mode && data == 0x00)))
+            if (!((sunrise->config->single_meas_mode && data == 0x01) || (!sunrise->config->single_meas_mode && data == 0x00))) // If wrong mode set
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
-                sunrise->state = SUNRISE_ERROR_WRONG_MODE;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
+                sunrise->state = SUNRISE_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
             }
-            if (sunrise->config->single_meas_mode)
+            if (sunrise->config->single_meas_mode) // If in single measurement mode
             {
-                sunrise->meas_state = SUNRISE_WRITE_MEAS_CMD;
-                sunrise->wake_time = make_timeout_time_ms(10);
+                sunrise->meas_state = SUNRISE_WRITE_MEAS_CMD; // Next step - write measurement command
+                sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
             }
             else
             {
-                sunrise->meas_state = SUNRISE_READ_VALUE;
-                sunrise->wake_time = make_timeout_time_ms(300);
+                sunrise->meas_state = SUNRISE_READ_VALUE; // Next step - read measurement data
+                sunrise->wake_time = make_timeout_time_ms(300); // Timer 300 ms
             }
             return;
         }
-        case SUNRISE_WRITE_MEAS_CMD:
+        case SUNRISE_WRITE_MEAS_CMD: // Writing measurement command
         {
             uint8_t buf[24] = {0};
-            if (memcmp(sunrise->state_reg, buf, 24))
+            if (memcmp(sunrise->state_reg, buf, 24)) // If last state was zeros (not set)
             {
-                uint8_t data = 0x01;
-                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, &data, 1);
+                uint8_t data = 0x01; // Prepare data
+                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, &data, 1); // Set measurement trigger
             }
-            else
+            else // Last state exists
             {
                 uint8_t data[25];
-                data[0] = 0x01;
+                data[0] = 0x01; // Prepare data
                 memcpy(&data[1], sunrise->state_reg, 24);
-                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, data, 25);
+                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, data, 25); // Set measurement trigger
             }
-            if (ret != 0)
+            if (ret != 0) // On invalid read
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
-                sunrise->state = ret;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
+                sunrise->state = ret; // Output return state
                 return;
             }
-            sunrise->wake_time = make_timeout_time_ms(300);
-            sunrise->meas_state = SUNRISE_READ_VALUE;
+            sunrise->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
+            sunrise->meas_state = SUNRISE_READ_VALUE; // Next step - read measurement data
             return;
         }
-        case SUNRISE_READ_VALUE:
+        case SUNRISE_READ_VALUE: // Reading measurement data
         {
             uint8_t buf[10] = {0};
-            ret = sunrise_read(REG_ERR_H, buf, 10);
-            if (ret != 0)
+            ret = sunrise_read(REG_ERR_H, buf, 10); // Read data
+            if (ret != 0) // On invalid read
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
-                sunrise->state = ret;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
+                sunrise->state = ret; // Output return state
                 return;
             }
-            if (i++ > (sunrise->config->meas_samples))
+            if (i++ > (sunrise->config->meas_samples)) // If data not present for 4* the measurement time needed
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = SUNRISE_ERROR_DATA_READY_TIMEOUT;
                 return;
             }
-            ret = sr_get_error(ntoh16(*((uint16_t*)&buf[0])));
-            if (ret != 0 && ret != SUNRISE_ERROR_DATA_READY_TIMEOUT)
+            ret = sr_get_error(ntoh16(*((uint16_t*)&buf[0]))); // Check returned error
+            if (ret != 0 && ret != SUNRISE_ERROR_DATA_READY_TIMEOUT) // If error & not timeout error
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
-                sunrise->co2 = INT16_MAX;
-                sunrise->temperature = NAN;
-                sunrise->state = ret;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
+                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->temperature = NAN; // Set temperature to unknown
+                sunrise->state = ret; // Output return state
                 return;
             }
-            else if (ret == SUNRISE_ERROR_DATA_READY_TIMEOUT)
+            else if (ret == SUNRISE_ERROR_DATA_READY_TIMEOUT) // On data not ready
             {
-                sunrise->wake_time = make_timeout_time_ms(300);
+                sunrise->wake_time = make_timeout_time_ms(300); // Try again after 300 ms
                 return;
             }
-            sunrise->co2 = (int16_t)(ntoh16(*((uint16_t*)&buf[6])));
-            sunrise->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f;
-            if (sunrise->config->single_meas_mode)
+            sunrise->co2 = (int16_t)(ntoh16(*((uint16_t*)&buf[6]))); // Set CO2 value
+            sunrise->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f; // Set temperature value
+            if (sunrise->config->single_meas_mode) // If single measurement mode
             {
-                sunrise->wake_time = make_timeout_time_ms(10);
-                sunrise->meas_state = SUNRISE_READ_STATUS;
+                sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
+                sunrise->meas_state = SUNRISE_READ_STATUS; // Next step - read status
             }
-            else 
+            else // Not in single measurement mode
             {
-                sunrise->meas_state = SUNRISE_MEAS_FINISHED;
+                sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
             }
-            sunrise->state = SUCCESS;
+            sunrise->state = SUCCESS; // Output SUCCESS state
             return;
         }
-        case SUNRISE_READ_STATUS:
+        case SUNRISE_READ_STATUS: // Reading status registers
         {
-            ret = sunrise_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 24);
-            if (ret != 0)
+            ret = sunrise_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 24); // Read status registers
+            if (ret != 0) // On invalid read
             {
-                memset(sunrise->state_reg, 0x00, 24);
-                sunrise->state = ret;
+                memset(sunrise->state_reg, 0x00, 24); // Clear last state registers
+                sunrise->state = ret; // Output return state
             }
-            sunrise->meas_state = SUNRISE_MEAS_FINISHED;
+            sunrise->meas_state = SUNRISE_MEAS_FINISHED; // Measurement finished
             return;
         }
     }
@@ -415,15 +410,25 @@ void sunrise_get_value(sunrise_t* sunrise)
 
 void sr_wake_up(void)
 {
-    int32_t ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, NULL, 0, false, 100);
+    int32_t ret = i2c_write_timeout_per_char_us(SUNRISE_I2C, SUNRISE_ADDR, NULL, 0, false, 100); // Send empty command
 }
 
 void sunrise_init_struct(sunrise_t* sunrise)
 {
-    sunrise->co2 = 0;
-    sunrise->temperature = 0;
-    sunrise->state = ERROR_SENSOR_NOT_INITIALIZED;
-    sunrise->meas_state = (sunrise_meas_state_e)0;
-    sunrise->wake_time = make_timeout_time_ms(INT32_MAX);
-    memset(sunrise->state_reg, 0x00, 24);
+    sunrise->co2 = 0; // Init CO2
+    sunrise->temperature = 0; // Init temperature
+    sunrise->state = ERROR_SENSOR_NOT_INITIALIZED; // Set sensor state to not initialized
+    sunrise->meas_state = (sunrise_meas_state_e)0; // Set measurement state to not started
+    sunrise->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+    memset(sunrise->state_reg, 0x00, 24); // Clear saved state register
+}
+
+void sunrise_power(sunrise_t* sunrise, bool on)
+{
+    if (!sunrise->config->power_global_control) // If power not controlled globally
+    {
+        // Read power vector
+        // Check if bit turned [on]
+        // Write power vector
+    }
 }

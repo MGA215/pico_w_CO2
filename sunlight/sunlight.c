@@ -281,7 +281,7 @@ void sunlight_get_value(sunlight_t* sunlight)
         case SUNLIGHT_MEAS_START: // Measurement start
         {
             sunlight_power(sunlight, true); // Power on
-            sunlight->wake_time = make_timeout_time_ms(100); // Timeout 100 ms - power stabilization
+            sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunlight->meas_state = SUNLIGHT_READ_MODE; // Next step - read mode
             i = 0; // Initialize iterator value
             return;
@@ -309,12 +309,12 @@ void sunlight_get_value(sunlight_t* sunlight)
             if (sunlight->config->single_meas_mode) // If in single measurement mode
             {
                 sunlight->meas_state = SUNLIGHT_WRITE_MEAS_CMD; // Next step - write measurement command
-                sunlight->wake_time = make_timeout_time_ms(10); // Timeout 10 ms
+                sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
             }
             else
             {
                 sunlight->meas_state = SUNLIGHT_READ_VALUE; // Next step - read measurement data
-                sunlight->wake_time = make_timeout_time_ms(300); // Timeout 300 ms
+                sunlight->wake_time = make_timeout_time_ms(300); // Timer 300 ms
             }
             return;
         }
@@ -341,7 +341,7 @@ void sunlight_get_value(sunlight_t* sunlight)
                 sunlight->state = ret; // Output return state
                 return;
             }
-            sunlight->wake_time = make_timeout_time_ms(300); // Set timeout 300 ms
+            sunlight->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
             sunlight->meas_state = SUNLIGHT_READ_VALUE; // Next step - read measurement data
             return;
         }
@@ -383,7 +383,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             sunlight->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f; // Set temperature value
             if (sunlight->config->single_meas_mode) // If single measurement mode
             {
-                sunlight->wake_time = make_timeout_time_ms(10); // Timeout 10 ms
+                sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
                 sunlight->meas_state = SUNLIGHT_READ_STATUS; // Next step - read status
             }
             else // Not in single measurement mode
@@ -424,7 +424,7 @@ void sunlight_init_struct(sunlight_t* sunlight)
 
 void sunlight_power(sunlight_t* sunlight, bool on)
 {
-    if (!sunlight->config->power_global_control)
+    if (!sunlight->config->power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]
