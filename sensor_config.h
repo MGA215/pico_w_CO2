@@ -42,3 +42,14 @@ cdm7162_config_t sensor_cdm7162_config = {
     .pressure_corr = false,
     .PWM_range_high = false,
 };
+
+scd30_config_t sensor_scd30_config = {
+    .enable_altitude_comp = false,
+    .altitude = 0,
+    .enable_autocal = false,
+    .autocal_value = 0,
+    .pressure_comp = false,
+    .pressure = 0,
+    .temperature_offset = 0,
+    .meas_period = 2,
+};

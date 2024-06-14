@@ -9,7 +9,7 @@
 #define I2C_DEFAULT i2c0
 #define I2C_BAUDRATE 40000
 
-#define CONNECTED_SENSORS 4
+#define CONNECTED_SENSORS 5
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -261,14 +261,14 @@ void write_display(void)
             write_display_sensor("E+E EE895", sensor_readings.ee895.state, 
                                     true, sensor_readings.ee895.co2, 
                                     true, sensor_readings.ee895.temperature, 
-                                    true, sensor_readings.ee895.pressure); // Write ee895 readings to the display
+                                    true, sensor_readings.ee895.pressure, false, 0.0f); // Write ee895 readings to the display
             break; 
         }
         case 1:
         {
             write_display_sensor("FIGARO CDM7162", sensor_readings.cdm7162.state,
                                     true, (float)sensor_readings.cdm7162.co2,
-                                    false, 0.0f, false, 0.0f); // Write CDM7162 readings to the display
+                                    false, 0.0f, false, 0.0f, false, 0.0f); // Write CDM7162 readings to the display
             break;
         }
         case 2: 
@@ -276,7 +276,7 @@ void write_display(void)
             write_display_sensor("Senseair SUNRISE", sensor_readings.sunrise.state,
                                     true, (float)sensor_readings.sunrise.co2,
                                     true, sensor_readings.sunrise.temperature,
-                                    false, 0.0f); // Write SUNRISE readings to the display
+                                    false, 0.0f, false, 0.0f); // Write SUNRISE readings to the display
             break;
         }
         case 3:
@@ -284,7 +284,16 @@ void write_display(void)
             write_display_sensor("Senseair SUNLIGHT", sensor_readings.sunlight.state,
                                     true, (float)sensor_readings.sunlight.co2,
                                     true, sensor_readings.sunlight.temperature,
-                                    false, 0.0f); // Write SUNLIGHT readings to the display
+                                    false, 0.0f, false, 0.0f); // Write SUNLIGHT readings to the display
+            break;
+        }
+        case 4:
+        {
+            write_display_sensor("Sensirion SCD30", sensor_readings.scd30.state,
+                                    true, sensor_readings.scd30.co2,
+                                    true, sensor_readings.scd30.temperature,
+                                    false, 0.0f,
+                                    true, sensor_readings.scd30.humidity); // Write SCD30 readings to the display
             break;
         }
         default: 
@@ -314,18 +323,24 @@ void init_sensors(void)
     cdm7162_init_struct(&(sensor_readings.cdm7162));
     sunrise_init_struct(&(sensor_readings.sunrise));
     sunlight_init_struct(&(sensor_readings.sunlight));
+    scd30_init_struct(&(sensor_readings.scd30));
+
+    set_power_mode();
 
     // ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
     // sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
-    ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
-    sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    // ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
+    // sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
     // ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
     // sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
     // ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
     // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+
+    ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
+    sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 }
 
 void init_sensor_i2c(void)
@@ -347,6 +362,15 @@ void set_power_mode(void)
     sensor_cdm7162_config.power_global_control = global_power;
     sensor_sunrise_config.power_global_control = global_power;
     sensor_sunlight_config.power_global_control = global_power;
+    sensor_scd30_config.power_global_control = global_power;
+}
+
+void set_power(bool on)
+{
+    if (global_power)
+    {
+        // Set power [on]
+    }
 }
 
 void read_sensors_start()
@@ -357,19 +381,13 @@ void read_sensors_start()
         sensor_readings.cdm7162.meas_state = CDM7162_MEAS_START; // Start CDM7162 measurement
         sensor_readings.sunrise.meas_state = SUNRISE_MEAS_START; // Start SUNRISE measurement
         sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
-
-        set_power_mode();
+        sensor_readings.scd30.meas_state = SCD30_MEAS_START; // Start SCD30 measurement
         
         sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
         sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
         sensor_measurement_vector |= ~(0b0); // Set measurement vector to all sensors measuring
 
-        if (global_power) // Turn on power globally
-        {
-            // Read power vector
-            // Check if all turned on
-            // Write power vector
-        }
+        set_power(true);
     }
     else 
     {
@@ -395,6 +413,10 @@ void sensor_timer_vector_update(void)
     {
         sensor_timer_vector |= (0b1 << 3);
     }
+    if (time_reached(sensor_readings.scd30.wake_time)) // If SCD30 timer reached
+    {
+        sensor_timer_vector |= (0b1 << 4);
+    }
 }
 
 void read_sensors()
@@ -416,20 +438,20 @@ void read_sensors()
     //     if (sensor_readings.ee895.meas_state == EE895_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 0); // If measurement completed clear sensor measurement bit
     // }
 
-    if (sensor_timer_vector & (0b1 << 1)) // If cdm7162 should react to a timer reached
-    {
-        sensor_timer_vector &= ~(0b1 << 1); // clear cdm7162 timer reached bit
-        if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
-        {
-            cdm7162_get_value(&sensor_readings.cdm7162); // Read CDM7162 values
-        }
-        else // Try initializing the sensor
-        {
-            ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
-            sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-        }
-        if (sensor_readings.cdm7162.meas_state == CDM7162_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 1); // If measurement completed clear sensor measurement bit
-    }
+    // if (sensor_timer_vector & (0b1 << 1)) // If cdm7162 should react to a timer reached
+    // {
+    //     sensor_timer_vector &= ~(0b1 << 1); // clear cdm7162 timer reached bit
+    //     if (sensor_readings.cdm7162.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+    //     {
+    //         cdm7162_get_value(&sensor_readings.cdm7162); // Read CDM7162 values
+    //     }
+    //     else // Try initializing the sensor
+    //     {
+    //         ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
+    //         sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    //     }
+    //     if (sensor_readings.cdm7162.meas_state == CDM7162_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 1); // If measurement completed clear sensor measurement bit
+    // }
 
     // if (sensor_timer_vector & (0b1 << 2)) // If SUNRISE should react to a timer reached
     // {
@@ -460,17 +482,31 @@ void read_sensors()
     //     }
     //     if (sensor_readings.sunlight.meas_state == SUNLIGHT_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 3); // If measurement completed clear sensor measurement bit
     // }
-    if (true) // Must set corresponding bit for the currently active sensor
+
+    if (sensor_timer_vector & (0b1 << 4)) // If SCD30 should react to a timer reached
     {
-        sensor_measurement_vector &= (0b10 << 0); // All other measurements finished - temporary
-        sensor_timer_vector &= (0b10 << 0); // All other timers are not reached - temporary
+        sensor_timer_vector &= ~(0b1 << 4); // clear SCD30 timer reached bit
+        if (sensor_readings.scd30.state != ERROR_SENSOR_INIT_FAILED) // If sensor initialized
+        {
+            scd30_get_value(&sensor_readings.scd30); // Read SCD30 values
+        }
+        else // Try initializing the sensor
+        {
+            ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
+            sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+        }
+        if (sensor_readings.scd30.meas_state == SCD30_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 4); // If measurement completed clear sensor measurement bit
     }
 
-    if (!sensor_measurement_vector && global_power) // If all measurements finished - turn off power globally
+    if (true) // Must set corresponding bit for the currently active sensor
     {
-        // Read power vector
-        // Check if all turned off
-        // Write power vector
+        sensor_measurement_vector &= (0b10000 << 0); // All other measurements finished - temporary
+        sensor_timer_vector &= (0b10000 << 0); // All other timers are not reached - temporary
+    }
+
+    if (!sensor_measurement_vector) // If all measurements finished - turn off power globally if possible
+    {
+        set_power(false);
     }
 
     update_display_buffer = true; // Update display
@@ -480,15 +516,18 @@ void read_sensors()
 void write_display_sensor(uint8_t* sensor_name, int state, 
         bool co2, float co2_value, 
         bool temp, float temp_value, 
-        bool pressure, float pressure_value)
+        bool pressure, float pressure_value,
+        bool humidity, float humidity_value)
 {
+    uint8_t row = 1;
     point_t position;
     position.x = 0;
-    position.y = 1;
+    position.y = row;
     gfx_pack_write_text(&position, sensor_name); // Write sensor name
     
+    row++;
     position.x = 0;
-    position.y = 2;
+    position.y = row;
 
     if (state != 0) // If sensor in invalid state
     {
@@ -496,8 +535,9 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         
         snprintf(buf, 6, "E%i", state);
         gfx_pack_write_text(&position, buf); // Write error code (sensor state)
+        row++;
         position.x = 0;
-        position.y = 3;
+        position.y = row;
     }
     else
     {
@@ -508,16 +548,18 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         {
             snprintf(buf, 16, "CO2: %.0f ppm", co2_value);
             gfx_pack_write_text(&position, buf); // Write co2 concentration
+            row++;
             position.x = 0;
-            position.y = 3;
+            position.y = row;
             memset(buf, 0x00, 16);
         }
         if (temp)
         {
             snprintf(buf, 16, "T: %4.2f |C", temp_value); // C char does not support ° symbol
             gfx_pack_write_text(&position, buf); // Write temperature
+            row++;
             position.x = 0;
-            position.y = 4;
+            position.y = row;
             memset(buf, 0x00, 16);
 
         }
@@ -525,8 +567,18 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         {
             snprintf(buf, 16, "p: %4.1f hPa", pressure_value);
             gfx_pack_write_text(&position, buf); // Write pressure
+            row++;
             position.x = 0;
-            position.y = 5;
+            position.y = row;
+            memset(buf, 0x00, 16);
+        }
+        if (humidity)
+        {
+            snprintf(buf, 16, "RH: %4.1f %%", humidity_value);
+            gfx_pack_write_text(&position, buf); // Write humidity
+            row++;
+            position.x = 0;
+            position.y = row;
             memset(buf, 0x00, 16);
         }
     }

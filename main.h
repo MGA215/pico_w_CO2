@@ -13,6 +13,7 @@
 #include "cdm7162/cdm7162.h"
 #include "sunrise/sunrise.h"
 #include "sunlight/sunlight.h"
+#include "scd30/scd30.h"
 
 #include "sensor_config.h"
 
@@ -26,6 +27,7 @@ typedef struct sensors
     cdm7162_t cdm7162; // CDM7162 sensor structure
     sunrise_t sunrise; // SUNRISE sensor structure
     sunlight_t sunlight; // SUNLIGHT sensor structure
+    scd30_t scd30; // SCD30 sensor structure
 } sensors_t;
 
 /**
@@ -120,11 +122,14 @@ void read_sensors();
  * @param temp_value Temperature value
  * @param pressure Should pressure be displayed
  * @param pressure_value Pressure value
+ * @param humidity Should humidity be displayed
+ * @param humidity_value Humidity value
  */
 void write_display_sensor(uint8_t* sensor_name, int state, 
         bool co2, float co2_value, 
         bool temp, float temp_value, 
-        bool pressure, float pressure_value);
+        bool pressure, float pressure_value,
+        bool humidity, float humidity_value);
 
 /**
  * @brief Updates vector of timers if timer reached timeout

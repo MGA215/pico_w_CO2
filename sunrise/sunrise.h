@@ -113,5 +113,13 @@ int sunrise_read_config(sunrise_config_t* config);
  */
 void sunrise_init_struct(sunrise_t* sunrise);
 
+/**
+ * @brief Switches sensor power [on] if not controlled globally
+ * 
+ * @param sunrise sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+void sunrise_power(sunrise_t* sunrise, bool on);
+
 
 

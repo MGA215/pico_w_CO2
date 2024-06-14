@@ -341,29 +341,29 @@ int32_t ee895_init(ee895_t* ee895, ee895_config_t* config)
     int32_t ret;
 
     ee895->config = config; // Save configuration
-    ee_power(ee895, true); // Power on
+    ee895_power(ee895, true); // Power on
 
     ee895_init_struct(ee895); // Initialize structure
 
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) // Read sensor name
     {
-        ee_power(ee895, false); // Power off
+        ee895_power(ee895, false); // Power off
         return ret;
     }
     if (strcmp(fw_read_name, "EE895") != 0) // Check sensor name
     {
-        ee_power(ee895, false); // Power off
+        ee895_power(ee895, false); // Power off
         return ERROR_UNKNOWN_SENSOR;
     }
 
     if ((ret = ee_write_config(config)) != 0) // Write configuration to sensor
     {
-        ee_power(ee895, false); // Power off
+        ee895_power(ee895, false); // Power off
         return ret;
     }
 
-    ee_power(ee895, false); // Power off
+    ee895_power(ee895, false); // Power off
 
     return SUCCESS;
 }

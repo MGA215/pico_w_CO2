@@ -66,22 +66,38 @@ int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
     cdm7162->config = config; // Save config
     cdm7162_power(cdm7162, true); // Power on
 
-    if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) return ret; // Read operation mode
+    if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) // Read operation mode
+    {
+        cdm7162_power(cdm7162, false);
+        return ret; 
+    }
     busy_wait_ms(10);
     if (buf != 0x06) // If not in measurement mode
     {
-        if ((ret = cdm7162_write(REG_OP_MODE, 0x06)) != 0) return ret; // Set measurement mode
+        if ((ret = cdm7162_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
+        {
+        cdm7162_power(cdm7162, false);
+        return ret; 
+    }
         busy_wait_ms(100);
     }
 
-    if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret; // Read set functions
+    if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) // Read set functions
+    {
+        cdm7162_power(cdm7162, false);
+        return ret; 
+    }
     busy_wait_ms(10);
 
     if (((buf & 0b100) >> 2) == (bool)(config->pressure_corr) &&
         ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
         ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
         ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
-        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) return SUCCESS; // All functions correctly set
+        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) 
+        {
+            cdm7162_power(cdm7162, false);
+            return SUCCESS; // All functions correctly set
+        }
 
     uint8_t func_settings = 0;
     if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
@@ -89,7 +105,12 @@ int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
     if (config->PWM_range_high) func_settings |= (0b1 << 3);
     if (config->long_term_adj_2) func_settings |= (0b1 << 4);
     if (config->long_term_adj_1) func_settings |= (0b1 << 5);
-    if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) return ret; // Set functions
+    if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) // Set functions
+    {
+        cdm7162_power(cdm7162, false);
+        return ret; 
+    }
+    
     busy_wait_ms(100);
     cdm7162_power(cdm7162, false); // Power off
     return SUCCESS;

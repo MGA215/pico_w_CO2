@@ -178,7 +178,11 @@ int sunlight_init(sunlight_t* sunlight, sunlight_config_t* config)
     // if (strcmp(buf, "006-0-0007") != 0) return ERROR_UNKNOWN_SENSOR;
     // memset(buf, 0x00, 16);
 
-    if ((ret = sl_write_config(config)) != 0) return ret; // Write configuration
+    if ((ret = sl_write_config(config)) != 0) // Write configuration
+    {
+        sunlight_power(sunlight, false);
+        return ret; 
+    }
 
     sunlight_reset(); // Reset sensor
     

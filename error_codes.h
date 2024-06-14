@@ -65,3 +65,9 @@
 #define SUNLIGHT_ERROR_SENSOR_GENERAL -317 // Error SUNLIGHT - general sensor error
 #define SUNLIGHT_ERROR_WRONG_STATE -318 // Error SUNLIGHT - invalid buffer for reading/writing current state in single meas mode
 #define SUNLIGHT_ERROR_WRONG_MODE -319 // Error SUNLIGHT - sensor is in a wrong mode
+
+// SCD30 Errors
+#define SCD30_ERROR_CRC -403 // Error SCD30 - Invalid CRC
+#define SCD30_ERROR_DATA_READY_TIMEOUT -405 // Error SCD30 - Data not ready
+
+
