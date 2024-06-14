@@ -116,3 +116,12 @@ void cdm7162_init_struct(cdm7162_t* cdm7162);
  */
 int32_t cdm7162_read_config(cdm7162_config_t* config);
 
+/**
+ * @brief Switches sensor power [on] if not controlled globally
+ * 
+ * @param cdm7162 sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+void cdm7162_power(cdm7162_t* cdm7162, bool on);
+
+
