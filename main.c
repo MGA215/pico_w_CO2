@@ -15,10 +15,10 @@
 struct ds3231_rtc rtc;
 
 // string holding the datetime value
-uint8_t datetime_str[30] = {0};
+uint8_t datetime_str[30] = {0}; // MUTEX
 
 // structure containing sensor readings & info
-sensors_t sensor_readings;
+sensors_t sensor_readings; // MUTEX
 
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;

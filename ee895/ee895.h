@@ -73,7 +73,7 @@ int32_t ee895_write(uint16_t addr, uint16_t value);
 void ee895_get_value(ee895_t* ee895);
 
 /**
- * @brief Reads number of registers from the EE895 with timing
+ * @brief Reads number of registers from the EE895 with timing; must manually turn power on/off
  * 
  * @param addr Address of the register to be read from
  * @param nreg Number of registers to read
@@ -83,7 +83,7 @@ void ee895_get_value(ee895_t* ee895);
 int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf);
 
 /**
- * @brief Writes a value to the EE895 with timing
+ * @brief Writes a value to the EE895 with timing; must manually turn power on/off
  * 
  * @param addr Address of the register to be written to
  * @param value Value to be written
@@ -114,3 +114,11 @@ void ee895_init_struct(ee895_t* ee895);
  * @return int32_t Return code
  */
 int32_t ee895_read_config(ee895_config_t* config);
+
+/**
+ * @brief Switches sensor power to [on] state if not controlled globally
+ * 
+ * @param ee895 Sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+void ee895_power(ee895_t* ee895, bool on);

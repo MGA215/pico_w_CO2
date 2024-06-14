@@ -22,10 +22,10 @@
  */
 typedef struct sensors
 {
-    ee895_t ee895;
-    cdm7162_t cdm7162;
-    sunrise_t sunrise;
-    sunlight_t sunlight;
+    ee895_t ee895; // EE895 sensor structure
+    cdm7162_t cdm7162; // CDM7162 sensor structure
+    sunrise_t sunrise; // SUNRISE sensor structure
+    sunlight_t sunlight; // SUNLIGHT sensor structure
 } sensors_t;
 
 /**
