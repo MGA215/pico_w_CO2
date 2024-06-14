@@ -269,13 +269,23 @@ void sunrise_get_value(sunrise_t* sunrise)
     {
         case SUNRISE_MEAS_FINISHED:
         {
-            // Power off
+            if (!sunrise->config->power_global_control)
+            {
+                // Read power vector
+                // Check if bit turned off
+                // Write power vector
+            }
             sunrise->wake_time = make_timeout_time_ms(INT32_MAX);
             return;
         }
         case SUNRISE_MEAS_START:
         {
-            // Power on
+            if (!sunrise->config->power_global_control)
+            {
+                // Read power vector - possibly not needed
+                // Check if bit turned on
+                // Write power vector
+            }
             sunrise->wake_time = make_timeout_time_ms(100);
             sunrise->meas_state = SUNRISE_READ_MODE;
             i = 0;

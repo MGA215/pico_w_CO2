@@ -269,13 +269,23 @@ void sunlight_get_value(sunlight_t* sunlight)
     {
         case SUNLIGHT_MEAS_FINISHED:
         {
-            // Power off
+            if (!sunlight->config->power_global_control)
+            {
+                // Read power vector
+                // Check if bit turned off
+                // Write power vector
+            }
             sunlight->wake_time = make_timeout_time_ms(INT32_MAX);
             return;
         }
         case SUNLIGHT_MEAS_START:
         {
-            // Power on
+            if (!sunlight->config->power_global_control)
+            {
+                // Read power vector - possibly not needed
+                // Check if bit turned on
+                // Write power vector
+            }
             sunlight->wake_time = make_timeout_time_ms(100);
             sunlight->meas_state = SUNLIGHT_READ_MODE;
             i = 0;

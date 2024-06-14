@@ -5,40 +5,53 @@
 #include "../common/functions.h"
 #include "math.h"
 
+/**
+ * @brief FSM for the SUNLIGHT sensor
+ * 
+ */
 typedef enum sunlight_read_value_state
 {
-    SUNLIGHT_MEAS_FINISHED = 0,
-    SUNLIGHT_MEAS_START = 1,
-    SUNLIGHT_READ_MODE = 2,
-    SUNLIGHT_WRITE_MEAS_CMD = 3,
-    SUNLIGHT_READ_VALUE = 4,
-    SUNLIGHT_READ_STATUS = 5
+    SUNLIGHT_MEAS_FINISHED = 0, // Measurement is finished / not started
+    SUNLIGHT_MEAS_START = 1, // Measurement has started
+    SUNLIGHT_READ_MODE = 2, // Reading operation mode
+    SUNLIGHT_WRITE_MEAS_CMD = 3, // Writing measure command (for single measurement)
+    SUNLIGHT_READ_VALUE = 4, // Reading measured data
+    SUNLIGHT_READ_STATUS = 5 // Reading & saving status (for single measurement)
 } sunlight_meas_state_e;
 
+/**
+ * @brief Configuration of the SUNLIGHT sensor
+ * 
+ */
 typedef struct sunlight_config
 {
-    bool single_meas_mode;
-    uint16_t meas_period;
-    uint16_t meas_samples;
-    uint16_t abc_period;
-    uint16_t abc_target_value;
-    bool enable_nRDY;
-    bool enable_ABC;
-    bool enable_static_IIR;
-    bool enable_dynamic_IIR;
-    bool enable_pressure_comp;
-    bool invert_nRDY;
+    bool single_meas_mode; // Enable single measurement mode
+    uint16_t meas_period; // Set measurement period
+    uint16_t meas_samples; // Set number of samples to measure (default 4)
+    uint16_t abc_period; // Set ABC calibration period (set 0 to disable)
+    uint16_t abc_target_value; // Set ABC calibration target value (default 400 ppm)
+    bool enable_nRDY; // Output measurement done state on nRDY pin
+    bool enable_ABC; // Enable ABC calibration
+    bool enable_static_IIR; // Enable static IIR filtering (possibly smoothing)
+    bool enable_dynamic_IIR; // Enable dynamic IIR filtering (reacting to spikes, works if static IIR is on)
+    bool enable_pressure_comp; // Enable pressure compenzation
+    bool invert_nRDY; // Invert nRDY pin logic
+    bool power_global_control; // Global power control
 } sunlight_config_t;
 
+/**
+ * @brief SUNLIGHT sensor main structure
+ * 
+ */
 typedef struct sunlight
 {
-    float temperature;
-    int16_t co2;
-    int state;
-    sunlight_meas_state_e meas_state;
-    absolute_time_t wake_time;
-    uint8_t state_reg[24];
-    sunlight_config_t* config;
+    float temperature; // Measured temperature
+    int16_t co2; // Measured CO2 concentration
+    int state; // Sensor state
+    sunlight_meas_state_e meas_state; // Measurement state
+    absolute_time_t wake_time; // Time of next action
+    uint8_t state_reg[24]; // State registers (for single measurement mode)
+    sunlight_config_t* config; // SUNLIGHT configuration
 } sunlight_t;
 
 

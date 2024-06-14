@@ -4,29 +4,43 @@
 #include "common/functions.h"
 #include "math.h"
 
+/**
+ * @brief FSM for the CDM7162 sensor
+ * 
+ */
 typedef enum cdm7162_read_value_state
 {
-    CDM7162_MEAS_FINISHED = 0,
-    CDM7162_MEAS_START = 1,
-    CDM7162_READ_STATUS = 2,
-    CDM7162_READ_VALUE = 3
+    CDM7162_MEAS_FINISHED = 0, // Measurement is finished / not started
+    CDM7162_MEAS_START = 1, // Measurement has started
+    CDM7162_READ_STATUS = 2, // Reading sensor status
+    CDM7162_READ_VALUE = 3 // Reading measured data
 } cdm7162_meas_state_e;
 
+/**
+ * @brief Configuration of the CDM7162 sensor
+ * 
+ */
 typedef struct cdm7162_config
 {
-    bool enable_PWM_pin;
-    bool PWM_range_high;
-    bool pressure_corr;
-    bool long_term_adj_1;
-    bool long_term_adj_2;
+    bool enable_PWM_pin; // Output 1 kHz PWM with duty proportional to CO2 concentration
+    bool PWM_range_high; // CO2 = PWM high (us) * 5 if true, else * 2
+    bool pressure_corr; // Enable pressure correction
+    bool long_term_adj_1; // Enable long term adjustment 1
+    bool long_term_adj_2; // Enable long term adjustment 2
+    bool power_global_control; // Global power control
 } cdm7162_config_t;
 
+/**
+ * @brief CDM7162 sensor main structure
+ * 
+ */
 typedef struct cdm7162
 {
-    uint16_t co2;
-    int state;
-    cdm7162_meas_state_e meas_state;
-    absolute_time_t wake_time;
+    uint16_t co2; // Measured CO2 concentration
+    int state; // Sensor state
+    cdm7162_meas_state_e meas_state; // Measurement state
+    absolute_time_t wake_time; // Time of next action
+    cdm7162_config_t* config; // CDM7162 configuration
 } cdm7162_t;
 
 
@@ -59,7 +73,8 @@ int32_t cdm7162_reset(void);
 /**
  * @brief Initializes the cdm7162 sensor
  * 
- * @param pressure_corr if pressure correction should be enabled
+ * @param cdm7162 output CDM7162 sensor structure
+ * @param config Configuration of the CDM7162 sensor to be written
  * @return int32_t Return code
  */
 int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config);
@@ -80,10 +95,9 @@ int32_t cdm7162_set_atm_pressure(uint16_t pressure);
 int32_t cdm7162_set_default_atm_pressure(void);
 
 /**
- * @brief Retrieves measured co2 value in ppm
+ * @brief Reads measured values from the sensor
  * 
- * @param co2 CO2 concentration in ppm
- * @return int32_t Return code
+ * @param cdm7162 CDM7162 sensor structure
  */
 void cdm7162_get_value(cdm7162_t* cdm7162);
 

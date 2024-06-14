@@ -149,13 +149,23 @@ void ee895_get_value(ee895_t* ee895)
     {
         case EE895_MEAS_FINISHED: // Measurement finished
         {
-            // Power off
+            if (!ee895->config->power_global_control)
+            {
+                // Read power vector
+                // Check if bit turned off
+                // Write power vector
+            }
             ee895->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
         case EE895_MEAS_START: // Measurement started
         {
-            // Power on
+            if (!ee895->config->power_global_control)
+            {
+                // Read power vector - possibly not needed
+                // Check if bit turned on
+                // Write power vector
+            }
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
             if (ee895->config->single_meas_mode) 
             {

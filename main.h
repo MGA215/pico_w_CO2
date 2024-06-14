@@ -16,6 +16,10 @@
 
 #include "sensor_config.h"
 
+/**
+ * @brief Structure to encapsulate all of the sensors
+ * 
+ */
 typedef struct sensors
 {
     ee895_t ee895;
@@ -100,10 +104,8 @@ void init_sensors(void);
 void write_display(void);
 
 /**
- * @brief Reads data from sensors - timer callback
+ * @brief  Reads data from sensors
  * 
- * @param rt Timer structure
- * @return true if the timer should continue
  */
 void read_sensors();
 
@@ -124,7 +126,20 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         bool temp, float temp_value, 
         bool pressure, float pressure_value);
 
-
+/**
+ * @brief Updates vector of timers if timer reached timeout
+ * 
+ */
 void sensor_timer_vector_update(void);
 
+/**
+ * @brief FUnction to start reading sensor measurements
+ * 
+ */
 void read_sensors_start();
+
+/**
+ * @brief Set the power mode for each sensor
+ * 
+ */
+void set_power_mode(void);

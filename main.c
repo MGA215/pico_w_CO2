@@ -87,29 +87,27 @@ int init(void)
 {
     int32_t ret;
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
-
-
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
+
     gfx_pack_init(); // initialize display
     init_sensor_i2c(); // Initialize I2C for sensor communication
 
     init_sensors(); // initialize sensors
         
-    update_display_buffer = true;
-
-    process_update_time = make_timeout_time_ms(display_interval);
-    sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms);
+    process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
+    sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set measurement interval
 
     sensor_timer_vector = 0; // No sensor individual timer is running
     sensor_measurement_vector = 0; // No sensor is measuring
 
+    update_display_buffer = true; // Redraw display
     sleep_ms(1000); // Init wait
     return SUCCESS;
 }
 
 int loop(void)
 {
-    sensor_timer_vector_update();
+    sensor_timer_vector_update(); // Update timer vector
 
     if (time_reached(sensor_start_measurement_time)) read_sensors_start(); // Start measurement
     if (time_reached(process_update_time)) update(); // Update display & buttons
@@ -122,10 +120,10 @@ void set_datetime(void)
     ds3231_datetime_t dt = {
         .year = 2024,
         .month = 6,
-        .dotw = 2,
-        .day = 4,
-        .hour = 10,
-        .minutes = 19,
+        .dotw = 5,
+        .day = 14,
+        .hour = 6,
+        .minutes = 56,
         .seconds = 00
     };
     ds3231_set_datetime(&dt, &rtc); // refresh datetime
@@ -312,7 +310,7 @@ void init_sensors(void)
 {
     int32_t ret;
 
-    ee895_init_struct(&(sensor_readings.ee895));
+    ee895_init_struct(&(sensor_readings.ee895)); // Initialize sensor structures
     cdm7162_init_struct(&(sensor_readings.cdm7162));
     sunrise_init_struct(&(sensor_readings.sunrise));
     sunlight_init_struct(&(sensor_readings.sunlight));
@@ -343,6 +341,14 @@ void init_sensor_i2c(void)
     i2c_baud = i2c_init(I2C_DEFAULT, I2C_BAUDRATE); // Initialize I2C
 }
 
+void set_power_mode(void)
+{
+    sensor_ee895_config.power_global_control = global_power; // Set sensor power mode to global power control
+    sensor_cdm7162_config.power_global_control = global_power;
+    sensor_sunrise_config.power_global_control = global_power;
+    sensor_sunlight_config.power_global_control = global_power;
+}
+
 void read_sensors_start()
 {
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
@@ -351,10 +357,19 @@ void read_sensors_start()
         sensor_readings.cdm7162.meas_state = CDM7162_MEAS_START; // Start CDM7162 measurement
         sensor_readings.sunrise.meas_state = SUNRISE_MEAS_START; // Start SUNRISE measurement
         sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
+
+        set_power_mode();
         
         sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
-        sensor_timer_vector |= ~(0b0);
-        sensor_measurement_vector |= ~(0b0);
+        sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
+        sensor_measurement_vector |= ~(0b0); // Set measurement vector to all sensors measuring
+
+        if (global_power) // Turn on power globally
+        {
+            // Read power vector
+            // Check if all turned on
+            // Write power vector
+        }
     }
     else 
     {
@@ -364,19 +379,19 @@ void read_sensors_start()
 
 void sensor_timer_vector_update(void)
 {
-    if (time_reached(sensor_readings.ee895.wake_time)) 
+    if (time_reached(sensor_readings.ee895.wake_time)) // If EE895 timer reached
     {
         sensor_timer_vector |= (0b1 << 0);
     }
-    if (time_reached(sensor_readings.cdm7162.wake_time))
+    if (time_reached(sensor_readings.cdm7162.wake_time)) // If CDM7162 timer reached
     {
         sensor_timer_vector |= (0b1 << 1);
     }
-    if (time_reached(sensor_readings.sunrise.wake_time))
+    if (time_reached(sensor_readings.sunrise.wake_time)) // If SUNRISE timer reached
     {
         sensor_timer_vector |= (0b1 << 2);
     }
-    if (time_reached(sensor_readings.sunlight.wake_time))
+    if (time_reached(sensor_readings.sunlight.wake_time)) // If SUNLIGHT timer reached
     {
         sensor_timer_vector |= (0b1 << 3);
     }
@@ -447,8 +462,15 @@ void read_sensors()
     // }
     if (true) // Must set corresponding bit for the currently active sensor
     {
-        sensor_measurement_vector &= (0b10 << 0);
-        sensor_timer_vector &= (0b10 << 0);
+        sensor_measurement_vector &= (0b10 << 0); // All other measurements finished - temporary
+        sensor_timer_vector &= (0b10 << 0); // All other timers are not reached - temporary
+    }
+
+    if (!sensor_measurement_vector && global_power) // If all measurements finished - turn off power globally
+    {
+        // Read power vector
+        // Check if all turned off
+        // Write power vector
     }
 
     update_display_buffer = true; // Update display

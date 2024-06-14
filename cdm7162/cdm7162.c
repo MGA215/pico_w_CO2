@@ -145,13 +145,23 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
     {
         case CDM7162_MEAS_FINISHED: // Measurement finished
         {
-            // Power off
+            if (!cdm7162->config->power_global_control)
+            {
+                // Read power vector
+                // Check if bit turned off
+                // Write power vector
+            }
             cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
             return;
         }
         case CDM7162_MEAS_START: // Measurement started
         {
-            // Power on
+            if (!cdm7162->config->power_global_control)
+            {
+                // Read power vector - possibly not needed
+                // Check if bit turned on
+                // Write power vector
+            }
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = CDM7162_READ_STATUS; // Next step - read status
             i = 0; // Initialize read status timeout iterator
