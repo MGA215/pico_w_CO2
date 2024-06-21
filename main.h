@@ -148,3 +148,9 @@ void read_sensors_start();
  * 
  */
 void set_power_mode(void);
+
+/**
+ * @brief Resets the I2C bus
+ * 
+ */
+void reset_i2c(void);
