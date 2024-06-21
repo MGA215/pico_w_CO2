@@ -1,17 +1,17 @@
 #include "scd30.h"
 #include <stdio.h>
 
-#define REG_START_CONT_MEAS 0x0010
-#define REG_STOP_CONT_MEAS 0x0104
-#define REG_MEAS_INTERVAL 0x4600
-#define REG_DATA_READY 0x0202
-#define REG_READ_MEAS 0x0300
-#define REG_AUTO_CAL 0x5306
-#define REG_FORCE_RECAL 0x5204
-#define REG_T_OFFSET 0x5403
-#define REG_ALTITUDE_COMP 0x5102
-#define REG_FW_VERSION 0xD100
-#define REG_SOFT_RESET 0xD304
+#define CMD_START_CONT_MEAS 0x0010
+#define CMD_STOP_CONT_MEAS 0x0104
+#define CMD_MEAS_INTERVAL 0x4600
+#define CMD_DATA_READY 0x0202
+#define CMD_READ_MEAS 0x0300
+#define CMD_AUTO_CAL 0x5306
+#define CMD_FORCE_RECAL 0x5204
+#define CMD_T_OFFSET 0x5403
+#define CMD_ALTITUDE_COMP 0x5102
+#define CMD_FW_VERSION 0xD100
+#define CMD_SOFT_RESET 0xD304
 
 #define SCD30_I2C i2c0
 #define SCD30_ADDR 0x61
@@ -60,10 +60,11 @@ int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len)
     int32_t ret;
     uint8_t read_data[len * 3];
     memset(read_data, 0x00, (len * 3) + 2);
-    uint8_t commandBuf[2];
-    *((uint16_t*)&commandBuf[0]) = ntoh16(command);
-    if ((ret = scd30_write_command(command))) return ret;
+
+    if ((ret = scd30_write_command(command)) != 0) return ret;
+    
     busy_wait_ms(3);
+    
     if ((ret = i2c_read_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, read_data, (len * 3 + 2), false, 1000)) < 0) return ret;
     for (int i = 0; i < len; i++)
     {
@@ -122,7 +123,7 @@ void scd30_get_value(scd30_t* scd30)
         }
         case SCD30_READ_STATUS: // Reading status
         {
-            ret = scd30_read(REG_DATA_READY, &tempBuffer, 1); // Reading status register
+            ret = scd30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
                 scd30->co2 = NAN; // Set values to NaN
@@ -146,13 +147,13 @@ void scd30_get_value(scd30_t* scd30)
                 scd30->meas_state = SCD30_MEAS_FINISHED; // Finished measurement
                 return;
             }
-            scd30->wake_time = make_timeout_time_ms(50); // Check status after 25 ms
+            scd30->wake_time = make_timeout_time_ms(50); // Check status after 50 ms
             return;
         }
         case SCD30_READ_VALUE: // Reading values
         {
             uint16_t buf[6];
-            ret = scd30_read(REG_READ_MEAS, buf, 6); // Read measured data
+            ret = scd30_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)
             {
                 scd30->co2 = NAN; // Set values to NaN
@@ -203,54 +204,54 @@ int32_t scd30_write_config(scd30_config_t* config)
 {
     int32_t ret;
     uint16_t val;
-    if ((ret = scd30_read(REG_START_CONT_MEAS, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret;
     if (config->pressure_comp != (val != 0))
     {
         if (config->pressure_comp)
         {
-            if ((ret = scd30_write_value(REG_START_CONT_MEAS, config->pressure)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret;
         }
         else
         {
-            if ((ret = scd30_write_value(REG_START_CONT_MEAS, 0)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret;
         }
     }
 
-    if ((ret = scd30_read(REG_MEAS_INTERVAL, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret;
     if (val != config->meas_period)
     {
-        if ((ret = scd30_write_value(REG_MEAS_INTERVAL, config->meas_period)) != 0) return ret;
+        if ((ret = scd30_write_value(CMD_MEAS_INTERVAL, config->meas_period)) != 0) return ret;
     }
 
-    if ((ret = scd30_read(REG_AUTO_CAL, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret;
     if (config->enable_autocal != (val != 0))
     {
         if (config->enable_autocal)
         {
-            if ((ret = scd30_write_value(REG_AUTO_CAL, config->autocal_value)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_AUTO_CAL, config->autocal_value)) != 0) return ret;
         }
         else
         {
-            if ((ret = scd30_write_value(REG_AUTO_CAL, 0)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_AUTO_CAL, 0)) != 0) return ret;
         }
     }
 
-    if ((ret = scd30_read(REG_T_OFFSET, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret;
     if ((uint16_t)(config->temperature_offset * 100) != val)
     {
-        if ((ret = scd30_write_value(REG_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret;
+        if ((ret = scd30_write_value(CMD_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret;
     }
 
-    if ((ret = scd30_read(REG_ALTITUDE_COMP, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_ALTITUDE_COMP, &val, 1)) != 0) return ret;
     if (config->enable_altitude_comp != (val != 0))
     {
         if (config->enable_altitude_comp)
         {
-            if ((ret = scd30_write_value(REG_ALTITUDE_COMP, config->altitude)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret;
         }
         else
         {
-            if ((ret = scd30_write_value(REG_ALTITUDE_COMP, 0)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret;
         }
     }
 
@@ -261,21 +262,21 @@ int32_t scd30_read_config(scd30_config_t* config)
 {
     int32_t ret;
     uint16_t val;
-    if ((ret = scd30_read(REG_START_CONT_MEAS, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret;
     config->pressure = val;
     config->pressure_comp = (val != 0);
 
-    if ((ret = scd30_read(REG_MEAS_INTERVAL, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret;
     config->meas_period = val;
 
-    if ((ret = scd30_read(REG_AUTO_CAL, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret;
     config->autocal_value = val;
     config->enable_autocal = (val != 0);
 
-    if ((ret = scd30_read(REG_T_OFFSET, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret;
     config->temperature_offset = val / 100.f;
 
-    if ((ret = scd30_read(REG_ALTITUDE_COMP, &val, 1)) != 0) return ret;
+    if ((ret = scd30_read(CMD_ALTITUDE_COMP, &val, 1)) != 0) return ret;
     config->altitude = val;
     config->enable_altitude_comp = (val != 0);
 

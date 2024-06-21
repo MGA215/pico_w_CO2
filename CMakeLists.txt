@@ -65,6 +65,7 @@ add_subdirectory(common)
 add_subdirectory(sunrise)
 add_subdirectory(sunlight)
 add_subdirectory(scd30)
+add_subdirectory(scd41)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 

@@ -36,7 +36,6 @@ typedef struct scd30
     int state;
     scd30_meas_state_e meas_state;
     absolute_time_t wake_time; // Time of next action
-    //
     scd30_config_t* config;
 } scd30_t;
 
