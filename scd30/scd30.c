@@ -60,17 +60,14 @@ int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len)
     int32_t ret;
     uint8_t read_data[len * 3];
     memset(read_data, 0x00, (len * 3) + 2);
-
-    if ((ret = scd30_write_command(command)) != 0) return ret;
-    
+    if ((ret = scd30_write_command(command))) return ret;
     busy_wait_ms(3);
-    
     if ((ret = i2c_read_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, read_data, (len * 3 + 2), false, 1000)) < 0) return ret;
     for (int i = 0; i < len; i++)
     {
-        if (scd30_crc(&read_data[3 * i], 3) != 0) return SCD30_ERROR_CRC;
+        if (scd30_crc(&read_data[3 * i], 3) != 0) return SCD30_ERROR_CRC; // Check data CRC
         uint16_t val = ((read_data[3 * i + 1]) << 8) | (read_data[3 * i]);
-        buf[i] = ntoh16(val);
+        buf[i] = ntoh16(val); // Save data to the output buffer
     }
     return SUCCESS;
 }
@@ -85,8 +82,7 @@ int32_t scd30_write_value(uint16_t command, uint16_t value)
     *((uint16_t*)&commandBuffer[2]) = ntoh16(value); // Adding value
     commandBuffer[4] = scd30_crc(&commandBuffer[2], 2); // Adding CRC
 
-    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 5, false, 1000)) < 0) return ret;
-    sleep_ms(100);
+    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 5, false, 1000)) < 0) return ret; // Write command to the sensor
     return SUCCESS;
 }
 
@@ -94,9 +90,9 @@ int32_t scd30_write_command(uint16_t command)
 {
     int32_t ret;
     uint8_t commandBuffer[2];
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command);
+    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command
 
-    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 2, false, 1000)) < 0) return ret;
+    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 2, false, 1000)) < 0) return ret; // Send command
     return SUCCESS;
 }
 
@@ -190,13 +186,13 @@ void scd30_power(scd30_t* scd30, bool on)
 int32_t scd30_init(scd30_t* scd30, scd30_config_t* config)
 {
     int32_t ret;
-    scd30->config = config;
-    scd30_power(scd30, true);
+    scd30->config = config; // Save configuration
+    scd30_power(scd30, true); // Power on
 
-    scd30_init_struct(scd30);
+    scd30_init_struct(scd30); // Init defaults in struct
 
-    ret = scd30_write_config(config);
-    scd30_power(scd30, false);
+    ret = scd30_write_config(config); // Write configuration to sensor
+    scd30_power(scd30, false); // Power off
     return ret;
 }
 
@@ -207,11 +203,11 @@ int32_t scd30_write_config(scd30_config_t* config)
     if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret;
     if (config->pressure_comp != (val != 0))
     {
-        if (config->pressure_comp)
+        if (config->pressure_comp) // If pressure compensation enabled
         {
             if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret;
         }
-        else
+        else // pressure compensation disabled
         {
             if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret;
         }
