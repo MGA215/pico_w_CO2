@@ -57,7 +57,7 @@ target_include_directories(pico_w_CO2 PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts or any other standard includes, if required
 )
 
-add_subdirectory(ds3231)
+add_subdirectory(pico-ds3231)
 add_subdirectory(gfx_pack)
 add_subdirectory(ee895)
 add_subdirectory(cdm7162)
