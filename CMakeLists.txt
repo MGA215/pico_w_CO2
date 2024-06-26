@@ -66,6 +66,7 @@ add_subdirectory(sunrise)
 add_subdirectory(sunlight)
 add_subdirectory(scd30)
 add_subdirectory(scd41)
+add_subdirectory(cozir-lp3)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 
@@ -80,6 +81,7 @@ target_link_libraries(pico_w_CO2
         pico-sunlight
         hardware_exception
         pico-scd30
+        pico-cozir-lp3
         )
 
 pico_add_extra_outputs(pico_w_CO2)
