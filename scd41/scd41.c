@@ -143,7 +143,7 @@ void scd41_get_value(scd41_t* scd41)
             msg("Meas finished");
             #endif
             scd41_power(scd41, false); // Power off
-            scd41->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+            scd41->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
             return;
         }
         case SCD41_MEAS_START: // Measurement started
@@ -409,7 +409,7 @@ void scd41_init_struct(scd41_t* scd41)
     scd41->temperature = .0f; // Init temperature
     scd41->state = ERROR_SENSOR_NOT_INITIALIZED; // Sensor not initialized state
     scd41->meas_state = (scd41_meas_state_e)0; // Measurement not started
-    scd41->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timeout
+    scd41->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
 }
 
 void scd41_reset(void)

@@ -26,7 +26,7 @@ typedef struct cozir_lp3_config
     uint16_t pressure;
     bool temp_humidity_meas_en;
     bool PWM_en;
-    bool enable_ABC;
+    bool enable_cal;
     uint16_t ABC_init_period;
     uint16_t ABC_period;
     uint16_t ABC_target_co2;
@@ -52,7 +52,7 @@ typedef struct cozir_lp3
  * @brief Writes data to the CozIR-LP3 sensor
  * 
  * @param addr Register address the data should be written to
- * @param data Data to write
+ * @param data Data to write - MSB first
  * @param len Length of the data (in bytes)
  * @return int32_t Return code
  */
@@ -62,7 +62,7 @@ int32_t cozir_lp3_write(uint8_t addr, uint8_t* data, uint8_t len);
  * @brief Reads data from the CozIR-LP3 sensor
  * 
  * @param addr Register address to read from
- * @param buf Read data
+ * @param buf Read data - MSB first
  * @param len Length of the data to read (in bytes)
  * @return int32_t Return code
  */
@@ -75,5 +75,25 @@ int32_t cozir_lp3_read(uint8_t addr, uint8_t* buf, uint8_t len);
  */
 void cozir_lp3_get_value(cozir_lp3_t* cozir_lp3);
 
+/**
+ * @brief Turns the sensor power [on]
+ * 
+ * @param cozir_lp3 Sensor structure
+ * @param on Whether the power should be turned on
+ */
+void cozir_lp3_power(cozir_lp3_t* cozir_lp3, bool on);
 
+/**
+ * @brief Initializes the sensor structure and sets variables to defaults
+ * 
+ * @param cozir_lp3 Sensor structure
+ */
+void cozir_lp3_init_struct(cozir_lp3_t* cozir_lp3);
 
+/**
+ * @brief Reads configuration from the CozIR-LP3 sensor
+ * 
+ * @param config Configuration structure the read configuration will be saved to
+ * @return int32_t Return code
+ */
+int32_t cozir_lp3_read_config(cozir_lp3_config_t* config);
