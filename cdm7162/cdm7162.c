@@ -1,7 +1,7 @@
 #include "cdm7162.h"
+#include <stdio.h>
 
 #define CDM7162_ADDR 0x68
-#define CDM7162_I2C i2c0
 
 #define REG_RST 0x00
 #define REG_OP_MODE 0x01
@@ -22,6 +22,8 @@
 #define CO2_MIN_RANGE 0
 #define CO2_MAX_RANGE 10000
 
+#define msg(x) printf("[%u] [CDM7162] %s\n", to_ms_since_boot(get_absolute_time()), x)
+
 /**
  * @brief Sets device operation mode to power down
  * 
@@ -32,10 +34,10 @@ int32_t cdm7162_deinit(void); // DO NOT USE
 int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
     int32_t ret;
-    if ((ret = i2c_write_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, &addr, 1, true, 1000)) < 0) return ret; // Write address
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address
     
     busy_wait_ms(2);
-    if ((ret = i2c_read_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, buf, num_bytes, false, 1000)) < 0) return ret; // Read number of bytes from the address
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US)) < 0) return ret; // Read number of bytes from the address
     return SUCCESS;
 }
 
@@ -43,9 +45,9 @@ int32_t cdm7162_write(uint8_t addr, uint8_t value)
 {
     int32_t ret;
     uint8_t buf[2] = {addr, value};
-    if ((ret = i2c_write_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, buf, 2, true, 1000)) < 0) return ret; // Write value
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, 2, true, I2C_TIMEOUT_US)) < 0) return ret; // Write value
     busy_wait_ms(2);
-    if ((ret = i2c_read_timeout_per_char_us(CDM7162_I2C, CDM7162_ADDR, &buf[0], 1, false, 1000)) < 0) return ret; // Confirm saved value
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, &buf[0], 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Confirm saved value
     if (buf[0] != value) return CDM7162_ERROR_WRITE_RESP; // Incorrect value returned
     return SUCCESS;
 }
@@ -171,12 +173,18 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
     {
         case CDM7162_MEAS_FINISHED: // Measurement finished
         {
+            #ifdef DEBUG
+            msg("Meas finished");
+            #endif
             cdm7162_power(cdm7162, false); // Power off
             cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
             return;
         }
         case CDM7162_MEAS_START: // Measurement started
         {
+            #ifdef DEBUG
+            msg("Meas started");
+            #endif
             cdm7162_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = CDM7162_READ_STATUS; // Next step - read status
@@ -185,6 +193,9 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
         }
         case CDM7162_READ_STATUS: // Reading status
         {
+            #ifdef DEBUG
+            msg("Read status");
+            #endif
             ret = cdm7162_read(REG_STATUS, &buf[0], 1); // Read status
             if (ret != 0) // On invalid read
             {
@@ -210,6 +221,9 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
         }
         case CDM7162_READ_VALUE: // Reading measured value
         {
+            #ifdef DEBUG
+            msg("Read value");
+            #endif
             ret = cdm7162_read(REG_CO2_L, buf, 2); // Read measured CO2
             if (ret != 0) // On invalid read
             {

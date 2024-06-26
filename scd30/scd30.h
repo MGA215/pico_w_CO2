@@ -4,6 +4,7 @@
 #include "../common/functions.h"
 #include "string.h"
 #include <math.h>
+#include "../common/constants.h"
 
 typedef enum scd30_meas_state
 {

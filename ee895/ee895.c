@@ -1,8 +1,6 @@
 #include "ee895.h"
 #include <stdio.h>
 
-#define EE895_I2C i2c0
-
 #define EE895_ADDR 0x5F
 #define EE895_MAX_REG_READ 8
 
@@ -50,6 +48,8 @@
 #define REG_MEAS_INTERVAL       (0x1450)
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
+
+#define msg(x) printf("[%u] [EE895] %s\n", to_ms_since_boot(get_absolute_time()), x)
 
 /**
  * @brief Computes Modbus CRC for specified buffer
@@ -106,10 +106,10 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(nreg); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, true, 1000)) < 0) return ret; // Write to slave
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, true, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
 
-    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false, 1000)) < 0) return ret; // Read from slave
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false, I2C_TIMEOUT_US)) < 0) return ret; // Read from slave
     if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_ERROR_READ_RESP; // Check valid command & number of registers
 
     if (ee895_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
@@ -128,11 +128,11 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
     *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
 
-    if ((ret = i2c_write_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false, 1000)) < 0) return ret; // Write to slave
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(3);
 
     memset(&commandBuffer[1], 0x00, 7);
-    if ((ret = i2c_read_timeout_per_char_us(EE895_I2C, EE895_ADDR, &commandBuffer[1], 7, false, 1000)) < 0) return ret; // Read from slave
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Read from slave
 
     if (commandBuffer[1] != 0x06 || (ntoh16(*((uint16_t*)&commandBuffer[4]))) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
     if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
@@ -149,12 +149,18 @@ void ee895_get_value(ee895_t* ee895)
     {
         case EE895_MEAS_FINISHED: // Measurement finished
         {
+            #ifdef DEBUG
+            msg("Meas finished");
+            #endif
             ee895_power(ee895, false); // Power off
             ee895->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
         case EE895_MEAS_START: // Measurement started
         {
+            #ifdef DEBUG
+            msg("Meas started");
+            #endif
             ee895_power(ee895, true); // Power off
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
             if (ee895->config->single_meas_mode) 
@@ -167,6 +173,9 @@ void ee895_get_value(ee895_t* ee895)
         }
         case EE895_READ_TRIGGER_RDY:
         {
+            #ifdef DEBUG
+            msg("Read trigger ready");
+            #endif
             ret = ee895_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
             {
@@ -209,6 +218,9 @@ void ee895_get_value(ee895_t* ee895)
         }
         case EE895_READ_STATUS: // Reading status
         {
+            #ifdef DEBUG
+            msg("Read status");
+            #endif
             ret = ee895_read(REG_STATUS, 1, tempBuffer); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -238,6 +250,9 @@ void ee895_get_value(ee895_t* ee895)
         }
         case EE895_READ_VALUE: // Reading values
         {
+            #ifdef DEBUG
+            msg("Read value");
+            #endif
             ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
             if (ret != 0) // On invalid read
             {

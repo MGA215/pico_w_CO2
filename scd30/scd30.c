@@ -13,10 +13,9 @@
 #define CMD_FW_VERSION 0xD100
 #define CMD_SOFT_RESET 0xD304
 
-#define SCD30_I2C i2c0
 #define SCD30_ADDR 0x61
 
-
+#define msg(x) printf("[%u] [SCD30] %s\n", to_ms_since_boot(get_absolute_time()), x)
 
 /**
  * @brief Computes CRC for specified buffer
@@ -59,10 +58,10 @@ int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len)
 {
     int32_t ret;
     uint8_t read_data[len * 3];
-    memset(read_data, 0x00, (len * 3) + 2); // Clear read buffer
+    memset(read_data, 0x00, (len * 3)); // Clear read buffer
     if ((ret = scd30_write_command(command))) return ret; // Send command
     busy_wait_ms(3);
-    if ((ret = i2c_read_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, read_data, (len * 3 + 2), false, 1000)) < 0) return ret; // Read resonse
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD30_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read resonse
     for (int i = 0; i < len; i++) // Check each word CRC
     {
         if (scd30_crc(&read_data[3 * i], 3) != 0) return SCD30_ERROR_CRC; // Check data CRC
@@ -82,7 +81,7 @@ int32_t scd30_write_value(uint16_t command, uint16_t value)
     *((uint16_t*)&commandBuffer[2]) = ntoh16(value); // Adding value
     commandBuffer[4] = scd30_crc(&commandBuffer[2], 2); // Adding CRC
 
-    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 5, false, 1000)) < 0) return ret; // Write command to the sensor
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD30_ADDR, commandBuffer, 5, false, I2C_TIMEOUT_US)) < 0) return ret; // Write command to the sensor
     return SUCCESS;
 }
 
@@ -92,7 +91,7 @@ int32_t scd30_write_command(uint16_t command)
     uint8_t commandBuffer[2];
     *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command
 
-    if ((ret = i2c_write_timeout_per_char_us(SCD30_I2C, SCD30_ADDR, commandBuffer, 2, false, 1000)) < 0) return ret; // Send command
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD30_ADDR, commandBuffer, 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
     return SUCCESS;
 }
 
@@ -105,12 +104,14 @@ void scd30_get_value(scd30_t* scd30)
     {
         case SCD30_MEAS_FINISHED: // Measurement finished
         {
+            msg("Meas finished");
             scd30_power(scd30, false); // Power off
             scd30->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
         case SCD30_MEAS_START: // Measurement started
         {
+            msg("Meas start");
             scd30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
             scd30->meas_state = SCD30_READ_STATUS; // Next step - read status
@@ -119,6 +120,7 @@ void scd30_get_value(scd30_t* scd30)
         }
         case SCD30_READ_STATUS: // Reading status
         {
+            msg("read state");
             ret = scd30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -148,6 +150,7 @@ void scd30_get_value(scd30_t* scd30)
         }
         case SCD30_READ_VALUE: // Reading values
         {
+            msg("read value");
             uint16_t buf[6];
             ret = scd30_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)

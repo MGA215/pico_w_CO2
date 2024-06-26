@@ -6,6 +6,7 @@
 #include "error_codes.h"
 #include <stdlib.h>
 #include <string.h>
+#include "common/constants.h"
 
 #include "ds3231/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
@@ -14,6 +15,7 @@
 #include "sunrise/sunrise.h"
 #include "sunlight/sunlight.h"
 #include "scd30/scd30.h"
+#include "scd41/scd41.h"
 
 #include "sensor_config.h"
 
@@ -28,6 +30,7 @@ typedef struct sensors
     sunrise_t sunrise; // SUNRISE sensor structure
     sunlight_t sunlight; // SUNLIGHT sensor structure
     scd30_t scd30; // SCD30 sensor structure
+    scd41_t scd41; // SCD41 sensor structure
 } sensors_t;
 
 /**

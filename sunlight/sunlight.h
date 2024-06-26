@@ -4,6 +4,7 @@
 #include "../error_codes.h"
 #include "../common/functions.h"
 #include "math.h"
+#include "../common/constants.h"
 
 /**
  * @brief FSM for the SUNLIGHT sensor

@@ -6,10 +6,10 @@
 
 #define I2C_SCL 5
 #define I2C_SDA 4
-#define I2C_DEFAULT i2c0
-#define I2C_BAUDRATE 40000
 
 #define CONNECTED_SENSORS 8
+
+#define msg(sensor, x) printf("[%U] [MAIN-%s] %s\n", to_ms_since_boot(get_absolute_time()), sensor, x)
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -292,8 +292,15 @@ void write_display(void)
             write_display_sensor("Sensirion SCD30", sensor_readings.scd30.state,
                                     true, sensor_readings.scd30.co2,
                                     true, sensor_readings.scd30.temperature,
-                                    false, 0.0f,
-                                    true, sensor_readings.scd30.humidity); // Write SCD30 readings to the display
+                                    false, 0.0f, true, sensor_readings.scd30.humidity); // Write SCD30 readings to the display
+            break;
+        }
+        case 5:
+        {
+            write_display_sensor("Sensirion SCD41", sensor_readings.scd41.state,
+                                    true, sensor_readings.scd41.co2,
+                                    true, sensor_readings.scd41.temperature,
+                                    false, 0.0f, true, sensor_readings.scd41.humidity); // Write SCD41 readings to the display
             break;
         }
         default: 
@@ -324,30 +331,40 @@ void init_sensors(void)
     sunrise_init_struct(&(sensor_readings.sunrise));
     sunlight_init_struct(&(sensor_readings.sunlight));
     scd30_init_struct(&(sensor_readings.scd30));
+    scd41_init_struct(&(sensor_readings.scd41));
 
     set_power_mode();
 
+    // reset_i2c();
     // ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
     // sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
+    // reset_i2c();
     // ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
     // sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
+    // reset_i2c();
     // ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
     // sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
+    // reset_i2c();
     // ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
     // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
+    // reset_i2c();
     // ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
     // sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+
+    reset_i2c();
+    ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD41 sensor
+    sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 }
 
 void reset_i2c(void)
 {
-    i2c_deinit(I2C_DEFAULT);
+    i2c_deinit(I2C_SENSOR);
     sleep_ms(1);
-    i2c_init(I2C_DEFAULT, I2C_BAUDRATE);
+    i2c_init(I2C_SENSOR, I2C_BAUDRATE);
 }
 
 void init_sensor_i2c(void)
@@ -360,7 +377,7 @@ void init_sensor_i2c(void)
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SCL);
 
-    i2c_baud = i2c_init(I2C_DEFAULT, I2C_BAUDRATE); // Initialize I2C
+    i2c_baud = i2c_init(I2C_SENSOR, I2C_BAUDRATE); // Initialize I2C
 }
 
 void set_power_mode(void)
@@ -370,6 +387,7 @@ void set_power_mode(void)
     sensor_sunrise_config.power_global_control = global_power;
     sensor_sunlight_config.power_global_control = global_power;
     sensor_scd30_config.power_global_control = global_power;
+    sensor_scd41_config.power_global_control = global_power;
 }
 
 void set_power(bool on)
@@ -389,6 +407,7 @@ void read_sensors_start()
         sensor_readings.sunrise.meas_state = SUNRISE_MEAS_START; // Start SUNRISE measurement
         sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
         sensor_readings.scd30.meas_state = SCD30_MEAS_START; // Start SCD30 measurement
+        sensor_readings.scd41.meas_state = SCD41_MEAS_START; // Start SCD41 measurement
         
         sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
         sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
@@ -398,7 +417,7 @@ void read_sensors_start()
     }
     else 
     {
-        sensor_start_measurement_time = make_timeout_time_ms(100); // if cannot process - check after 100 ms
+        sensor_start_measurement_time = make_timeout_time_ms(100); // if cannot start measurement - check after 100 ms
     }
 }
 
@@ -424,6 +443,10 @@ void sensor_timer_vector_update(void)
     {
         sensor_timer_vector |= (0b1 << 4);
     }
+    if (time_reached(sensor_readings.scd41.wake_time)) // If SCD41 timer reached
+    {
+        sensor_timer_vector |= (0b1 << 5);
+    }
 }
 
 void read_sensors()
@@ -440,7 +463,7 @@ void read_sensors()
     //     }
     //     else // Try initializing the sensor
     //     {
-    //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
+    //         reset_i2c(); // If the last sensor failed init reset I2C bus
     //         ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
     //         sensor_readings.ee895.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     //     }
@@ -456,7 +479,7 @@ void read_sensors()
     //     }
     //     else // Try initializing the sensor
     //     {
-    //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
+    //         reset_i2c(); // If the last sensor failed init reset I2C bus
     //         ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
     //         sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
     //     }
@@ -507,10 +530,25 @@ void read_sensors()
     //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
     //         ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
     //         sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-            
     //     }
     //     if (sensor_readings.scd30.meas_state == SCD30_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 4); // If measurement completed clear sensor measurement bit
     // }
+
+    if (sensor_timer_vector & (0b1 << 5)) // If SCD41 should react to a timer reached
+    {
+        sensor_timer_vector &= ~(0b1 << 5); // clear SCD41 timer reached bit
+        if (sensor_readings.scd41.state == SUCCESS || sensor_readings.scd41.state == ERROR_NO_MEAS) // If sensor initialized
+        {
+            scd41_get_value(&sensor_readings.scd41); // Read SCD41 values
+        }
+        else // Try initializing the sensor
+        {
+            reset_i2c(); // If the last sensor failed init reset I2C bus
+            ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD30 sensor
+            sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+        }
+        if (sensor_readings.scd41.meas_state == SCD41_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 5); // If measurement completed clear sensor measurement bit
+    }
 
     if (true) // Must set corresponding bit for the currently active sensor
     {

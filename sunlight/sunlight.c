@@ -1,7 +1,7 @@
 #include "sunlight.h"
+#include <stdio.h>
 
 #define SUNLIGHT_ADDR 0x68
-#define SUNLIGHT_I2C i2c0
 
 #define SUNLIGHT_EN INT32_MAX
 
@@ -30,7 +30,6 @@
 #define REG_ID_LL 0x3D
 
 #define REG_PRODUCT_CODE 0x70 // 16 byte null-terminated string register
-
 
 #define REG_CAL_STATUS 0x81
 #define REG_CAL_CMD_H 0x82
@@ -98,6 +97,8 @@
 #define REG_ABC_PRESSURE_H 0xDE
 #define REG_ABC_PRESSURE_L 0xDF
 
+#define msg(x) printf("[%u] [SUNLIGHT] %s\n", to_ms_since_boot(get_absolute_time()), x)
+
 /**
  * @brief returns error code according to the error register value
  * 
@@ -135,10 +136,10 @@ int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len)
     command_buffer[0] = addr;
     memcpy(&command_buffer[1], buf, len);
     sl_wake_up(); // Wake sensor up
-    if ((ret = i2c_write_timeout_per_char_us(SUNLIGHT_I2C, SUNLIGHT_ADDR, command_buffer, len + 1, false, 1000)) < 0) return ret; // Write data to sensor
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, command_buffer, len + 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Write data to sensor
     busy_wait_ms(12);
     // uint8_t resp[len];
-    // if ((ret = i2c_read_timeout_per_char_us(SUNLIGHT_I2C, SUNLIGHT_ADDR, resp, len, false, 1000)) < 0) return ret;
+    // if ((ret = i2c_read_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, resp, len, false, 1000)) < 0) return ret;
     // if (memcmp(buf, resp, len)) return SUNLIGHT_ERROR_WRITE_RESP;
     return SUCCESS;
 }
@@ -147,10 +148,10 @@ int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
 {
     int32_t ret;
     sl_wake_up(); // Wake sensor up
-    if ((ret = i2c_write_timeout_per_char_us(SUNLIGHT_I2C, SUNLIGHT_ADDR, &addr, 1, true, 1000)) < 0) return ret; // Write address to read from
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address to read from
     
     busy_wait_ms(2);
-    if ((ret = i2c_read_timeout_per_char_us(SUNLIGHT_I2C, SUNLIGHT_ADDR, buf, num_bytes, false, 1000)) < 0) return ret; // Read data from sensor
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US)) < 0) return ret; // Read data from sensor
     busy_wait_ms(1);
     return SUCCESS;
 }
@@ -278,12 +279,18 @@ void sunlight_get_value(sunlight_t* sunlight)
     {
         case SUNLIGHT_MEAS_FINISHED: // Measurement finished
         {
+            #ifdef DEBUG
+            msg("Meas finished");
+            #endif
             sunlight_power(sunlight, false); // Power off
             sunlight->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
         case SUNLIGHT_MEAS_START: // Measurement start
         {
+            #ifdef DEBUG
+            msg("Meas start");
+            #endif
             sunlight_power(sunlight, true); // Power on
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunlight->meas_state = SUNLIGHT_READ_MODE; // Next step - read mode
@@ -292,6 +299,9 @@ void sunlight_get_value(sunlight_t* sunlight)
         }
         case SUNLIGHT_READ_MODE: // Reading mode
         {
+            #ifdef DEBUG
+            msg("Read mode");
+            #endif
             uint8_t data;
             ret = sunlight_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
             if (ret != 0) // On invalid read
@@ -324,6 +334,9 @@ void sunlight_get_value(sunlight_t* sunlight)
         }
         case SUNLIGHT_WRITE_MEAS_CMD: // Writing measurement command
         {
+            #ifdef DEBUG
+            msg("Write measure command");
+            #endif
             uint8_t buf[24] = {0}; 
             if (memcmp(sunlight->state_reg, buf, 24)) // If last state was zeros (not set)
             {
@@ -351,6 +364,9 @@ void sunlight_get_value(sunlight_t* sunlight)
         }
         case SUNLIGHT_READ_VALUE: // Reading measurement data
         {
+            #ifdef DEBUG
+            msg("Read value");
+            #endif
             uint8_t buf[10] = {0};
             ret = sunlight_read(REG_ERR_H, buf, 10); // Read data
             if (ret != 0) // On invalid read
@@ -399,6 +415,9 @@ void sunlight_get_value(sunlight_t* sunlight)
         }
         case SUNLIGHT_READ_STATUS: // Reading status registers
         {
+            #ifdef DEBUG
+            msg("Read status");
+            #endif
             ret = sunlight_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 24); // Read status registers
             if (ret != 0) // On invalid read
             {
@@ -413,7 +432,7 @@ void sunlight_get_value(sunlight_t* sunlight)
 
 void sl_wake_up(void)
 {
-    int32_t ret = i2c_write_timeout_per_char_us(SUNLIGHT_I2C, SUNLIGHT_ADDR, NULL, 0, false, 100); // Send empty command
+    int32_t ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, NULL, 0, false, 100); // Send empty command
 }
 
 void sunlight_init_struct(sunlight_t* sunlight)
