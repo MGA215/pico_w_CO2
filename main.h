@@ -69,7 +69,7 @@ void get_datetime(uint8_t* datetime_str, uint8_t datetime_len);
  * @param dt datetime struct read from RTC module
  * @return int negative if conversion failed, otherwise number of written characters (except null byte)
  */
-int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
+int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
 
 /**
  * @brief Reads button inputs and reacts to them

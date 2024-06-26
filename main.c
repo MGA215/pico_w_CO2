@@ -134,10 +134,10 @@ void get_datetime(uint8_t* datetime_str, uint8_t datetime_len)
     ds3231_datetime_t dt;
 
     ds3231_get_datetime(&dt, &rtc); // read datetime
-    ds3231_datetime2str(datetime_str, datetime_len, &dt); // convert datetime to string
+    datetime2str(datetime_str, datetime_len, &dt); // convert datetime to string
 }
 
-int ds3231_datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)
+int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)
 {
     return snprintf(buf, buf_size, "%04u-%02u-%02u %02u:%02u:%02u", dt->year, dt->month, dt->day, 
                     dt->hour, dt->minutes, dt->seconds); // Conversion of the datetime struct to date time string
