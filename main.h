@@ -32,6 +32,7 @@ typedef struct sensors
     sunlight_t sunlight; // SUNLIGHT sensor structure
     scd30_t scd30; // SCD30 sensor structure
     scd41_t scd41; // SCD41 sensor structure
+    cozir_lp3_t cozir_lp3; // CozIR-LP3 sensor structure
 } sensors_t;
 
 /**

@@ -97,3 +97,12 @@ void cozir_lp3_init_struct(cozir_lp3_t* cozir_lp3);
  * @return int32_t Return code
  */
 int32_t cozir_lp3_read_config(cozir_lp3_config_t* config);
+
+/**
+ * @brief Initializes the CozIR-LP3 sensor and writes configuration to it
+ * 
+ * @param cozir_lp3 Sensor structure
+ * @param config Configuration to write
+ * @return int32_t Return code
+ */
+int32_t cozir_lp3_init(cozir_lp3_t* cozir_lp3, cozir_lp3_config_t* config);

@@ -303,6 +303,15 @@ void write_display(void)
                                     false, 0.0f, true, sensor_readings.scd41.humidity); // Write SCD41 readings to the display
             break;
         }
+        case 6:
+        {
+            write_display_sensor("GSS CozIR-LP3", sensor_readings.cozir_lp3.state,
+                                    true, sensor_readings.cozir_lp3.co2,
+                                    sensor_readings.cozir_lp3.config->temp_humidity_meas_en, sensor_readings.cozir_lp3.temperature,
+                                    false, 0.0f,
+                                    sensor_readings.cozir_lp3.config->temp_humidity_meas_en, sensor_readings.cozir_lp3.humidity); // Write CozIR-LP3 readings to the display
+            break;
+        }
         default: 
         {
             position.x = 0;
@@ -332,6 +341,7 @@ void init_sensors(void)
     sunlight_init_struct(&(sensor_readings.sunlight));
     scd30_init_struct(&(sensor_readings.scd30));
     scd41_init_struct(&(sensor_readings.scd41));
+    cozir_lp3_init_struct(&(sensor_readings.cozir_lp3));
 
     set_power_mode();
 
@@ -355,9 +365,13 @@ void init_sensors(void)
     // ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
     // sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 
+    // reset_i2c();
+    // ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD41 sensor
+    // sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+
     reset_i2c();
-    ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD41 sensor
-    sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    ret = cozir_lp3_init(&(sensor_readings.cozir_lp3), &sensor_cozir_lp3_config); // Initialize CozIR-LP3 sensor
+    sensor_readings.cozir_lp3.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
 }
 
 void reset_i2c(void)
@@ -388,6 +402,7 @@ void set_power_mode(void)
     sensor_sunlight_config.power_global_control = global_power;
     sensor_scd30_config.power_global_control = global_power;
     sensor_scd41_config.power_global_control = global_power;
+    sensor_cozir_lp3_config.power_global_control = global_power;
 }
 
 void set_power(bool on)
@@ -408,6 +423,7 @@ void read_sensors_start()
         sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
         sensor_readings.scd30.meas_state = SCD30_MEAS_START; // Start SCD30 measurement
         sensor_readings.scd41.meas_state = SCD41_MEAS_START; // Start SCD41 measurement
+        sensor_readings.cozir_lp3.meas_state = COZIR_LP3_MEAS_START; // Start CozIR-LP3 measurement
         
         sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
         sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
@@ -446,6 +462,10 @@ void sensor_timer_vector_update(void)
     if (time_reached(sensor_readings.scd41.wake_time)) // If SCD41 timer reached
     {
         sensor_timer_vector |= (0b1 << 5);
+    }
+    if (time_reached(sensor_readings.cozir_lp3.wake_time)) // If CozIR-LP3 timer reached
+    {
+        sensor_timer_vector |= (0b1 << 6);
     }
 }
 
@@ -534,26 +554,42 @@ void read_sensors()
     //     if (sensor_readings.scd30.meas_state == SCD30_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 4); // If measurement completed clear sensor measurement bit
     // }
 
-    if (sensor_timer_vector & (0b1 << 5)) // If SCD41 should react to a timer reached
+    // if (sensor_timer_vector & (0b1 << 5)) // If SCD41 should react to a timer reached
+    // {
+    //     sensor_timer_vector &= ~(0b1 << 5); // clear SCD41 timer reached bit
+    //     if (sensor_readings.scd41.state == SUCCESS || sensor_readings.scd41.state == ERROR_NO_MEAS) // If sensor initialized
+    //     {
+    //         scd41_get_value(&sensor_readings.scd41); // Read SCD41 values
+    //     }
+    //     else // Try initializing the sensor
+    //     {
+    //         reset_i2c(); // If the last sensor failed init reset I2C bus
+    //         ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD30 sensor
+    //         sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    //     }
+    //     if (sensor_readings.scd41.meas_state == SCD41_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 5); // If measurement completed clear sensor measurement bit
+    // }
+
+    if (sensor_timer_vector & (0b1 << 6)) // If CozIR-LP3 should react to a timer reached
     {
-        sensor_timer_vector &= ~(0b1 << 5); // clear SCD41 timer reached bit
-        if (sensor_readings.scd41.state == SUCCESS || sensor_readings.scd41.state == ERROR_NO_MEAS) // If sensor initialized
+        sensor_timer_vector &= ~(0b1 << 6); // clear CozIR-LP3 timer reached bit
+        if (sensor_readings.cozir_lp3.state == SUCCESS || sensor_readings.cozir_lp3.state == ERROR_NO_MEAS) // If sensor initialized
         {
-            scd41_get_value(&sensor_readings.scd41); // Read SCD41 values
+            cozir_lp3_get_value(&sensor_readings.cozir_lp3); // Read CozIR-LP3 values
         }
         else // Try initializing the sensor
         {
             reset_i2c(); // If the last sensor failed init reset I2C bus
-            ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD30 sensor
-            sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+            ret = cozir_lp3_init(&(sensor_readings.cozir_lp3), &sensor_cozir_lp3_config); // Initialize SCD30 sensor
+            sensor_readings.cozir_lp3.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
         }
-        if (sensor_readings.scd41.meas_state == SCD41_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 5); // If measurement completed clear sensor measurement bit
+        if (sensor_readings.cozir_lp3.meas_state == COZIR_LP3_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 6); // If measurement completed clear sensor measurement bit
     }
 
     if (true) // Must set corresponding bit for the currently active sensor
     {
-        sensor_measurement_vector &= (0b1 << 5); // All other measurements finished - temporary
-        sensor_timer_vector &= (0b1 << 5); // All other timers are not reached - temporary
+        sensor_measurement_vector &= (0b1 << 6); // All other measurements finished - temporary
+        sensor_timer_vector &= (0b1 << 6); // All other timers are not reached - temporary
     }
 
     if (!sensor_measurement_vector) // If all measurements finished - turn off power globally if possible

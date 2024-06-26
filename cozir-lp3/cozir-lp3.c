@@ -94,7 +94,7 @@ void cozir_lp3_get_value(cozir_lp3_t* cozir_lp3)
             #ifdef DEBUG
             msg("Read value");
             #endif
-            ret = cozir_lp3_read(REG_CO2, &tempBuffer, 2);
+            ret = cozir_lp3_read(REG_CO2, tempBuffer, 2);
             if (ret != 0)
             {
                 cozir_lp3->co2 = NAN;
@@ -106,26 +106,27 @@ void cozir_lp3_get_value(cozir_lp3_t* cozir_lp3)
             }
             cozir_lp3->co2 = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));
 
-            ret = cozir_lp3_read(REG_RH, &tempBuffer, 2);
-            if (ret != 0)
-            {
-                cozir_lp3->humidity = NAN;
-                cozir_lp3->temperature = NAN;
-                cozir_lp3->meas_state = COZIR_LP3_MEAS_FINISHED;
-                cozir_lp3->state = ret;
-                return;
-            }
-            cozir_lp3->humidity = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));
+            // ret = cozir_lp3_read(REG_RH, tempBuffer, 2);
+            // if (ret != 0)
+            // {
+            //     cozir_lp3->humidity = NAN;
+            //     cozir_lp3->temperature = NAN;
+            //     cozir_lp3->meas_state = COZIR_LP3_MEAS_FINISHED;
+            //     cozir_lp3->state = ret;
+            //     return;
+            // }
+            // cozir_lp3->humidity = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));
 
-            ret = cozir_lp3_read(REG_TEMPERATURE, &tempBuffer, 2);
-            if (ret != 0)
-            {
-                cozir_lp3->temperature = NAN;
-                cozir_lp3->meas_state = COZIR_LP3_MEAS_FINISHED;
-                cozir_lp3->state = ret;
-                return;
-            }
-            cozir_lp3->temperature = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));
+            // ret = cozir_lp3_read(REG_TEMPERATURE, tempBuffer, 2);
+            // if (ret != 0)
+            // {
+            //     cozir_lp3->temperature = NAN;
+            //     cozir_lp3->meas_state = COZIR_LP3_MEAS_FINISHED;
+            //     cozir_lp3->state = ret;
+            //     return;
+            // }
+            // cozir_lp3->temperature = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));
+            
             cozir_lp3->meas_state = COZIR_LP3_MEAS_FINISHED;
             cozir_lp3->state = SUCCESS;
             return;
@@ -163,22 +164,22 @@ int32_t cozir_lp3_write_config(cozir_lp3_config_t* config)
     cozir_lp3_config_t read_config;
     cozir_lp3_read_config(&read_config);
     
-    if (read_config.pressure_comp != config->pressure_comp)
+    if (read_config.pressure_comp != config->pressure_comp || read_config.pressure != config->pressure)
     {
         if (config->pressure_comp && read_config.pressure != config->pressure)
         {
-            *((uint16_t*)&buf[0]) = ntoh(config->pressure);
+            *((uint16_t*)&buf[0]) = ntoh16(config->pressure);
             if ((ret = cozir_lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
         }
         else if (!config->pressure_comp && read_config.pressure != 1013)
         {
-            *((uint16_t*)&buf[0]) = ntoh(1013);
+            *((uint16_t*)&buf[0]) = ntoh16(1013);
             if ((ret = cozir_lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
         }
     }
     
-    buf[0] = config->temp_humidity_meas_en ? 1 : 0;
-    if ((ret = cozir_lp3_write(REG_TH_CONTROL, &buf[0], 1)) != 0) return ret;
+    // buf[0] = config->temp_humidity_meas_en ? 1 : 0;
+    // if ((ret = cozir_lp3_write(REG_TH_CONTROL, &buf[0], 1)) != 0) return ret;
 
     if (read_config.PWM_en != config->PWM_en)
     {
@@ -195,38 +196,41 @@ int32_t cozir_lp3_write_config(cozir_lp3_config_t* config)
     {
         if (read_config.ABC_init_period != config->ABC_init_period)
         {
-            *((uint16_t*)&buf[0]) = ntoh(config->ABC_init_period);
+            *((uint16_t*)&buf[0]) = ntoh16(config->ABC_init_period);
             if ((ret = cozir_lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.ABC_period != config->ABC_period)
         {
-            *((uint16_t*)&buf[0]) = ntoh(config->ABC_period);
+            *((uint16_t*)&buf[0]) = ntoh16(config->ABC_period);
             if ((ret = cozir_lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.ABC_target_co2 != config->ABC_target_co2)
         {
-            *((uint16_t*)&buf[0]) = ntoh(config->ABC_target_co2);
+            *((uint16_t*)&buf[0]) = ntoh16(config->ABC_target_co2);
             if ((ret = cozir_lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
         }
         if (read_config.cal_target_fresh_air != config->cal_target_fresh_air)
         {
-            *((uint16_t*)&buf[0]) = ntoh(config->cal_target_fresh_air);
+            *((uint16_t*)&buf[0]) = ntoh16(config->cal_target_fresh_air);
             if ((ret = cozir_lp3_write(REG_CAL_TARGET_FRESH_AIR, buf, 2)) != 0) return ret;
         }
         buf[0] = 0b1 << config->cal_mode;
         if ((ret = cozir_lp3_write(REG_SENSOR_CONTROL_SETTING, &buf[0], 1)) != 0) return ret;
     }
-
-    if (config->alarm_en)
+    if (read_config.alarm_treshold_co2 != config->alarm_treshold_co2)
     {
-        *((uint16_t*)&buf[0]) = ntoh(config->alarm_treshold_co2);
-        if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+        if (config->alarm_en)
+        {
+            *((uint16_t*)&buf[0]) = ntoh16(config->alarm_treshold_co2);
+            if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+        }
+        else
+        {
+            *((uint16_t*)&buf[0]) = ntoh16(0);
+            if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+        }
     }
-    else
-    {
-        *((uint16_t*)&buf[0]) = ntoh(0);
-        if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
-    }
+    return SUCCESS;
 }
 
 int32_t cozir_lp3_read_config(cozir_lp3_config_t* config)
