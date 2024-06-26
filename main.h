@@ -16,6 +16,7 @@
 #include "sunlight/sunlight.h"
 #include "scd30/scd30.h"
 #include "scd41/scd41.h"
+#include "cozir-lp3/cozir-lp3.h"
 
 #include "sensor_config.h"
 

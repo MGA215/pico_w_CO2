@@ -70,4 +70,9 @@
 #define SCD30_ERROR_CRC -403 // Error SCD30 - Invalid CRC
 #define SCD30_ERROR_DATA_READY_TIMEOUT -405 // Error SCD30 - Data not ready
 
+// SCD41 Errors
+#define SCD41_ERROR_CRC -503 // Error SCD41 - Invalid CRC
+#define SCD41_ERROR_DATA_READY_TIMEOUT -505 // Error SCD41 - Data not ready
 
+// CozIR-LP3 Errors
+#define COZIR_LP3_ERROR_NREG_REG -601 // Error CozIR-LP3 - specified number of registers is invalid

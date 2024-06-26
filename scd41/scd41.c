@@ -97,7 +97,7 @@ int32_t scd41_read(uint16_t command, uint16_t* buf, uint32_t len)
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD41_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read response
     for (int i = 0; i < len; i++) // Check response crcs
     {
-        if (scd41_crc(&read_data[3 * i], 3) != 0) return SCD30_ERROR_CRC; // Check word CRC
+        if (scd41_crc(&read_data[3 * i], 3) != 0) return SCD41_ERROR_CRC; // Check word CRC
         uint16_t val = ((read_data[3 * i + 1]) << 8) | (read_data[3 * i]);
         buf[i] = ntoh16(val); // Save response word
     }
@@ -247,7 +247,7 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
                 printf("Read status failed, abort...\n");
                 return;
@@ -270,7 +270,7 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
                 return;
             }

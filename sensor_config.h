@@ -63,3 +63,18 @@ scd41_config_t sensor_scd41_config = {
     .pressure_comp = false,
     .temperature_offset = 4
 };
+
+cozir_lp3_config_t sensor_cozir_lp3_config = {
+    .pressure_comp = false,
+    .pressure = 1013,
+    .temp_humidity_meas_en = true,
+    .PWM_en = false,
+    .enable_ABC = false,
+    .cal_mode = COZIR_LP3_CAL_ABC,
+    .ABC_init_period = 0,
+    .ABC_period = 0,
+    .ABC_target_co2 = 400,
+    .cal_target_fresh_air = 400,
+    .alarm_en = false,
+    .alarm_treshold_co2 = 20000
+};

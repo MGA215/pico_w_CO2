@@ -27,8 +27,6 @@ typedef struct scd30_config
     bool power_global_control; // Global power control
 } scd30_config_t;
 
-
-
 typedef struct scd30
 {
     float co2;
