@@ -24,5 +24,14 @@ uint32_t ntoh32(uint32_t network)
 
 void common_init_struct(sensor_t* sensor)
 {
-    
+    sensor->co2 = 0.0f;
+    sensor->humidity = 0.0f;
+    sensor->pressure = 0.0f;
+    sensor->temperature = 0.0f;
+    sensor->meas_state = MEAS_FINISHED;
+    sensor->measurement_iterator = 0;
+    sensor->state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor->timeout_iterator = 0;
+    sensor->wake_time = make_timeout_time_us(UINT64_MAX);
+    memset(sensor->state_reg, 0x00, 26);
 }

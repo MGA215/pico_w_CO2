@@ -22,7 +22,7 @@
 #define CO2_MIN_RANGE 0
 #define CO2_MAX_RANGE 10000
 
-#define msg(x) printf("[%u] [CDM7162] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [CDM7162] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Sets device operation mode to power down
@@ -173,7 +173,6 @@ int32_t cdm7162_set_default_atm_pressure(void)
 void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
-    static int32_t i;
     uint8_t buf[2];
     switch (cdm7162->meas_state)
     {
@@ -194,7 +193,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             cdm7162_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
-            i = 0; // Initialize read status timeout iterator
+            cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -215,7 +214,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read data
                 return;
             }
-            if (i++ > 20) // If in timeout
+            if (cdm7162->timeout_iterator++ > 20) // If in timeout
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished

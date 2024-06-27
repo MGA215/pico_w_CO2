@@ -24,7 +24,7 @@
 #define REG_ALTITUDE_PRESSURE 0x76
 #define REG_TH_CONTROL 0x8C
 
-#define msg(x) printf("[%u] [COZIR-LP3] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [COZIR-LP3] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 
 /**

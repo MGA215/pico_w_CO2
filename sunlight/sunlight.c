@@ -97,7 +97,7 @@
 #define REG_ABC_PRESSURE_H 0xDE
 #define REG_ABC_PRESSURE_L 0xDF
 
-#define msg(x) printf("[%u] [SUNLIGHT] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [SUNLIGHT] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief returns error code according to the error register value
@@ -263,7 +263,6 @@ int sl_get_error(uint16_t error_reg)
 void sunlight_get_value(sensor_t* sunlight)
 {
     int32_t ret;
-    static int32_t i;
 
     switch (sunlight->meas_state)
     {
@@ -284,7 +283,7 @@ void sunlight_get_value(sensor_t* sunlight)
             sunlight_power(sunlight, true); // Power on
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
-            i = 0; // Initialize iterator value
+            sunlight->timeout_iterator = 0; // Initialize iterator value
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -367,7 +366,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->state = ret; // Output return state
                 return;
             }
-            if (i++ > (4 * sunlight->config->meas_samples)) // If data not present for 4* the measurement time needed
+            if (sunlight->timeout_iterator++ > (4 * sunlight->config->meas_samples)) // If data not present for 4* the measurement time needed
             {
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown

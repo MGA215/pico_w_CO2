@@ -36,7 +36,7 @@
 
 #define SCD41_ADDR 0x62
 
-#define msg(x) printf("[%u] [SCD41] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [SCD41] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes CRC for specified buffer
@@ -133,8 +133,6 @@ void scd41_get_value(sensor_t* scd41)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    static int32_t i = 0;
-    static int32_t j = 0;
     switch(scd41->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -154,8 +152,8 @@ void scd41_get_value(sensor_t* scd41)
             scd41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
-            i = 0; // Initialize read status timeout iterator
-            j = 0; // Initialize read single measurement iterator
+            scd41->timeout_iterator = 0; // Initialize read status timeout iterator
+            scd41->measurement_iterator = 0; // Initialize read single measurement iterator
             return;
         }
         case MEAS_READ_MODE:
@@ -186,7 +184,7 @@ void scd41_get_value(sensor_t* scd41)
             if (scd41->config->single_meas_mode) // If in single meas mode
             {
                 scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Set next state to send single meas command
-                j = 0;
+                scd41->measurement_iterator = 0;
             }
             else
             {
@@ -234,7 +232,7 @@ void scd41_get_value(sensor_t* scd41)
             }
             if ((tempBuffer & 0x7FF) == 0x06) // On data ready - might cause troubles later (should be equal to 0, might be config not saved problem??)
             {
-                if (j++ == 0 && scd41->config->single_meas_mode)
+                if (scd41->measurement_iterator++ == 0 && scd41->config->single_meas_mode)
                 {
                     scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS;
                     return;
@@ -242,7 +240,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
-            if (i++ > 50) // On timeout
+            if (scd41->timeout_iterator++ > 50) // On timeout
             {
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;

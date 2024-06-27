@@ -1,6 +1,6 @@
 #include "main.h"
 
-#define msg(sensor, x) printf("[%U] [MAIN-%s] %s\n", to_ms_since_boot(get_absolute_time()), sensor, x)
+#define msg(sensor, x) printf("[%llu] [MAIN-"sensor"] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -240,7 +240,7 @@ void read_inputs(void)
 void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
 {
     if (len < 24) return;
-    switch(sensor->config->sensor_type) // On sensor type generate string
+    switch(sensor->sensor_type) // On sensor type generate string
     {
         case EE895:
         {
@@ -279,9 +279,11 @@ void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
         }
         default:
         {
+            memset(buf, 0x00, len);
             break;
         }
     }
+    return;
 }
 
 void write_display(void)
@@ -289,10 +291,12 @@ void write_display(void)
     gfx_pack_clear_display(); // Clear display
     point_t position = {.x = 0, .y = 0}; // position of datetime string on display
     gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
-    uint8_t sensor_name[24] = {0};
+    uint8_t sensor_name[24];
+    memset(sensor_name, 0x00, 24);
 
     get_sensor_name_string(&(sensors[display_sensor]), sensor_name, 24); // Get string name of the sensor
-    if (strcmp(sensor_name, "\0")) // If no sensor found
+    
+    if (strncmp(sensor_name, "\0", 1) == 0) // If no sensor found
     {
         position.x = 0;
         position.y = 1;
@@ -319,6 +323,8 @@ void init_sensors(void)
     for (int i = 0; i < 8; i++)
     {
         common_init_struct(&sensors[i]); // Initialize sensor structures
+        if (configuration_map[i] != NULL) sensors[i].sensor_type = configuration_map[i]->sensor_type; // Copy sensor type to sensor structure
+        else sensors[i].sensor_type = UNKNOWN;
     }
 
 

@@ -49,7 +49,7 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
-#define msg(x) printf("[%u] [EE895] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [EE895] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes Modbus CRC for specified buffer
@@ -144,7 +144,6 @@ void ee895_get_value(sensor_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
     int32_t ret;
-    static int32_t i = 0;
     switch(ee895->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -168,7 +167,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // If single measurement mode - wait for trigger ready
             }
             else ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
-            i = 0; // Initialize read status timeout iterator
+            ee895->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
@@ -201,10 +200,10 @@ void ee895_get_value(sensor_t* ee895)
                 }
                 ee895->wake_time = make_timeout_time_ms(300); // Wait for the measurement
                 ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
-                i = 0; // Reset iterator
+                ee895->timeout_iterator = 0; // Reset iterator
                 return;
             }
-            if (i++ > 20) // If timeout
+            if (ee895->timeout_iterator++ > 20) // If timeout
             {
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
@@ -236,7 +235,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
-            if (i++ > 20) // On timeout
+            if (ee895->timeout_iterator++ > 20) // On timeout
             {
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;

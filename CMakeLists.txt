@@ -57,7 +57,7 @@ target_include_directories(pico_w_CO2 PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/.. # for our common lwipopts or any other standard includes, if required
 )
 
-set(PICO_DEOPTIMIZED_DEBUG 1 CACHE STRING "Deoptimized debug")
+set(PICO_DEOPTIMIZED_DEBUG 1 CACHE BOOL "Deoptimized debug")
 
 add_subdirectory(pico-ds3231/lib)
 add_subdirectory(gfx_pack)

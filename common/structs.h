@@ -3,6 +3,7 @@
 
 typedef enum sensor_type
 {
+    UNKNOWN = -1,
     EE895 = 0,
     CDM7162 = 1,
     SUNRISE = 2,
@@ -82,10 +83,12 @@ typedef struct sensor
     float pressure;
     float humidity;
     int32_t state;
-    int32_t iterator;
+    int32_t timeout_iterator;
+    uint8_t measurement_iterator;
     meas_state_e meas_state;
     absolute_time_t wake_time;
     sensor_config_t* config;
+    sensor_type_e sensor_type;
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
 } sensor_t;
 #endif

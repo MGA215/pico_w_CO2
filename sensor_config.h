@@ -61,7 +61,7 @@ static sensor_config_t sensor_config_2 = {
 };
 
 static sensor_config_t sensor_config_3 = {
-    .sensor_type = SUNRISE,
+    .sensor_type = SUNLIGHT,
     .meas_period = 14,
     .single_meas_mode = false,
     .meas_samples = 8,

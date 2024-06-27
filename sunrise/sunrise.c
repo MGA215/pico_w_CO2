@@ -98,7 +98,7 @@
 #define REG_ABC_PRESSURE_H 0xDE
 #define REG_ABC_PRESSURE_L 0xDF
 
-#define msg(x) printf("[%u] [SUNRISE] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [SUNRISE] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief returns error code according to the error register value
@@ -268,7 +268,6 @@ int sr_get_error(uint16_t error_reg)
 void sunrise_get_value(sensor_t* sunrise)
 {
     int32_t ret;
-    static int32_t i;
 
     switch (sunrise->meas_state)
     {
@@ -289,7 +288,7 @@ void sunrise_get_value(sensor_t* sunrise)
             sunrise_power(sunrise, true); // Power on
             sunrise->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunrise->meas_state = MEAS_READ_MODE; // Next step - read mode
-            i = 0; // Initialize iterator value
+            sunrise->timeout_iterator = 0; // Initialize iterator value
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -372,7 +371,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->state = ret; // Output return state
                 return;
             }
-            if (i++ > (sunrise->config->meas_samples)) // If data not present for 4* the measurement time needed
+            if (sunrise->timeout_iterator++ > (sunrise->config->meas_samples)) // If data not present for 4* the measurement time needed
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = INT16_MAX; // Set CO2 to unknown

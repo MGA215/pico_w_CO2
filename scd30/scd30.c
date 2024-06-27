@@ -15,7 +15,7 @@
 
 #define SCD30_ADDR 0x61
 
-#define msg(x) printf("[%u] [SCD30] %s\n", to_ms_since_boot(get_absolute_time()), x)
+#define msg(x) printf("[%llu] [SCD30] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes CRC for specified buffer
@@ -99,7 +99,6 @@ void scd30_get_value(sensor_t* scd30)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    static int32_t i = 0;
     switch(scd30->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -115,7 +114,7 @@ void scd30_get_value(sensor_t* scd30)
             scd30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
-            i = 0; // Initialize read status timeout iterator
+            scd30->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -136,7 +135,7 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
-            if (i++ > 20) // On timeout
+            if (scd30->timeout_iterator++ > 20) // On timeout
             {
                 scd30->co2 = NAN; // Set values to NaN
                 scd30->temperature = NAN;
