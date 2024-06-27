@@ -13,4 +13,5 @@ target_sources(pico-common
   ${CMAKE_CURRENT_LIST_DIR}/functions.c
   ${CMAKE_CURRENT_LIST_DIR}/functions.h
   ${CMAKE_CURRENT_LIST_DIR}/constants.h
+  ${CMAKE_CURRENT_LIST_DIR}/structs.h
 )

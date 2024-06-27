@@ -1,14 +1,5 @@
 #include "main.h"
 
-#define DS3231_I2C_PORT i2c1
-#define DS3231_I2C_SDA_PIN 6
-#define DS3231_I2C_SCL_PIN 7
-
-#define I2C_SCL 5
-#define I2C_SDA 4
-
-#define CONNECTED_SENSORS 8
-
 #define msg(sensor, x) printf("[%U] [MAIN-%s] %s\n", to_ms_since_boot(get_absolute_time()), sensor, x)
 
 // structure containing info about the RTC module
@@ -17,8 +8,8 @@ struct ds3231_rtc rtc;
 // string holding the datetime value
 uint8_t datetime_str[30] = {0}; // MUTEX
 
-// structure containing sensor readings & info
-sensors_t sensor_readings; // MUTEX
+// array of sensors
+sensor_t sensors[8];
 
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
@@ -31,12 +22,6 @@ bool blight_on = true;
 
 // Should the display buffer be updated with new data
 bool update_display_buffer;
-
-// value representing the interval between display draws in ms
-uint32_t display_interval = 33;
-
-// value representing the interval between sensor readings in ms
-uint32_t sensor_read_interval_ms = 15000;
 
 // Sensor I2C actual baudrate
 uint32_t i2c_baud;
@@ -55,6 +40,9 @@ uint8_t sensor_timer_vector;
 
 // Vector of measurements, bit is high if measurement running
 uint8_t sensor_measurement_vector; 
+
+// Vector of active sensors
+uint8_t active_sensors = 0b01000000;
 
 
 /**
@@ -249,80 +237,73 @@ void read_inputs(void)
     return;
 }
 
+void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
+{
+    if (len < 24) return;
+    switch(sensor->config->sensor_type) // On sensor type generate string
+    {
+        case EE895:
+        {
+            snprintf(buf, len, "E+E EE895");
+            break;
+        }
+        case CDM7162:
+        {
+            snprintf(buf, len, "Figaro CDM7162");
+            break;
+        }
+        case SUNRISE:
+        {
+            snprintf(buf, len, "Senseair SUNRISE");
+            break;
+        }
+        case SUNLIGHT:
+        {
+            snprintf(buf, len, "Senseair SUNLIGHT");
+            break;
+        }
+        case SCD30:
+        {
+            snprintf(buf, len, "Sensirion SCD30");
+            break;
+        }
+        case SCD41:
+        {
+            snprintf(buf, len, "Sensirion SCD41");
+            break;
+        }
+        case COZIR_LP3:
+        {
+            snprintf(buf, len, "GSS CozIR-LP3");
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
 void write_display(void)
 {
     gfx_pack_clear_display(); // Clear display
     point_t position = {.x = 0, .y = 0}; // position of datetime string on display
     gfx_pack_write_text(&position, (char*)datetime_str); // write datetime string to display
-    switch (display_sensor)
+    uint8_t sensor_name[24] = {0};
+
+    get_sensor_name_string(&(sensors[display_sensor]), sensor_name, 24); // Get string name of the sensor
+    if (strcmp(sensor_name, "\0")) // If no sensor found
     {
-        case 0: 
-        {
-            write_display_sensor("E+E EE895", sensor_readings.ee895.state, 
-                                    true, sensor_readings.ee895.co2, 
-                                    true, sensor_readings.ee895.temperature, 
-                                    true, sensor_readings.ee895.pressure, false, 0.0f); // Write ee895 readings to the display
-            break; 
-        }
-        case 1:
-        {
-            write_display_sensor("FIGARO CDM7162", sensor_readings.cdm7162.state,
-                                    true, (float)sensor_readings.cdm7162.co2,
-                                    false, 0.0f, false, 0.0f, false, 0.0f); // Write CDM7162 readings to the display
-            break;
-        }
-        case 2: 
-        {
-            write_display_sensor("Senseair SUNRISE", sensor_readings.sunrise.state,
-                                    true, (float)sensor_readings.sunrise.co2,
-                                    true, sensor_readings.sunrise.temperature,
-                                    false, 0.0f, false, 0.0f); // Write SUNRISE readings to the display
-            break;
-        }
-        case 3:
-        {
-            write_display_sensor("Senseair SUNLIGHT", sensor_readings.sunlight.state,
-                                    true, (float)sensor_readings.sunlight.co2,
-                                    true, sensor_readings.sunlight.temperature,
-                                    false, 0.0f, false, 0.0f); // Write SUNLIGHT readings to the display
-            break;
-        }
-        case 4:
-        {
-            write_display_sensor("Sensirion SCD30", sensor_readings.scd30.state,
-                                    true, sensor_readings.scd30.co2,
-                                    true, sensor_readings.scd30.temperature,
-                                    false, 0.0f, true, sensor_readings.scd30.humidity); // Write SCD30 readings to the display
-            break;
-        }
-        case 5:
-        {
-            write_display_sensor("Sensirion SCD41", sensor_readings.scd41.state,
-                                    true, sensor_readings.scd41.co2,
-                                    true, sensor_readings.scd41.temperature,
-                                    false, 0.0f, true, sensor_readings.scd41.humidity); // Write SCD41 readings to the display
-            break;
-        }
-        case 6:
-        {
-            write_display_sensor("GSS CozIR-LP3", sensor_readings.cozir_lp3.state,
-                                    true, sensor_readings.cozir_lp3.co2,
-                                    sensor_readings.cozir_lp3.config->temp_humidity_meas_en, sensor_readings.cozir_lp3.temperature,
-                                    false, 0.0f,
-                                    sensor_readings.cozir_lp3.config->temp_humidity_meas_en, sensor_readings.cozir_lp3.humidity); // Write CozIR-LP3 readings to the display
-            break;
-        }
-        default: 
-        {
-            position.x = 0;
-            position.y = 1;
-            uint8_t buf[18];
-            memset(buf, 0x00, 18);
-            snprintf(buf, 18, "ERR_NO_SENSOR %i", display_sensor); // Write error no sensor to display
-            gfx_pack_write_text(&position, buf);
-            break;
-        }
+        position.x = 0;
+        position.y = 1;
+        snprintf(sensor_name, 18, "ERR_NO_SENSOR %i", display_sensor); // Write error no sensor to display
+        gfx_pack_write_text(&position, sensor_name);
     }
+    else write_display_sensor(sensor_name, sensors[display_sensor].state, 
+            sensors[display_sensor].config->co2_en, sensors[display_sensor].co2,
+            sensors[display_sensor].config->temp_en, sensors[display_sensor].temperature,
+            sensors[display_sensor].config->pressure_en, sensors[display_sensor].pressure,
+            sensors[display_sensor].config->RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
 }
 
 void update_display(void)
@@ -335,43 +316,67 @@ void init_sensors(void)
 {
     int32_t ret;
 
-    ee895_init_struct(&(sensor_readings.ee895)); // Initialize sensor structures
-    cdm7162_init_struct(&(sensor_readings.cdm7162));
-    sunrise_init_struct(&(sensor_readings.sunrise));
-    sunlight_init_struct(&(sensor_readings.sunlight));
-    scd30_init_struct(&(sensor_readings.scd30));
-    scd41_init_struct(&(sensor_readings.scd41));
-    cozir_lp3_init_struct(&(sensor_readings.cozir_lp3));
+    for (int i = 0; i < 8; i++)
+    {
+        common_init_struct(&sensors[i]); // Initialize sensor structures
+    }
 
-    set_power_mode();
 
-    // reset_i2c();
-    // ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
-    // sensor_readings.ee895.state = (ret != 0) ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    for (int i = 0; i < 8; i++)
+    {
+        if (active_sensors & (0b1 << i))
+        {
+            reset_i2c();
+            switch (configuration_map[i]->sensor_type)
+            {
+                case EE895:
+                {
+                    ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
+                    break;
+                }
+                case CDM7162:
+                {
+                    ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
+                    break;
+                }
+                case SUNRISE:
+                {
+                    ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
+                    break;
+                }
+                case SUNLIGHT:
+                {
+                    ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
+                    break;
+                }
+                case SCD30:
+                {
+                    ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
+                    break;
+                }
+                case SCD41:
+                {
+                    ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
+                    break;
+                }
+                case COZIR_LP3:
+                {
+                    ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
+                    break;
+                }
+                
+                default:
+                {
+                    sensors[i].state = ERROR_UNKNOWN_SENSOR;
+                    break;
+                }
+            }
+            if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
+            sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+        }
+    }
 
-    // reset_i2c();
-    // ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
-    // sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    // reset_i2c();
-    // ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
-    // sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    // reset_i2c();
-    // ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
-    // sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    // reset_i2c();
-    // ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
-    // sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    // reset_i2c();
-    // ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD41 sensor
-    // sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-
-    reset_i2c();
-    ret = cozir_lp3_init(&(sensor_readings.cozir_lp3), &sensor_cozir_lp3_config); // Initialize CozIR-LP3 sensor
-    sensor_readings.cozir_lp3.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+    set_power_mode(); // Set power control mode
 }
 
 void reset_i2c(void)
@@ -396,13 +401,11 @@ void init_sensor_i2c(void)
 
 void set_power_mode(void)
 {
-    sensor_ee895_config.power_global_control = global_power; // Set sensor power mode to global power control
-    sensor_cdm7162_config.power_global_control = global_power;
-    sensor_sunrise_config.power_global_control = global_power;
-    sensor_sunlight_config.power_global_control = global_power;
-    sensor_scd30_config.power_global_control = global_power;
-    sensor_scd41_config.power_global_control = global_power;
-    sensor_cozir_lp3_config.power_global_control = global_power;
+    for (int i = 0; i < 8; i++)
+    {
+        if (sensors[i].config == NULL) continue;
+        sensors[i].config->power_global_control = global_power; // Set sensor power mode to global power control
+    }
 }
 
 void set_power(bool on)
@@ -417,13 +420,11 @@ void read_sensors_start()
 {
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
     {
-        sensor_readings.ee895.meas_state = EE895_MEAS_START; // Start measurement .. ToDo: add more sensors
-        sensor_readings.cdm7162.meas_state = CDM7162_MEAS_START; // Start CDM7162 measurement
-        sensor_readings.sunrise.meas_state = SUNRISE_MEAS_START; // Start SUNRISE measurement
-        sensor_readings.sunlight.meas_state = SUNLIGHT_MEAS_START; // Start SUNLIGHT measurement
-        sensor_readings.scd30.meas_state = SCD30_MEAS_START; // Start SCD30 measurement
-        sensor_readings.scd41.meas_state = SCD41_MEAS_START; // Start SCD41 measurement
-        sensor_readings.cozir_lp3.meas_state = COZIR_LP3_MEAS_START; // Start CozIR-LP3 measurement
+        for (int i = 0; i < 8; i++)
+        {
+            if (sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue; // If not initialized sensor (aka disabled) continue
+            sensors[i].meas_state = MEAS_STARTED; // Start measurement
+        }
         
         sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
         sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
@@ -439,158 +440,128 @@ void read_sensors_start()
 
 void sensor_timer_vector_update(void)
 {
-    if (time_reached(sensor_readings.ee895.wake_time)) // If EE895 timer reached
+    for (int i = 0; i < 8; i++)
     {
-        sensor_timer_vector |= (0b1 << 0);
-    }
-    if (time_reached(sensor_readings.cdm7162.wake_time)) // If CDM7162 timer reached
-    {
-        sensor_timer_vector |= (0b1 << 1);
-    }
-    if (time_reached(sensor_readings.sunrise.wake_time)) // If SUNRISE timer reached
-    {
-        sensor_timer_vector |= (0b1 << 2);
-    }
-    if (time_reached(sensor_readings.sunlight.wake_time)) // If SUNLIGHT timer reached
-    {
-        sensor_timer_vector |= (0b1 << 3);
-    }
-    if (time_reached(sensor_readings.scd30.wake_time)) // If SCD30 timer reached
-    {
-        sensor_timer_vector |= (0b1 << 4);
-    }
-    if (time_reached(sensor_readings.scd41.wake_time)) // If SCD41 timer reached
-    {
-        sensor_timer_vector |= (0b1 << 5);
-    }
-    if (time_reached(sensor_readings.cozir_lp3.wake_time)) // If CozIR-LP3 timer reached
-    {
-        sensor_timer_vector |= (0b1 << 6);
+        if (time_reached(sensors[i].wake_time)) // If sensor timer reached
+        {
+            sensor_timer_vector |= (0b1 << i);
+        }
     }
 }
 
 void read_sensors()
 {
-    int32_t ret = -1;
+    int32_t ret = -99;
     bool i2c_reset = true;
 
-    // if (sensor_timer_vector & (0b1 << 0)) // If EE895 should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 0); // clear ee895 timer reached bit
-    //     if (sensor_readings.ee895.state == SUCCESS || sensor_readings.ee895.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         ee895_get_value(&sensor_readings.ee895); // Read EE895 values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = ee895_init(&(sensor_readings.ee895), &sensor_ee895_config); // Initialize EE895 sensor
-    //         sensor_readings.ee895.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.ee895.meas_state == EE895_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 0); // If measurement completed clear sensor measurement bit
-    // }
-
-    // if (sensor_timer_vector & (0b1 << 1)) // If cdm7162 should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 1); // clear cdm7162 timer reached bit
-    //     if (sensor_readings.cdm7162.state == SUCCESS || sensor_readings.cdm7162.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         cdm7162_get_value(&sensor_readings.cdm7162); // Read CDM7162 values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = cdm7162_init(&(sensor_readings.cdm7162), &sensor_cdm7162_config); // Initialize CDM7162 sensor
-    //         sensor_readings.cdm7162.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.cdm7162.meas_state == CDM7162_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 1); // If measurement completed clear sensor measurement bit
-    // }
-
-    // if (sensor_timer_vector & (0b1 << 2)) // If SUNRISE should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 2); // clear SUNRISE timer reached bit
-    //     if (sensor_readings.sunrise.state == SUCCESS || sensor_readings.sunrise.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         sunrise_get_value(&sensor_readings.sunrise); // Read SUNRISE values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = sunrise_init(&(sensor_readings.sunrise), &sensor_sunrise_config); // Initialize SUNRISE sensor
-    //         sensor_readings.sunrise.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.sunrise.meas_state == SUNRISE_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 2); // If measurement completed clear sensor measurement bit
-    // }
-
-    // if (sensor_timer_vector & (0b1 << 3)) // If SUNLIGHT should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 3); // clear SUNLIGHT timer reached bit
-    //     if (sensor_readings.sunlight.state == SUCCESS || sensor_readings.sunlight.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         sunlight_get_value(&sensor_readings.sunlight); // Read SUNLIGHT values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = sunlight_init(&(sensor_readings.sunlight), &sensor_sunlight_config); // Initialize SUNLIGHT sensor
-    //         sensor_readings.sunlight.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.sunlight.meas_state == SUNLIGHT_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 3); // If measurement completed clear sensor measurement bit
-    // }
-
-    // if (sensor_timer_vector & (0b1 << 4)) // If SCD30 should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 4); // clear SCD30 timer reached bit
-    //     if (sensor_readings.scd30.state == SUCCESS || sensor_readings.scd30.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         scd30_get_value(&sensor_readings.scd30); // Read SCD30 values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         if (ret != SUCCESS) reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = scd30_init(&(sensor_readings.scd30), &sensor_scd30_config); // Initialize SCD30 sensor
-    //         sensor_readings.scd30.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.scd30.meas_state == SCD30_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 4); // If measurement completed clear sensor measurement bit
-    // }
-
-    // if (sensor_timer_vector & (0b1 << 5)) // If SCD41 should react to a timer reached
-    // {
-    //     sensor_timer_vector &= ~(0b1 << 5); // clear SCD41 timer reached bit
-    //     if (sensor_readings.scd41.state == SUCCESS || sensor_readings.scd41.state == ERROR_NO_MEAS) // If sensor initialized
-    //     {
-    //         scd41_get_value(&sensor_readings.scd41); // Read SCD41 values
-    //     }
-    //     else // Try initializing the sensor
-    //     {
-    //         reset_i2c(); // If the last sensor failed init reset I2C bus
-    //         ret = scd41_init(&(sensor_readings.scd41), &sensor_scd41_config); // Initialize SCD30 sensor
-    //         sensor_readings.scd41.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-    //     }
-    //     if (sensor_readings.scd41.meas_state == SCD41_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 5); // If measurement completed clear sensor measurement bit
-    // }
-
-    if (sensor_timer_vector & (0b1 << 6)) // If CozIR-LP3 should react to a timer reached
+    for (int i = 0; i < 8; i++)
     {
-        sensor_timer_vector &= ~(0b1 << 6); // clear CozIR-LP3 timer reached bit
-        if (sensor_readings.cozir_lp3.state == SUCCESS || sensor_readings.cozir_lp3.state == ERROR_NO_MEAS) // If sensor initialized
+        if ((sensor_timer_vector & (0b1 << i)) && (active_sensors & (0b1 << i))) // If sensor should react to a timer reached
         {
-            cozir_lp3_get_value(&sensor_readings.cozir_lp3); // Read CozIR-LP3 values
+            sensor_timer_vector &= ~(0b1 << i); // Clear timer reached bit
+            if (sensors[i].state == SUCCESS || sensors[i].state == ERROR_NO_MEAS) // If sensor initialized
+            {
+                switch (configuration_map[i]->sensor_type)
+                {
+                    case EE895:
+                    {
+                        ee895_get_value(&(sensors[i])); // Read EE895 values
+                        break;
+                    }
+                    case CDM7162:
+                    {
+                        cdm7162_get_value(&(sensors[i])); // Read CDM7162 values
+                        break;
+                    }
+                    case SUNRISE:
+                    {
+                        sunrise_get_value(&(sensors[i])); // Read SUNRISE values
+                        break;
+                    }
+                    case SUNLIGHT:
+                    {
+                        sunlight_get_value(&(sensors[i])); // Read SUNLIGHT values
+                        break;
+                    }
+                    case SCD30:
+                    {
+                        scd30_get_value(&(sensors[i])); // Read SCD30 values
+                        break;
+                    }
+                    case SCD41:
+                    {
+                        scd41_get_value(&(sensors[i])); // Read SCD41 values
+                        break;
+                    }
+                    case COZIR_LP3:
+                    {
+                        cozir_lp3_get_value(&(sensors[i])); // Read CozIR-LP3 values
+                        break;
+                    }
+                    
+                    default:
+                    {
+                        sensors[i].state = ERROR_UNKNOWN_SENSOR;
+                        break;
+                    }
+                }
+            }
+            else if (sensors[i].state != ERROR_SENSOR_NOT_INITIALIZED)
+            {
+                reset_i2c();
+                switch (configuration_map[i]->sensor_type)
+                {
+                    case EE895:
+                    {
+                        ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
+                        break;
+                    }
+                    case CDM7162:
+                    {
+                        ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
+                        break;
+                    }
+                    case SUNRISE:
+                    {
+                        ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
+                        break;
+                    }
+                    case SUNLIGHT:
+                    {
+                        ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
+                        break;
+                    }
+                    case SCD30:
+                    {
+                        ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
+                        break;
+                    }
+                    case SCD41:
+                    {
+                        ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
+                        break;
+                    }
+                    case COZIR_LP3:
+                    {
+                        ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
+                        break;
+                    }
+                    
+                    default:
+                    {
+                        sensors[i].state = ERROR_UNKNOWN_SENSOR;
+                        break;
+                    }
+                }
+                if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
+                sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+            }
+            if (sensors[i].meas_state == MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << i); // If measurement completed clear sensor measurement bit
         }
-        else // Try initializing the sensor
-        {
-            reset_i2c(); // If the last sensor failed init reset I2C bus
-            ret = cozir_lp3_init(&(sensor_readings.cozir_lp3), &sensor_cozir_lp3_config); // Initialize SCD30 sensor
-            sensor_readings.cozir_lp3.state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
-        }
-        if (sensor_readings.cozir_lp3.meas_state == COZIR_LP3_MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << 6); // If measurement completed clear sensor measurement bit
     }
 
-    if (true) // Must set corresponding bit for the currently active sensor
-    {
-        sensor_measurement_vector &= (0b1 << 6); // All other measurements finished - temporary
-        sensor_timer_vector &= (0b1 << 6); // All other timers are not reached - temporary
-    }
+    sensor_measurement_vector &= active_sensors; // All other measurements finished - temporary
+    sensor_timer_vector &= active_sensors; // All other timers are not reached - temporary
 
     if (!sensor_measurement_vector) // If all measurements finished - turn off power globally if possible
     {

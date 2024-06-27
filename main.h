@@ -1,15 +1,16 @@
-#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "error_codes.h"
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "common/constants.h"
+#include "sensor_config.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
+
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
 #include "sunrise/sunrise.h"
@@ -17,23 +18,6 @@
 #include "scd30/scd30.h"
 #include "scd41/scd41.h"
 #include "cozir-lp3/cozir-lp3.h"
-
-#include "sensor_config.h"
-
-/**
- * @brief Structure to encapsulate all of the sensors
- * 
- */
-typedef struct sensors
-{
-    ee895_t ee895; // EE895 sensor structure
-    cdm7162_t cdm7162; // CDM7162 sensor structure
-    sunrise_t sunrise; // SUNRISE sensor structure
-    sunlight_t sunlight; // SUNLIGHT sensor structure
-    scd30_t scd30; // SCD30 sensor structure
-    scd41_t scd41; // SCD41 sensor structure
-    cozir_lp3_t cozir_lp3; // CozIR-LP3 sensor structure
-} sensors_t;
 
 /**
  * @brief Initializes pins, buses, modules; runs only once
@@ -159,3 +143,12 @@ void set_power_mode(void);
  * 
  */
 void reset_i2c(void);
+
+/**
+ * @brief Creates a sensor name string according to the sensor type
+ * 
+ * @param sensor Sensor structure
+ * @param buf String buffer
+ * @param len Max length of the buffer
+ */
+void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);

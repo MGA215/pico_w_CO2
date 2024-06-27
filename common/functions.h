@@ -1,4 +1,8 @@
 #include "pico/stdlib.h"
+#include "structs.h"
+#include "math.h"
+#include "error_codes.h"
+#include <string.h>
 /**
  * @brief Converts 16-bit value to the other endian
  * 
@@ -22,4 +26,11 @@ uint32_t ntoh32(uint32_t network);
  * @return float output value
  */
 float byte2float(uint32_t byte_value);
+
+/**
+ * @brief Initializes the sensor structure
+ * 
+ * @param sensor Sensor structure
+ */
+void common_init_struct(sensor_t* sensor);
 

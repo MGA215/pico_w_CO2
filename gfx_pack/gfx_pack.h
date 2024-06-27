@@ -8,17 +8,16 @@
  * @copyright Copyright (c) 2024
  * 
  */
+
+#ifndef GFX_PACK_MODULE
+#define GFX_PACK_MODULE
+
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/pwm.h"
 #include "math.h"
-
-#define GFX_PACK_BUTTON_A 12
-#define GFX_PACK_BUTTON_B 13
-#define GFX_PACK_BUTTON_C 14
-#define GFX_PACK_BUTTON_D 15
-#define GFX_PACK_BUTTON_E 22
+#include "common/constants.h"
 
 typedef struct {
     uint8_t x;
@@ -84,3 +83,5 @@ bool gfx_pack_write_text(point_t* position, char* text);
  * 
  */
 void gfx_pack_clear_display(void);
+
+#endif

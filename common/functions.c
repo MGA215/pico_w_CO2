@@ -21,3 +21,8 @@ uint32_t ntoh32(uint32_t network)
 {
     return (network >> 16) | ((network & 0x0000FFFF) << 16);
 }
+
+void common_init_struct(sensor_t* sensor)
+{
+    
+}

@@ -31,6 +31,14 @@
  */
 int32_t cdm7162_deinit(void); // DO NOT USE
 
+/**
+ * @brief Writes configuration to the CDM7162 sensor
+ * 
+ * @param config Configuration to be written
+ * @return int32_t Return code
+ */
+int32_t cdm7162_write_config(sensor_config_t* config);
+
 int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
     int32_t ret;
@@ -60,57 +68,59 @@ int32_t cdm7162_reset(void)
     return SUCCESS;
 }
 
-int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
+int32_t cdm7162_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf;
-    cdm7162_init_struct(cdm7162); // Initialize CDM7162 structure
-    cdm7162->config = config; // Save config
-    cdm7162_power(cdm7162, true); // Power on
-
     if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) // Read operation mode
     {
-        cdm7162_power(cdm7162, false);
         return ret; 
     }
     busy_wait_ms(10);
     if (buf != 0x06) // If not in measurement mode
     {
         if ((ret = cdm7162_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
-        {
-        cdm7162_power(cdm7162, false);
         return ret; 
-    }
         busy_wait_ms(100);
     }
 
     if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) // Read set functions
-    {
-        cdm7162_power(cdm7162, false);
         return ret; 
-    }
     busy_wait_ms(10);
 
-    if (((buf & 0b100) >> 2) == (bool)(config->pressure_corr) &&
+    if (((buf & 0b100) >> 2) == (bool)(config->enable_pressure_comp) &&
         ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
         ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
         ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
         ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) 
         {
-            cdm7162_power(cdm7162, false);
             return SUCCESS; // All functions correctly set
         }
 
     uint8_t func_settings = 0;
     if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
-    if (config->pressure_corr) func_settings |= (0b1 << 2);
+    if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
     if (config->PWM_range_high) func_settings |= (0b1 << 3);
     if (config->long_term_adj_2) func_settings |= (0b1 << 4);
     if (config->long_term_adj_1) func_settings |= (0b1 << 5);
     if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) // Set functions
     {
-        cdm7162_power(cdm7162, false);
         return ret; 
+    }
+    return SUCCESS;
+}
+
+int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf;
+    cdm7162->config = config; // Save config
+    cdm7162_power(cdm7162, true); // Power on
+
+    if ((ret = cdm7162_write_config(config)) != 0) // Write configuration to the sensor
+    {
+        cdm7162_power(cdm7162, false); // Power off
+        return ret;
     }
     
     busy_wait_ms(100);
@@ -118,13 +128,13 @@ int32_t cdm7162_init(cdm7162_t* cdm7162, cdm7162_config_t* config)
     return SUCCESS;
 }
 
-int32_t cdm7162_read_config(cdm7162_config_t* config)
+int32_t cdm7162_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf;
     if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret; // Read functions register
     config->enable_PWM_pin = buf & (0b1 << 0); // Save data from the function register
-    config->pressure_corr = buf & (0b1 << 2);
+    config->enable_pressure_comp = buf & (0b1 << 2);
     config->PWM_range_high = buf & (0b1 << 3);
     config->long_term_adj_2 = buf & (0b1 << 4);
     config->long_term_adj_1 = buf & (0b1 << 5);
@@ -164,14 +174,14 @@ int32_t cdm7162_set_default_atm_pressure(void)
     return cdm7162_set_atm_pressure(1013); // Set pressure to 1013 hPa
 }
 
-void cdm7162_get_value(cdm7162_t* cdm7162)
+void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
     static int32_t i;
     uint8_t buf[2];
     switch (cdm7162->meas_state)
     {
-        case CDM7162_MEAS_FINISHED: // Measurement finished
+        case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
             msg("Meas finished");
@@ -180,18 +190,18 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
             cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
             return;
         }
-        case CDM7162_MEAS_START: // Measurement started
+        case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
             msg("Meas started");
             #endif
             cdm7162_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
-            cdm7162->meas_state = CDM7162_READ_STATUS; // Next step - read status
+            cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
             i = 0; // Initialize read status timeout iterator
             return;
         }
-        case CDM7162_READ_STATUS: // Reading status
+        case MEAS_READ_STATUS: // Reading status
         {
             #ifdef DEBUG
             msg("Read status");
@@ -201,25 +211,25 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
                 cdm7162->state = ret; // Output return state
-                cdm7162->meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
+                cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 return;
             }    
             if ((buf[0] & (0b1 << 7)) == 0) // Data is ready to be read
             {
-                cdm7162->meas_state = CDM7162_READ_VALUE; // Next step - read data
+                cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read data
                 return;
             }
             if (i++ > 20) // If in timeout
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
-                cdm7162->meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
+                cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
             }
             cdm7162->wake_time = make_timeout_time_ms(25); // Wait 25 ms until next status check
             return;
         }
-        case CDM7162_READ_VALUE: // Reading measured value
+        case MEAS_READ_VALUE: // Reading measured value
         {
             #ifdef DEBUG
             msg("Read value");
@@ -228,7 +238,7 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
             if (ret != 0) // On invalid read
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
-                cdm7162->meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
+                cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = ret; // Output return state
                 return;
             }
@@ -236,27 +246,19 @@ void cdm7162_get_value(cdm7162_t* cdm7162)
             if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // If value out of range
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
-                cdm7162->meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
+                cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = CDM7162_ERROR_RANGE; // Output RANGE ERROR state
                 return;
             }
             cdm7162->co2 = val; // Save measured CO2
             cdm7162->state = SUCCESS; // Output SUCCESS state
-            cdm7162->meas_state = CDM7162_MEAS_FINISHED; // Measurement finished
+            cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
     }
 }
 
-void cdm7162_init_struct(cdm7162_t* cdm7162)
-{
-    cdm7162->co2 = 0; // Init CO2 concentration
-    cdm7162->meas_state = (cdm7162_meas_state_e)0; // Set measurement state to measurement not started
-    cdm7162->state = ERROR_SENSOR_NOT_INITIALIZED; // Set sensor state to not initialized
-    cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
-}
-
-void cdm7162_power(cdm7162_t* cdm7162, bool on)
+void cdm7162_power(sensor_t* cdm7162, bool on)
 {
     if (!cdm7162->config->power_global_control) // If power not controlled globally
     {
