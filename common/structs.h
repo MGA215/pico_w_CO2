@@ -1,5 +1,6 @@
 #ifndef STRUCTS
 #define STRUCTS
+
 typedef enum sensor_type
 {
     EE895 = 0,

@@ -117,15 +117,11 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     cdm7162->config = config; // Save config
     cdm7162_power(cdm7162, true); // Power on
 
-    if ((ret = cdm7162_write_config(config)) != 0) // Write configuration to the sensor
-    {
-        cdm7162_power(cdm7162, false); // Power off
-        return ret;
-    }
+    ret = cdm7162_write_config(config); // Write configuration to the sensor
     
-    busy_wait_ms(100);
+    sleep_ms(100);
     cdm7162_power(cdm7162, false); // Power off
-    return SUCCESS;
+    return ret;
 }
 
 int32_t cdm7162_read_config(sensor_config_t* config)

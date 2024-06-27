@@ -26,7 +26,7 @@
  */
 uint8_t scd30_crc(uint8_t* buf, uint32_t len);
 
-int32_t scd30_write_config(scd30_config_t* config);
+int32_t scd30_write_config(sensor_config_t* config);
 
 
 
@@ -95,30 +95,30 @@ int32_t scd30_write_command(uint16_t command)
     return SUCCESS;
 }
 
-void scd30_get_value(scd30_t* scd30)
+void scd30_get_value(sensor_t* scd30)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
     static int32_t i = 0;
     switch(scd30->meas_state)
     {
-        case SCD30_MEAS_FINISHED: // Measurement finished
+        case MEAS_FINISHED: // Measurement finished
         {
             msg("Meas finished");
             scd30_power(scd30, false); // Power off
             scd30->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
-        case SCD30_MEAS_START: // Measurement started
+        case MEAS_STARTED: // Measurement started
         {
             msg("Meas start");
             scd30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
-            scd30->meas_state = SCD30_READ_STATUS; // Next step - read status
+            scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             i = 0; // Initialize read status timeout iterator
             return;
         }
-        case SCD30_READ_STATUS: // Reading status
+        case MEAS_READ_STATUS: // Reading status
         {
             msg("read state");
             ret = scd30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
@@ -127,13 +127,13 @@ void scd30_get_value(scd30_t* scd30)
                 scd30->co2 = NAN; // Set values to NaN
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
-                scd30->meas_state = SCD30_MEAS_FINISHED; // Finished measurement
+                scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 scd30->state = ret; // Set sensor state to return value
                 return;
             }
             if (tempBuffer == 1) // On data ready
             {
-                scd30->meas_state = SCD30_READ_VALUE; // Next step - read values
+                scd30->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
             if (i++ > 20) // On timeout
@@ -142,13 +142,13 @@ void scd30_get_value(scd30_t* scd30)
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
                 scd30->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
-                scd30->meas_state = SCD30_MEAS_FINISHED; // Finished measurement
+                scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
             scd30->wake_time = make_timeout_time_ms(50); // Check status after 50 ms
             return;
         }
-        case SCD30_READ_VALUE: // Reading values
+        case MEAS_READ_VALUE: // Reading values
         {
             msg("read value");
             uint16_t buf[6];
@@ -159,7 +159,7 @@ void scd30_get_value(scd30_t* scd30)
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
                 scd30->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
-                scd30->meas_state = SCD30_MEAS_FINISHED; // Finished measurement
+                scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
             uint32_t val = ntoh16(*((uint32_t*)&buf[0])); // Convert co2 to uint32_t bytes
@@ -169,14 +169,14 @@ void scd30_get_value(scd30_t* scd30)
             val = ntoh16(*((uint32_t*)&buf[4])); // Convert humidity to uint32_t bytes
             scd30->humidity = byte2float(val); // Convert to float
 
-            scd30->meas_state = SCD30_MEAS_FINISHED; // Finished measurement
+            scd30->meas_state = MEAS_FINISHED; // Finished measurement
             scd30->state = SUCCESS; // Set state
             return;
         }
     }
 }
 
-void scd30_power(scd30_t* scd30, bool on)
+void scd30_power(sensor_t* scd30, bool on)
 {
     if (!scd30->config->power_global_control) // If power not controlled globally
     {
@@ -186,27 +186,25 @@ void scd30_power(scd30_t* scd30, bool on)
     }
 }
 
-int32_t scd30_init(scd30_t* scd30, scd30_config_t* config)
+int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
 {
     int32_t ret;
     scd30->config = config; // Save configuration
     scd30_power(scd30, true); // Power on
-
-    scd30_init_struct(scd30); // Init defaults in struct
 
     ret = scd30_write_config(config); // Write configuration to sensor
     scd30_power(scd30, false); // Power off
     return ret;
 }
 
-int32_t scd30_write_config(scd30_config_t* config)
+int32_t scd30_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint16_t val;
     if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read start continuous measurement & pressure
-    if (config->pressure_comp != (val != 0))
+    if (config->enable_pressure_comp != (val != 0))
     {
-        if (config->pressure_comp) // If pressure compensation enabled
+        if (config->enable_pressure_comp) // If pressure compensation enabled
         {
             if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret;
         }
@@ -223,11 +221,11 @@ int32_t scd30_write_config(scd30_config_t* config)
     }
 
     if ((ret = scd30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret; // Read auto calibration
-    if (config->enable_autocal != (val != 0))
+    if (config->enable_abc != (val != 0))
     {
-        if (config->enable_autocal) // If autocal enabled
+        if (config->enable_abc) // If autocal enabled
         {
-            if ((ret = scd30_write_value(CMD_AUTO_CAL, config->autocal_value)) != 0) return ret;
+            if ((ret = scd30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
         }
         else // Autocal disabled
         {
@@ -257,20 +255,20 @@ int32_t scd30_write_config(scd30_config_t* config)
     return SUCCESS;
 }
 
-int32_t scd30_read_config(scd30_config_t* config)
+int32_t scd30_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint16_t val;
     if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
-    config->pressure_comp = (val != 0);
+    config->enable_pressure_comp = (val != 0);
 
     if ((ret = scd30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret; // Read measurement interval
     config->meas_period = val;
 
     if ((ret = scd30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret; // Read auto calibration
-    config->autocal_value = val;
-    config->enable_autocal = (val != 0);
+    config->abc_target_value = val;
+    config->enable_abc = (val != 0);
 
     if ((ret = scd30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
     config->temperature_offset = val / 100.f;
@@ -281,17 +279,6 @@ int32_t scd30_read_config(scd30_config_t* config)
 
     return SUCCESS;
 }
-
-void scd30_init_struct(scd30_t* scd30)
-{
-    scd30->co2 = .0f; // Init CO2
-    scd30->humidity = .0f; // Init humidity
-    scd30->temperature = .0f; // Init temperature
-    scd30->state = ERROR_SENSOR_NOT_INITIALIZED; // Sensor not initialized state
-    scd30->meas_state = (scd30_meas_state_e)0; // Measurement not started
-    scd30->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timeout
-}
-
 
 
 

@@ -1,9 +1,10 @@
 #ifndef CONFIG
 #define CONFIG
+
 #include "common/structs.h"
 static bool global_power = true;
 
-sensor_config_t sensor_config_0 = {
+static sensor_config_t sensor_config_0 = {
     .sensor_type = EE895,
     .meas_period = 15,
     .single_meas_mode = false,
@@ -16,7 +17,7 @@ sensor_config_t sensor_config_0 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_1 = {
+static sensor_config_t sensor_config_1 = {
     .sensor_type = CDM7162,
     .enable_PWM_pin = false,
     .PWM_range_high = false,
@@ -37,7 +38,7 @@ sensor_config_t sensor_config_1 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_2 = {
+static sensor_config_t sensor_config_2 = {
     .sensor_type = SUNRISE,
     .meas_period = 14,
     .single_meas_mode = false,
@@ -59,7 +60,7 @@ sensor_config_t sensor_config_2 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_3 = {
+static sensor_config_t sensor_config_3 = {
     .sensor_type = SUNRISE,
     .meas_period = 14,
     .single_meas_mode = false,
@@ -81,7 +82,7 @@ sensor_config_t sensor_config_3 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_4 = {
+static sensor_config_t sensor_config_4 = {
     .sensor_type = SCD30,
     .meas_period = 2,
     .temperature_offset = 0,
@@ -97,7 +98,7 @@ sensor_config_t sensor_config_4 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_5 = {
+static sensor_config_t sensor_config_5 = {
     .sensor_type = SCD41,
     .single_meas_mode = false,
     .temperature_offset = 4,
@@ -115,7 +116,7 @@ sensor_config_t sensor_config_5 = {
     .power_5V = false,
 };
 
-sensor_config_t sensor_config_6 = {
+static sensor_config_t sensor_config_6 = {
     .sensor_type = COZIR_LP3,
     .digital_filter = 16,
     .enable_PWM_pin = false,
@@ -126,7 +127,7 @@ sensor_config_t sensor_config_6 = {
     .abc_period = 65535,
     .abc_target_value = 400,
     .alarm_en = false,
-    .alarm_treshold_co2_high = 20000,
+    .alarm_treshold_co2_high = 0,
     .co2_en = true,
     .temp_en = false,
     .RH_en = false,

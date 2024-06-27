@@ -65,13 +65,6 @@ int32_t cdm7162_set_default_atm_pressure(void);
 void cdm7162_get_value(sensor_t* cdm7162);
 
 /**
- * @brief Initilaizes the CDM7162 sensor structure
- * 
- * @param cdm7162 Sensor structure
- */
-void cdm7162_init_struct(sensor_t* cdm7162);
-
-/**
  * @brief Reads CDM7162 sensor config
  * 
  * @param config CDM7162 config structure the read configuration will be saved to

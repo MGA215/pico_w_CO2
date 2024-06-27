@@ -53,7 +53,7 @@ uint8_t scd41_crc(uint8_t* buf, uint32_t len);
  * @param config Configuration to write
  * @return int32_t Return code
  */
-int32_t scd41_write_config(scd41_config_t* config);
+int32_t scd41_write_config(sensor_config_t* config);
 
 /**
  * @brief Performs factory reset on the sensor
@@ -129,7 +129,7 @@ int32_t scd41_write_value(uint16_t command, uint16_t value)
     return SUCCESS;
 }
 
-void scd41_get_value(scd41_t* scd41)
+void scd41_get_value(sensor_t* scd41)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
@@ -137,7 +137,7 @@ void scd41_get_value(scd41_t* scd41)
     static int32_t j = 0;
     switch(scd41->meas_state)
     {
-        case SCD41_MEAS_FINISHED: // Measurement finished
+        case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
             msg("Meas finished");
@@ -146,26 +146,26 @@ void scd41_get_value(scd41_t* scd41)
             scd41->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
             return;
         }
-        case SCD41_MEAS_START: // Measurement started
+        case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
             msg("Meas started");
             #endif
             scd41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
-            scd41->meas_state = SCD41_READ_MODE; // Next step - read status
+            scd41->meas_state = MEAS_READ_MODE; // Next step - read status
             i = 0; // Initialize read status timeout iterator
             j = 0; // Initialize read single measurement iterator
             return;
         }
-        case SCD41_READ_MODE:
+        case MEAS_READ_MODE:
         {
             #ifdef DEBUG
             msg("Read mode");
             #endif
             uint16_t val = 0;
             if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
-            if (scd41->config->pressure_comp) // Pressure compensation enabled
+            if (scd41->config->enable_pressure_comp) // Pressure compensation enabled
             {
                 ret = scd41_write_value(CMD_SET_PRESSURE, scd41->config->pressure); // Write pressure
             }
@@ -178,24 +178,24 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+                scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 scd41->state = ret; // Set sensor state to return value
                 return;
             }
         
-            if (scd41->config->enable_single_meas) // If in single meas mode
+            if (scd41->config->single_meas_mode) // If in single meas mode
             {
-                scd41->meas_state = SCD41_WRITE_MEAS_CMD; // Set next state to send single meas command
+                scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Set next state to send single meas command
                 j = 0;
             }
             else
             {
-                scd41->meas_state = SCD41_READ_STATUS; // Set next state to read measurement status
+                scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
                 scd41->wake_time = make_timeout_time_ms(5000); // Wait 5 seconds
             }
             return;
         }
-        case SCD41_WRITE_MEAS_CMD:
+        case MEAS_TRIGGER_SINGLE_MEAS:
         {
             #ifdef DEBUG
             msg("Write measure command");
@@ -206,15 +206,15 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+                scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 scd41->state = ret; // Set sensor state to return value
                 return;
             }
-            scd41->meas_state = SCD41_READ_STATUS; // Set next state to read measurement status
+            scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
             scd41->wake_time = make_timeout_time_ms(5000); // Wait 5 seconds
             return;
         }
-        case SCD41_READ_STATUS: // Reading status
+        case MEAS_READ_STATUS: // Reading status
         {
             #ifdef DEBUG
                 msg("Read status");
@@ -228,18 +228,18 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+                scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 scd41->state = ret; // Set sensor state to return value
                 return;
             }
             if ((tempBuffer & 0x7FF) == 0x06) // On data ready - might cause troubles later (should be equal to 0, might be config not saved problem??)
             {
-                if (j++ == 0 && scd41->config->enable_single_meas)
+                if (j++ == 0 && scd41->config->single_meas_mode)
                 {
-                    scd41->meas_state = SCD41_WRITE_MEAS_CMD;
+                    scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS;
                     return;
                 }
-                scd41->meas_state = SCD41_READ_VALUE; // Next step - read values
+                scd41->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
             if (i++ > 50) // On timeout
@@ -248,14 +248,14 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
                 scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
-                scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+                scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 printf("Read status failed, abort...\n");
                 return;
             }
             scd41->wake_time = make_timeout_time_ms(100); // Check status after 100 ms
             return;
         }
-        case SCD41_READ_VALUE: // Reading values
+        case MEAS_READ_VALUE: // Reading values
         {
             #ifdef DEBUG
                 msg("Read value");
@@ -271,21 +271,21 @@ void scd41_get_value(scd41_t* scd41)
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
                 scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
-                scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+                scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
             scd41->co2 = (float)buf[0]; // Convert co2 to float
             scd41->temperature = -45 + 175 * (float)buf[1] / UINT16_MAX; // Convert temperature to float
             scd41->humidity = 100 * (float)buf[2] / UINT16_MAX; // Convert humidity to float
 
-            scd41->meas_state = SCD41_MEAS_FINISHED; // Finished measurement
+            scd41->meas_state = MEAS_FINISHED; // Finished measurement
             scd41->state = SUCCESS; // Set state
             return;
         }
     }
 }
 
-void scd41_power(scd41_t* scd41, bool on)
+void scd41_power(sensor_t* scd41, bool on)
 {
     if (!scd41->config->power_global_control) // If power not controlled globally
     {
@@ -295,20 +295,18 @@ void scd41_power(scd41_t* scd41, bool on)
     }
 }
 
-int32_t scd41_init(scd41_t* scd41, scd41_config_t* config)
+int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
 {
     int32_t ret;
     scd41->config = config;
     scd41_power(scd41, true); // Turn sensor power on
-
-    scd41_init_struct(scd41); // Initialize sensor structure
 
     ret = scd41_write_config(config); // Write config to the sensor
     scd41_power(scd41, false); // Power off
     return ret;
 }
 
-int32_t scd41_write_config(scd41_config_t* config)
+int32_t scd41_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint16_t val;
@@ -321,10 +319,10 @@ int32_t scd41_write_config(scd41_config_t* config)
     sleep_ms(500);
 
     if ((ret = scd41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto calibration enabled
-    printf("Read autocal: %i\nSet autocal:  %i\n", val, config->enable_autocal);
-    if (config->enable_autocal != (val != 0))
+    printf("Read autocal: %i\nSet autocal:  %i\n", val, config->enable_abc);
+    if (config->enable_abc != (val != 0))
     {
-        if (config->enable_autocal) // If autocal should be enabled
+        if (config->enable_abc) // If autocal should be enabled
         {
             if ((ret = scd41_write_value(CMD_SET_AUTO_SELF_CAL_EN, 1)) != 0) return ret;
         }
@@ -365,7 +363,7 @@ int32_t scd41_write_config(scd41_config_t* config)
         sleep_ms(800);
     }
 
-    if (!(config->enable_single_meas)) // If in periodic measurement mode
+    if (!(config->single_meas_mode)) // If in periodic measurement mode
     {
         if ((ret = scd41_write_command(CMD_START_PER_MEAS)) != 0) return ret; // Start periodic measurement
     }
@@ -373,7 +371,7 @@ int32_t scd41_write_config(scd41_config_t* config)
     return SUCCESS;
 }
 
-int32_t scd41_read_config(scd41_config_t* config, bool single_meas_mode)
+int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
 {
     int32_t ret;
     uint16_t val;
@@ -382,10 +380,10 @@ int32_t scd41_read_config(scd41_config_t* config, bool single_meas_mode)
 
     if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
-    config->pressure_comp = (val != 0);
+    config->enable_pressure_comp = (val != 0);
 
     if ((ret = scd41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
-    config->enable_autocal = (bool)val;
+    config->enable_abc = (bool)val;
 
     if ((ret = scd41_read(CMD_GET_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
     config->temperature_offset = val * (175.0f / UINT16_MAX);
@@ -400,16 +398,6 @@ int32_t scd41_read_config(scd41_config_t* config, bool single_meas_mode)
     }
 
     return SUCCESS;
-}
-
-void scd41_init_struct(scd41_t* scd41)
-{
-    scd41->co2 = .0f; // Init CO2
-    scd41->humidity = .0f; // Init humidity
-    scd41->temperature = .0f; // Init temperature
-    scd41->state = ERROR_SENSOR_NOT_INITIALIZED; // Sensor not initialized state
-    scd41->meas_state = (scd41_meas_state_e)0; // Measurement not started
-    scd41->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
 }
 
 void scd41_reset(void)

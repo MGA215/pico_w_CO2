@@ -119,7 +119,7 @@ void sl_wake_up(void);
  * @param config Configuration to be written
  * @return int Return code
  */
-int sl_write_config(sunlight_config_t* config);
+int sl_write_config(sensor_config_t* config);
 
 /**
  * @brief Writes config for the meter control register
@@ -127,7 +127,7 @@ int sl_write_config(sunlight_config_t* config);
  * @param config Config for the SUNLIGHT sensor
  * @return int Return code
  */
-int sl_write_meter_control(sunlight_config_t* config);
+int sl_write_meter_control(sensor_config_t* config);
 
 int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len)
 {
@@ -137,10 +137,7 @@ int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len)
     memcpy(&command_buffer[1], buf, len);
     sl_wake_up(); // Wake sensor up
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, command_buffer, len + 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Write data to sensor
-    busy_wait_ms(12);
-    // uint8_t resp[len];
-    // if ((ret = i2c_read_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, resp, len, false, 1000)) < 0) return ret;
-    // if (memcmp(buf, resp, len)) return SUNLIGHT_ERROR_WRITE_RESP;
+    sleep_ms(12);
     return SUCCESS;
 }
 
@@ -164,20 +161,13 @@ int sunlight_reset(void)
     return SUCCESS;
 }
 
-int sunlight_init(sunlight_t* sunlight, sunlight_config_t* config)
+int sunlight_init(sensor_t* sunlight, sensor_config_t* config)
 {
     int32_t ret;
-
-    sunlight_init_struct(sunlight); // Initialize sensor structure
     
     sunlight->config = config; // Save sensor config
 
     sunlight_power(sunlight, true); // Power on
-
-    // uint8_t buf[16];
-    // if ((ret = sunlight_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Product code returns buffer full of 0x88
-    // if (strcmp(buf, "006-0-0007") != 0) return ERROR_UNKNOWN_SENSOR;
-    // memset(buf, 0x00, 16);
 
     if ((ret = sl_write_config(config)) != 0) // Write configuration
     {
@@ -191,7 +181,7 @@ int sunlight_init(sunlight_t* sunlight, sunlight_config_t* config)
     return SUCCESS;
 }
 
-int sl_write_config(sunlight_config_t* config)
+int sl_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[11] = {0};
@@ -211,7 +201,7 @@ int sl_write_config(sunlight_config_t* config)
     return SUCCESS;
 }
 
-int sunlight_read_config(sunlight_config_t* config)
+int sunlight_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[11] = {0};
@@ -225,7 +215,7 @@ int sunlight_read_config(sunlight_config_t* config)
 
     if ((ret = sunlight_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
     config->enable_nRDY = data & 0b1 << 0; // Save meter control data
-    config->enable_ABC = data & 0b1 << 1;
+    config->enable_abc = data & 0b1 << 1;
     config->enable_static_IIR = data & 0b1 << 2;
     config->enable_dynamic_IIR = data & 0b1 << 3;
     config->enable_pressure_comp = data & 0b1 << 4;
@@ -234,11 +224,11 @@ int sunlight_read_config(sunlight_config_t* config)
     return SUCCESS;
 }
 
-int sl_write_meter_control(sunlight_config_t* config)
+int sl_write_meter_control(sensor_config_t* config)
 {
     uint8_t data = 0; // Prepare command
     data |= config->enable_nRDY;
-    data |= config->enable_ABC << 1;
+    data |= config->enable_abc << 1;
     data |= config->enable_static_IIR << 2;
     data |= config->enable_dynamic_IIR << 3;
     data |= config->enable_pressure_comp << 4;
@@ -270,14 +260,14 @@ int sl_get_error(uint16_t error_reg)
     else return SUNLIGHT_ERROR_SENSOR_GENERAL;
 }
 
-void sunlight_get_value(sunlight_t* sunlight)
+void sunlight_get_value(sensor_t* sunlight)
 {
     int32_t ret;
     static int32_t i;
 
     switch (sunlight->meas_state)
     {
-        case SUNLIGHT_MEAS_FINISHED: // Measurement finished
+        case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
             msg("Meas finished");
@@ -286,18 +276,18 @@ void sunlight_get_value(sunlight_t* sunlight)
             sunlight->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
             return;
         }
-        case SUNLIGHT_MEAS_START: // Measurement start
+        case MEAS_STARTED: // Measurement start
         {
             #ifdef DEBUG
             msg("Meas start");
             #endif
             sunlight_power(sunlight, true); // Power on
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
-            sunlight->meas_state = SUNLIGHT_READ_MODE; // Next step - read mode
+            sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
             i = 0; // Initialize iterator value
             return;
         }
-        case SUNLIGHT_READ_MODE: // Reading mode
+        case MEAS_READ_MODE: // Reading mode
         {
             #ifdef DEBUG
             msg("Read mode");
@@ -306,7 +296,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             ret = sunlight_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
             if (ret != 0) // On invalid read
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = ret; // Output return state
@@ -314,7 +304,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             }
             if (!((sunlight->config->single_meas_mode && data == 0x01) || (!sunlight->config->single_meas_mode && data == 0x00))) // If wrong mode set
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = SUNLIGHT_ERROR_WRONG_MODE; // Output Wrong mode error state
@@ -322,17 +312,17 @@ void sunlight_get_value(sunlight_t* sunlight)
             }
             if (sunlight->config->single_meas_mode) // If in single measurement mode
             {
-                sunlight->meas_state = SUNLIGHT_WRITE_MEAS_CMD; // Next step - write measurement command
+                sunlight->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
                 sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
             }
             else
             {
-                sunlight->meas_state = SUNLIGHT_READ_VALUE; // Next step - read measurement data
+                sunlight->meas_state = MEAS_READ_VALUE; // Next step - read measurement data
                 sunlight->wake_time = make_timeout_time_ms(300); // Timer 300 ms
             }
             return;
         }
-        case SUNLIGHT_WRITE_MEAS_CMD: // Writing measurement command
+        case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
             #ifdef DEBUG
             msg("Write measure command");
@@ -352,17 +342,17 @@ void sunlight_get_value(sunlight_t* sunlight)
             }
             if (ret != 0) // On invalid write
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = ret; // Output return state
                 return;
             }
             sunlight->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
-            sunlight->meas_state = SUNLIGHT_READ_VALUE; // Next step - read measurement data
+            sunlight->meas_state = MEAS_READ_VALUE; // Next step - read measurement data
             return;
         }
-        case SUNLIGHT_READ_VALUE: // Reading measurement data
+        case MEAS_READ_VALUE: // Reading measurement data
         {
             #ifdef DEBUG
             msg("Read value");
@@ -371,7 +361,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             ret = sunlight_read(REG_ERR_H, buf, 10); // Read data
             if (ret != 0) // On invalid read
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = ret; // Output return state
@@ -379,7 +369,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             }
             if (i++ > (4 * sunlight->config->meas_samples)) // If data not present for 4* the measurement time needed
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = SUNLIGHT_ERROR_DATA_READY_TIMEOUT; // Output timeout error state
@@ -388,7 +378,7 @@ void sunlight_get_value(sunlight_t* sunlight)
             ret = sl_get_error(ntoh16(*((uint16_t*)&buf[0]))); // Check returned error
             if (ret != 0 && ret != SUNLIGHT_ERROR_DATA_READY_TIMEOUT) // If error & not timeout error
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = ret; // Output return state
@@ -404,16 +394,16 @@ void sunlight_get_value(sunlight_t* sunlight)
             if (sunlight->config->single_meas_mode) // If single measurement mode
             {
                 sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
-                sunlight->meas_state = SUNLIGHT_READ_STATUS; // Next step - read status
+                sunlight->meas_state = MEAS_READ_STATUS; // Next step - read status
             }
             else // Not in single measurement mode
             {
-                sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+                sunlight->meas_state = MEAS_FINISHED; // Measurement finished
             }
             sunlight->state = SUCCESS; // Output SUCCESS state
             return;
         }
-        case SUNLIGHT_READ_STATUS: // Reading status registers
+        case MEAS_READ_STATUS: // Reading status registers
         {
             #ifdef DEBUG
             msg("Read status");
@@ -424,7 +414,7 @@ void sunlight_get_value(sunlight_t* sunlight)
                 memset(sunlight->state_reg, 0x00, 24); // Clear last state registers
                 sunlight->state = ret; // Output return state
             }
-            sunlight->meas_state = SUNLIGHT_MEAS_FINISHED; // Measurement finished
+            sunlight->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
     }
@@ -435,17 +425,7 @@ void sl_wake_up(void)
     int32_t ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, NULL, 0, false, 100); // Send empty command
 }
 
-void sunlight_init_struct(sunlight_t* sunlight)
-{
-    sunlight->co2 = 0; // Init CO2
-    sunlight->temperature = 0; // Init temperature
-    sunlight->state = ERROR_SENSOR_NOT_INITIALIZED; // Set sensor state to not initialized
-    sunlight->meas_state = (sunlight_meas_state_e)0; // Set measurement state to not started
-    sunlight->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
-    memset(sunlight->state_reg, 0x00, 24); // Clear saved state register
-}
-
-void sunlight_power(sunlight_t* sunlight, bool on)
+void sunlight_power(sensor_t* sunlight, bool on)
 {
     if (!sunlight->config->power_global_control) // If power not controlled globally
     {
