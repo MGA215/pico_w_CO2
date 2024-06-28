@@ -260,18 +260,18 @@ void sunlight_get_value(sensor_t* sunlight)
             #if DEBUG_INFO
             msg("info", "Write measure command");
             #endif
-            uint8_t buf[24] = {0}; 
-            if (memcmp(sunlight->state_reg, buf, 24)) // If last state was zeros (not set)
+            uint8_t buf[26] = {0}; 
+            if (memcmp(sunlight->state_reg, buf, 26)) // If last state was zeros (not set)
             {
                 uint8_t data = 0x01; // Prepare data
                 ret = sl_write(REG_START_SINGLE_MEAS_MIR, &data, 1); // Set measurement trigger
             }
             else // Last state exists
             {
-                uint8_t data[25];
+                uint8_t data[27];
                 data[0] = 0x01; // Prepare data
-                memcpy(&data[1], sunlight->state_reg, 24);
-                ret = sl_write(REG_START_SINGLE_MEAS_MIR, data, 25); // Set measurement trigger
+                memcpy(&data[1], sunlight->state_reg, 26);
+                ret = sl_write(REG_START_SINGLE_MEAS_MIR, data, 27); // Set measurement trigger
             }
             if (ret != 0) // On invalid write
             {
@@ -341,10 +341,10 @@ void sunlight_get_value(sensor_t* sunlight)
             #if DEBUG_INFO
             msg("info", "Read status");
             #endif
-            ret = sl_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 24); // Read status registers
+            ret = sl_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 26); // Read status registers
             if (ret != 0) // On invalid read
             {
-                memset(sunlight->state_reg, 0x00, 24); // Clear last state registers
+                memset(sunlight->state_reg, 0x00, 26); // Clear last state registers
                 sunlight->state = ret; // Output return state
             }
             sunlight->meas_state = MEAS_FINISHED; // Measurement finished

@@ -413,6 +413,16 @@ static int32_t s41_write_config(sensor_config_t* config)
         changed = true;
     }
 
+    if (config->abc_init_period != read_config.abc_init_period) // Check ABC initial period
+    {
+        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_INIT_PER, config->abc_init_period)) != 0) return ret; // Set ABC initial period
+    }
+
+    if (config->abc_period != read_config.abc_period) // Check ABC standard period
+    {
+        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_STANDARD_PER, config->abc_period)) != 0) return ret; // Set ABC standard period
+    }
+
     if (changed) // If value was changed save settings to EEPROM
     {
         #if DEBUG_WARN
