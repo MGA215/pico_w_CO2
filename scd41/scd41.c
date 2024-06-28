@@ -352,6 +352,12 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
     if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
     config->enable_abc = (bool)val;
 
+    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_INIT_PER, &val, 1)) != 0) return ret; // Read auto cal init period
+    config->abc_init_period = val;
+
+    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_STANDARD_PER, &val, 1)) != 0) return ret; // Read auto cal standard period
+    config->abc_period = val;
+
     if ((ret = s41_read(CMD_GET_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
     config->temperature_offset = val * (175.0f / UINT16_MAX);
 
@@ -372,39 +378,29 @@ static int32_t s41_write_config(sensor_config_t* config)
     int32_t ret;
     uint16_t val;
     bool changed = false;
+    sensor_config_t read_config;
 
-    printf("Init...\n");
     if ((ret = s41_write_command(CMD_WAKE_UP)) != 0) return ret; // Trying to wake sensor up
     sleep_ms(30);
+    if ((ret = scd41_read_config(&read_config, config->single_meas_mode)) != 0) return ret; // Read config
+
     if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop periodic measurement
     sleep_ms(500);
 
-    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto calibration enabled
-    printf("Read autocal: %i\nSet autocal:  %i\n", val, config->enable_abc);
-    if (config->enable_abc != (val != 0))
+    if (config->enable_abc != read_config.enable_abc)
     {
-        if (config->enable_abc) // If autocal should be enabled
-        {
-            if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, 1)) != 0) return ret;
-        }
-        else // Autocal disabled
-        {
-            if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, 0)) != 0) return ret;
-        }
+        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, config->enable_abc)) != 0) return ret;
         changed = true;
     }
 
-    if ((ret = s41_read(CMD_GET_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
-    printf("Read t_off: %i\nSet t_off:  %u\n", val, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)));
-    if ((uint16_t)(config->temperature_offset * (UINT16_MAX / 175)) != val) // Set temperature offset
+    if ((config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
     {
         if ((ret = s41_write_value(CMD_SET_T_OFFSET, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)))) != 0) return ret; // Write temperature offset
         changed = true;
     }
 
-    if ((ret = s41_read(CMD_GET_ALTITUDE, &val, 1)) != 0) return ret; // Read altitude value
-    printf("Read altitude: %i\nSet altitude:  %i\n", val, config->altitude);
-    if (config->enable_altitude_comp != (val != 0))
+    if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
+        config->enable_altitude_comp && (config->altitude != read_config.altitude)) // Check altitude
     {
         if (config->enable_altitude_comp) // If altitude compensation should be enabled
         {
@@ -419,7 +415,9 @@ static int32_t s41_write_config(sensor_config_t* config)
 
     if (changed) // If value was changed save settings to EEPROM
     {
-        printf("Writing to EEPROM...\n");
+        #if DEBUG_WARN
+        msg("Warn", "Config - writing config to EEPROM");
+        #endif
         if ((ret = s41_write_command(CMD_PERSIST_SETTINGS)) != 0) return ret; // Save settings to EEPROM
         sleep_ms(800);
     }

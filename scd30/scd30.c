@@ -309,7 +309,7 @@ static int32_t s30_write_config(sensor_config_t* config)
         if ((ret = s30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
     }
 
-    if (read_config.temperature_offset != config->temperature_offset) // Check temperature offset
+    if ((read_config.temperature_offset - config->temperature_offset) > 0.01f) // Check temperature offset
     {
         #if DEBUG_WARN
         msg("Warn", "Config - Writing Temperature offset");
