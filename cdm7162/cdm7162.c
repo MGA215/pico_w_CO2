@@ -202,10 +202,7 @@ int32_t cdm7162_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[4] = {0xFF};
     if ((ret = cdm_read(REG_FUNC, buf, 1)) != 0) return ret; // Read functions register
-    printf("enable pwm pin: %i\n", config->enable_PWM_pin);
-    printf("read enable pwm pin: %i\n", (bool)(buf[0] & (0b1 << 0)));
     config->enable_PWM_pin = (bool)(buf[0] & (0b1 << 0)); // Save data from the function register
-    printf("set pwm pin: %i\n", config->enable_PWM_pin);
     config->enable_pressure_comp = buf[0] & (0b1 << 2);
     config->PWM_range_high = buf[0] & (0b1 << 3);
     config->long_term_adj_2 = buf[0] & (0b1 << 4);
@@ -251,7 +248,6 @@ static int32_t cdm_write_config(sensor_config_t* config)
     }
     sensor_config_t read_config;
     if ((ret = cdm7162_read_config(&read_config)) != 0) return ret; // Read configuration
-    printf("outside: %i\n", read_config.enable_PWM_pin);
     busy_wait_ms(10);
 
     if (!(read_config.enable_PWM_pin == config->enable_PWM_pin && // Check for different flag
