@@ -1,3 +1,14 @@
+/**
+ * @file main.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief PICO and peripherals control implementation
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "main.h"
 
 #define msg(severity, source, message) printf("[%12llu] ["severity"] [MAIN-"source"] "message"\n", to_us_since_boot(get_absolute_time()) / 1000)
@@ -44,7 +55,7 @@ uint8_t sensor_timer_vector;
 uint8_t sensor_measurement_vector; 
 
 // Vector of active sensors
-uint8_t active_sensors = 0b01000000;
+uint8_t active_sensors = 0b00000001;
 
 
 /**
@@ -322,14 +333,14 @@ void init_sensors(void)
 {
     int32_t ret;
 
-    for (int i = 0; i < 8; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
         #if DEBUG
         uint8_t buf3[18];
         snprintf(buf3, 18, "Init structure %i", i);
         msgbuf("info", "SENSOR", buf3);
         #endif
-        common_init_struct(&sensors[i]); // Initialize sensor structures
+        common_init_struct(&sensors[i], i); // Initialize sensor structures
         if (configuration_map[i] != NULL) sensors[i].sensor_type = configuration_map[i]->sensor_type; // Copy sensor type to sensor structure
         else sensors[i].sensor_type = UNKNOWN;
     }
@@ -520,7 +531,7 @@ void read_sensors()
     int32_t ret = -99;
     bool i2c_reset = true;
 
-    for (int i = 0; i < 8; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
         if ((sensor_timer_vector & (0b1 << i)) && (active_sensors & (0b1 << i))) // If sensor should react to a timer reached
         {
@@ -616,7 +627,7 @@ void read_sensors()
                     snprintf(buf2, 36, "Reading sensor %i failed: %i", i, sensors[i].state);
                     msgbuf("ERROR", "SENSOR", buf2);
                 }
-                else if (sensors[i].meas_state == MEAS_FINISHED && sensors[i].state == SUCCESS)
+                else if (sensors[i].meas_state == MEAS_FINISHED && sensors[i].state == SUCCESS && !(sensor_measurement_vector & (0b1 << i)))
                 {
                     uint8_t buf2[36];
                     snprintf(buf2, 36, "Successfully read sensor %i", i);
@@ -627,7 +638,7 @@ void read_sensors()
             else if (sensors[i].state != ERROR_SENSOR_NOT_INITIALIZED)
             {
                 reset_i2c();
-                common_init_struct(&sensors[i]);
+                common_init_struct(&sensors[i], i);
                 switch (configuration_map[i]->sensor_type)
                 {
                     case EE895:

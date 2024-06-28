@@ -1,3 +1,14 @@
+/**
+ * @file sunlight.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Header file for communication with Senseair SUNLIGHT sensor
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef SUNLIGHT_MODULE
 #define SUNLIGHT_MODULE
 
@@ -9,32 +20,13 @@
 #include "math.h"
 #include "../common/constants.h"
 
-/**
- * @brief Writes data to the SUNLIGHT sensor to specified address
- * 
- * @param addr Register address
- * @param buf Data to be sent
- * @param len Length of the data
- * @return int Return code
- */
-int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len);
 
 /**
- * @brief Reads data from the SUNLIGHT sensor
+ * @brief Reads measured values from the sensor
  * 
- * @param addr Register address to be read from
- * @param buf Data buffer
- * @param num_bytes Number of bytes to read
- * @return int Return code
+ * @param sunlight SUNLIGHT sensor structure
  */
-int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
-
-/**
- * @brief Resets the sensor (soft reset)
- * 
- * @return int Return code
- */
-int sunlight_reset(void);
+extern void sunlight_get_value(sensor_t* sunlight);
 
 /**
  * @brief Initializes SUNLIGHT sensor
@@ -43,14 +35,7 @@ int sunlight_reset(void);
  * @param config Configuration of the SUNLIGHT sensor to be written
  * @return int Return code
  */
-int sunlight_init(sensor_t* sunlight, sensor_config_t* config);
-
-/**
- * @brief Reads measured values from the sensor
- * 
- * @param sunlight SUNLIGHT sensor structure
- */
-void sunlight_get_value(sensor_t* sunlight);
+extern int sunlight_init(sensor_t* sunlight, sensor_config_t* config);
 
 /**
  * @brief Reads SUNLIGHT sensor configuration
@@ -58,14 +43,13 @@ void sunlight_get_value(sensor_t* sunlight);
  * @param config SUNLIGHT config structure the read configuration will be saved to
  * @return int Return code
  */
-int sunlight_read_config(sensor_config_t* config);
+extern int sunlight_read_config(sensor_config_t* config);
 
 /**
- * @brief Switches sensor power [on] if not controlled globally
+ * @brief Resets the sensor (soft reset)
  * 
- * @param sunlight Sensor structure
- * @param on if the power should be switched on (true) or off (false)
+ * @return int Return code
  */
-void sunlight_power(sensor_t* sunlight, bool on);
+extern int sunlight_reset(void);
 
 #endif

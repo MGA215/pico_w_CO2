@@ -1,3 +1,14 @@
+/**
+ * @file error_codes.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Error codes used in the project
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #define SUCCESS 0
 
 // Main Errors

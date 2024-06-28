@@ -1,35 +1,59 @@
+/**
+ * @file cdm7162.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Implements communication with Figaro CDM7162 sensor
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "cdm7162.h"
 #include <stdio.h>
 
-#define CDM7162_ADDR 0x68
+#define CDM7162_ADDR        0x68
 
-#define REG_RST 0x00
-#define REG_OP_MODE 0x01
-#define REG_STATUS 0x02
-#define REG_CO2_L 0x03
-#define REG_CO2_H 0x04
-#define REG_ATM_PRESSURE 0x09
-#define REG_ALTITUDE 0x0A
-#define REG_ALARM_CO2_H 0x0C
-#define REG_ALARM_CO2_L 0x0D
-#define REG_CAL 0x0E
-#define REG_FUNC 0x0F
-#define REG_ERROR 0x10
-#define REG_CO2_CAL 0x12
-#define REG_LTA_TARGET 0x13
-#define REG_LTA_PERIOD 0x14
+#define REG_RST             0x00
+#define REG_OP_MODE         0x01
+#define REG_STATUS          0x02
+#define REG_CO2_L           0x03
+#define REG_CO2_H           0x04
+#define REG_ATM_PRESSURE    0x09
+#define REG_ALTITUDE        0x0A
+#define REG_ALARM_CO2_H     0x0C
+#define REG_ALARM_CO2_L     0x0D
+#define REG_CAL             0x0E
+#define REG_FUNC            0x0F
+#define REG_ERROR           0x10
+#define REG_CO2_CAL         0x12
+#define REG_LTA_TARGET      0x13
+#define REG_LTA_PERIOD      0x14
 
-#define CO2_MIN_RANGE 0
-#define CO2_MAX_RANGE 10000
+#define CO2_MIN_RANGE       0
+#define CO2_MAX_RANGE       10000
 
 #define msg(severity, x) printf("[%12llu] ["severity"] [CDM7162] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
+
 /**
- * @brief Sets device operation mode to power down
+ * @brief Reads data from cdm7162 sensor
  * 
+ * @param addr register address to read from
+ * @param buf output buffer
+ * @param num_bytes number of bytes to read
+ * @return int32_t error code
+ */
+static int32_t cdm_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes);
+
+/**
+ * @brief Writes data to cdm7162 sensor
+ * 
+ * @param addr Register address to write to
+ * @param value Value to write
  * @return int32_t Return code
  */
-int32_t cdm7162_deinit(void); // DO NOT USE
+static int32_t cdm_write(uint8_t addr, uint8_t value);
 
 /**
  * @brief Writes configuration to the CDM7162 sensor
@@ -37,9 +61,25 @@ int32_t cdm7162_deinit(void); // DO NOT USE
  * @param config Configuration to be written
  * @return int32_t Return code
  */
-int32_t cdm7162_write_config(sensor_config_t* config);
+static int32_t cdm_write_config(sensor_config_t* config);
 
-int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
+/**
+ * @brief Switches sensor power [on] if not controlled globally
+ * 
+ * @param cdm7162 sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+static inline void cdm_power(sensor_t* cdm7162, bool on);
+
+/**
+ * @brief Sets device operation mode to power down
+ * 
+ * @return int32_t Return code
+ */
+static int32_t cdm_deinit(void); // DO NOT USE - Writes to EEPROM
+
+
+static int32_t cdm_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
     int32_t ret;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address
@@ -49,7 +89,7 @@ int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
     return SUCCESS;
 }
 
-int32_t cdm7162_write(uint8_t addr, uint8_t value)
+static int32_t cdm_write(uint8_t addr, uint8_t value)
 {
     int32_t ret;
     uint8_t buf[2] = {addr, value};
@@ -58,116 +98,6 @@ int32_t cdm7162_write(uint8_t addr, uint8_t value)
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, &buf[0], 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Confirm saved value
     if (buf[0] != value) return CDM7162_ERROR_WRITE_RESP; // Incorrect value returned
     return SUCCESS;
-}
-
-int32_t cdm7162_reset(void)
-{
-    int32_t ret;
-    if ((ret = cdm7162_write(REG_RST, 0x01)) != 0) return ret; // Write reset
-    busy_wait_ms(100); // might need to be adjusted
-    return SUCCESS;
-}
-
-int32_t cdm7162_write_config(sensor_config_t* config)
-{
-    int32_t ret;
-    uint8_t buf;
-    if ((ret = cdm7162_read(REG_OP_MODE, &buf, 1)) != 0) // Read operation mode
-    {
-        return ret; 
-    }
-    busy_wait_ms(10);
-    if (buf != 0x06) // If not in measurement mode
-    {
-        if ((ret = cdm7162_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
-        return ret; 
-        busy_wait_ms(100);
-    }
-
-    if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) // Read set functions
-        return ret; 
-    busy_wait_ms(10);
-
-    if (((buf & 0b100) >> 2) == (bool)(config->enable_pressure_comp) &&
-        ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
-        ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
-        ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
-        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) 
-        {
-            return SUCCESS; // All functions correctly set
-        }
-
-    uint8_t func_settings = 0;
-    if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
-    if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
-    if (config->PWM_range_high) func_settings |= (0b1 << 3);
-    if (config->long_term_adj_2) func_settings |= (0b1 << 4);
-    if (config->long_term_adj_1) func_settings |= (0b1 << 5);
-    if ((ret = cdm7162_write(REG_FUNC, func_settings)) != 0) // Set functions
-    {
-        return ret; 
-    }
-    return SUCCESS;
-}
-
-int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
-{
-    int32_t ret;
-    uint8_t buf;
-    cdm7162->config = config; // Save config
-    cdm7162_power(cdm7162, true); // Power on
-
-    ret = cdm7162_write_config(config); // Write configuration to the sensor
-    
-    sleep_ms(100);
-    cdm7162_power(cdm7162, false); // Power off
-    return ret;
-}
-
-int32_t cdm7162_read_config(sensor_config_t* config)
-{
-    int32_t ret;
-    uint8_t buf;
-    if ((ret = cdm7162_read(REG_FUNC, &buf, 1)) != 0) return ret; // Read functions register
-    config->enable_PWM_pin = buf & (0b1 << 0); // Save data from the function register
-    config->enable_pressure_comp = buf & (0b1 << 2);
-    config->PWM_range_high = buf & (0b1 << 3);
-    config->long_term_adj_2 = buf & (0b1 << 4);
-    config->long_term_adj_1 = buf & (0b1 << 5);
-    return SUCCESS;
-}
-
-int32_t cdm7162_deinit(void)
-{
-    int32_t ret;
-    uint8_t op_mode;
-    if ((ret = cdm7162_read(REG_OP_MODE, &op_mode, 1)) != 0) return ret; // Read if sensor turned off
-
-    if (op_mode == 0) return SUCCESS;
-
-    if ((ret = cdm7162_write(REG_OP_MODE, 0x00)) != 0) return ret; // Turn sensor off
-    busy_wait_ms(100);
-    return SUCCESS;
-}
-
-int32_t cdm7162_set_atm_pressure(uint16_t pressure)
-{
-    int32_t ret;
-    if (pressure < 800 || pressure > 1055) return CDM7162_ERROR_RANGE; // Pressure out of range
-    uint8_t hpa = pressure - 800; // Convert to value for the sensor
-
-    uint8_t hpa_reg;
-    if ((ret = cdm7162_read(REG_ATM_PRESSURE, &hpa_reg, 1)) != 0) return ret; // Read set pressure
-    if (hpa == hpa_reg) return SUCCESS;
-
-    ret = cdm7162_write(REG_ATM_PRESSURE, hpa); // Write pressure value
-    busy_wait_ms(100);
-    return ret;
-}
-
-int32_t cdm7162_set_default_atm_pressure(void)
-{
-    return cdm7162_set_atm_pressure(1013); // Set pressure to 1013 hPa
 }
 
 void cdm7162_get_value(sensor_t* cdm7162)
@@ -181,7 +111,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             #ifdef DEBUG
             msg("info", "Meas finished");
             #endif
-            cdm7162_power(cdm7162, false); // Power off
+            cdm_power(cdm7162, false); // Power off
             cdm7162->wake_time = at_the_end_of_time; // Disable sensor timer
             return;
         }
@@ -190,7 +120,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             #ifdef DEBUG
             msg("info", "Meas started");
             #endif
-            cdm7162_power(cdm7162, true); // Power on
+            cdm_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
@@ -201,7 +131,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             #ifdef DEBUG
             msg("info", "Read status");
             #endif
-            ret = cdm7162_read(REG_STATUS, &buf[0], 1); // Read status
+            ret = cdm_read(REG_STATUS, &buf[0], 1); // Read status
             if (ret != 0) // On invalid read
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
@@ -229,7 +159,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             #ifdef DEBUG
             msg("info", "Read value");
             #endif
-            ret = cdm7162_read(REG_CO2_L, buf, 2); // Read measured CO2
+            ret = cdm_read(REG_CO2_L, buf, 2); // Read measured CO2
             if (ret != 0) // On invalid read
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
@@ -253,7 +183,96 @@ void cdm7162_get_value(sensor_t* cdm7162)
     }
 }
 
-void cdm7162_power(sensor_t* cdm7162, bool on)
+int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf;
+    cdm7162->config = config; // Save config
+    cdm_power(cdm7162, true); // Power on
+
+    ret = cdm_write_config(config); // Write configuration to the sensor
+    
+    sleep_ms(100);
+    cdm_power(cdm7162, false); // Power off
+    return ret;
+}
+
+int32_t cdm7162_read_config(sensor_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf;
+    if ((ret = cdm_read(REG_FUNC, &buf, 1)) != 0) return ret; // Read functions register
+    config->enable_PWM_pin = buf & (0b1 << 0); // Save data from the function register
+    config->enable_pressure_comp = buf & (0b1 << 2);
+    config->PWM_range_high = buf & (0b1 << 3);
+    config->long_term_adj_2 = buf & (0b1 << 4);
+    config->long_term_adj_1 = buf & (0b1 << 5);
+    return SUCCESS;
+}
+
+static int32_t cdm_write_config(sensor_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf;
+    if ((ret = cdm_read(REG_OP_MODE, &buf, 1)) != 0) // Read operation mode
+    {
+        return ret; 
+    }
+    busy_wait_ms(10);
+    if (buf != 0x06) // If not in measurement mode
+    {
+        if ((ret = cdm_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
+        return ret; 
+        busy_wait_ms(100);
+    }
+
+    if ((ret = cdm_read(REG_FUNC, &buf, 1)) != 0) // Read set functions
+        return ret; 
+    busy_wait_ms(10);
+
+    if (((buf & 0b100) >> 2) == (bool)(config->enable_pressure_comp) &&
+        ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
+        ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
+        ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
+        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) 
+        {
+            return SUCCESS; // All functions correctly set
+        }
+
+    uint8_t func_settings = 0;
+    if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
+    if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
+    if (config->PWM_range_high) func_settings |= (0b1 << 3);
+    if (config->long_term_adj_2) func_settings |= (0b1 << 4);
+    if (config->long_term_adj_1) func_settings |= (0b1 << 5);
+    if ((ret = cdm_write(REG_FUNC, func_settings)) != 0) // Set functions
+    {
+        return ret; 
+    }
+    return SUCCESS;
+}
+
+// int32_t cdm7162_set_atm_pressure(uint16_t pressure)
+// {
+//     int32_t ret;
+//     if (pressure < 800 || pressure > 1055) return CDM7162_ERROR_RANGE; // Pressure out of range
+//     uint8_t hpa = pressure - 800; // Convert to value for the sensor
+
+//     uint8_t hpa_reg;
+//     if ((ret = cdm_read(REG_ATM_PRESSURE, &hpa_reg, 1)) != 0) return ret; // Read set pressure
+//     if (hpa == hpa_reg) return SUCCESS;
+
+//     ret = cdm_write(REG_ATM_PRESSURE, hpa); // Write pressure value
+//     busy_wait_ms(100);
+//     return ret;
+// }
+
+// int32_t cdm7162_set_default_atm_pressure(void)
+// {
+//     return cdm7162_set_atm_pressure(1013); // Set pressure to 1013 hPa
+// }
+
+static inline void cdm_power(sensor_t* cdm7162, bool on)
 {
     if (!cdm7162->config->power_global_control) // If power not controlled globally
     {
@@ -262,3 +281,26 @@ void cdm7162_power(sensor_t* cdm7162, bool on)
         // Write power vector
     }
 }
+
+int32_t cdm7162_reset(void)
+{
+    int32_t ret;
+    if ((ret = cdm_write(REG_RST, 0x01)) != 0) return ret; // Write reset
+    busy_wait_ms(100); // might need to be adjusted
+    return SUCCESS;
+}
+
+static int32_t cdm_deinit(void)
+{
+    int32_t ret;
+    uint8_t op_mode;
+    if ((ret = cdm_read(REG_OP_MODE, &op_mode, 1)) != 0) return ret; // Read if sensor turned off
+
+    if (op_mode == 0) return SUCCESS;
+
+    if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret; // Turn sensor off
+    busy_wait_ms(100);
+    return SUCCESS;
+}
+
+

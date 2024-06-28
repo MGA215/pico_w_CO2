@@ -28,14 +28,14 @@ typedef struct {
  * @brief Initializes the GFX Pack
  * 
  */
-void gfx_pack_init(void);
+extern void gfx_pack_init(void);
 
 /**
  * @brief Controls the brightness of display backlight
  * 
  * @param brightness Brightness of the backlight
  */
-void gfx_pack_set_backlight(uint8_t brightness);
+extern void gfx_pack_set_backlight(uint8_t brightness);
 
 /**
  * @brief Returns button status
@@ -44,19 +44,19 @@ void gfx_pack_set_backlight(uint8_t brightness);
  * @return true when specified button is pressed
  * @return false when specified button is not pressed
  */
-bool gfx_pack_read_button(uint8_t GFX_PACK_BUTTON);
+extern bool gfx_pack_read_button(uint8_t GFX_PACK_BUTTON);
 
 /**
  * @brief Resets the GFX Pack
  * 
  */
-void gfx_pack_reset(void);
+extern void gfx_pack_reset(void);
 
 /**
  * @brief Updates the display pixels
  * 
  */
-void gfx_pack_update(void);
+extern void gfx_pack_update(void);
 
 /**
  * @brief Writes a character on the display
@@ -66,7 +66,7 @@ void gfx_pack_update(void);
  * @return true if character successfully written
  * @return false if character outside of the display
  */
-bool gfx_pack_write_char(point_t* position, char c);
+extern bool gfx_pack_write_char(point_t* position, char c);
 
 /**
  * @brief Writes text on the display
@@ -76,12 +76,12 @@ bool gfx_pack_write_char(point_t* position, char c);
  * @return true if text successfully written
  * @return false if part of the text could not be written
  */
-bool gfx_pack_write_text(point_t* position, char* text);
+extern bool gfx_pack_write_text(point_t* position, char* text);
 
 /**
  * @brief Clears the display
  * 
  */
-void gfx_pack_clear_display(void);
+extern void gfx_pack_clear_display(void);
 
 #endif

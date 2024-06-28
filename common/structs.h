@@ -1,5 +1,18 @@
+/**
+ * @file structs.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Defines main structs and enums used in the project
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef STRUCTS
 #define STRUCTS
+
+#include "pico/stdlib.h"
 
 typedef enum sensor_type
 {
@@ -89,6 +102,7 @@ typedef struct sensor
     absolute_time_t wake_time;
     sensor_config_t* config;
     sensor_type_e sensor_type;
+    uint8_t input_index;
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
 } sensor_t;
 #endif

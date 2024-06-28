@@ -1,3 +1,14 @@
+/**
+ * @file sunrise.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Header file for communication with Senseair SUNRISE sensor
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef SUNRISE_MODULE
 #define SUNRISE_MODULE
 
@@ -10,31 +21,11 @@
 #include "../common/constants.h"
 
 /**
- * @brief Writes data to the SUNRISE sensor to specified address
- * 
- * @param addr Register address
- * @param buf Data to be sent
- * @param len Length of the data
- * @return int Return code
- */
-int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len);
-
-/**
- * @brief Reads data from the SUNRISE sensor
- * 
- * @param addr Register address to be read from
- * @param buf Data buffer
- * @param num_bytes Number of bytes to read
- * @return int Return code
- */
-int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
-
-/**
  * @brief Resets the sensor (soft reset)
  * 
  * @return int Return code
  */
-int sunrise_reset(void);
+extern int sunrise_reset(void);
 
 /**
  * @brief Initializes SUNRISE sensor
@@ -43,14 +34,14 @@ int sunrise_reset(void);
  * @param config Configuration of the SUNRISE sensor to be written
  * @return int Return code
  */
-int sunrise_init(sensor_t* sunrise, sensor_config_t* config);
+extern int sunrise_init(sensor_t* sunrise, sensor_config_t* config);
 
 /**
  * @brief Reads measured values from the sensor
  * 
  * @param sunrise SUNRISE sensor structure
  */
-void sunrise_get_value(sensor_t* sunrise);
+extern void sunrise_get_value(sensor_t* sunrise);
 
 /**
  * @brief Reads SUNRISE sensor configuration
@@ -58,16 +49,6 @@ void sunrise_get_value(sensor_t* sunrise);
  * @param config SUNRISE config structure the read configuration will be saved to
  * @return int Return code
  */
-int sunrise_read_config(sensor_config_t* config);
-
-/**
- * @brief Switches sensor power [on] if not controlled globally
- * 
- * @param sunrise sensor structure
- * @param on if the power should be switched on (true) or off (false)
- */
-void sunrise_power(sensor_t* sunrise, bool on);
-
-
+extern int sunrise_read_config(sensor_config_t* config);
 
 #endif

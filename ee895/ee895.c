@@ -1,8 +1,19 @@
+/**
+ * @file ee895.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Implements communication with E+E EE895 sensor
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "ee895.h"
 #include <stdio.h>
 
-#define EE895_ADDR 0x5F
-#define EE895_MAX_REG_READ 8
+#define EE895_ADDR              0x5F
+#define EE895_MAX_REG_READ      8
 
 // CO2 range
 #define CO2_MIN_RANGE           0.0
@@ -58,7 +69,26 @@
  * @param len Length of the buffer
  * @return uint16_t CRC value
  */
-uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len);
+static inline uint16_t ee_modbus_crc(uint8_t* buf, uint32_t len);
+
+/**
+ * @brief Reads number of registers from the EE895
+ * 
+ * @param addr Address of the register to be read from
+ * @param nreg Number of registers to read
+ * @param buf Output buffer of values
+ * @return int32_t Return code
+ */
+static int32_t ee_read(uint16_t addr, uint16_t nreg, uint8_t* buf);
+
+/**
+ * @brief Writes a value to the EE895
+ * 
+ * @param addr Address of the register to be written to
+ * @param value Value to be written
+ * @return int32_t Return code
+ */
+static int32_t ee_write(uint16_t addr, uint16_t value);
 
 /**
  * @brief Writes configuration to the sensor
@@ -66,9 +96,18 @@ uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len);
  * @param config Configuration to write
  * @return int32_t Return code
  */
-int32_t ee_write_config(sensor_config_t* config);
+static int32_t ee_write_config(sensor_config_t* config);
 
-uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len)
+/**
+ * @brief Switches sensor power to [on] state if not controlled globally
+ * 
+ * @param ee895 Sensor structure
+ * @param on if the power should be switched on (true) or off (false)
+ */
+static inline void ee_power(sensor_t* ee895, bool on);
+
+
+static inline uint16_t ee_modbus_crc(uint8_t* buf, uint32_t len)
 {
     uint16_t crc = 0xFFFF;
     uint32_t i;
@@ -94,7 +133,7 @@ uint16_t ee895_modbus_crc(uint8_t* buf, uint32_t len)
     return crc;
 }
 
-int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
+static int32_t ee_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
 {
     int32_t ret;
     uint8_t commandBuffer[(EE895_MAX_REG_READ * 2) + 8];
@@ -104,7 +143,7 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
     commandBuffer[1] = 0x03; // Read multiple holding registers
     *((uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
     *((uint16_t*)&commandBuffer[4]) = ntoh16(nreg); // Convert number of registers to big endian
-    *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
+    *((uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, true, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
@@ -112,12 +151,12 @@ int32_t ee895_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], nreg * 2 + 4, false, I2C_TIMEOUT_US)) < 0) return ret; // Read from slave
     if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_ERROR_READ_RESP; // Check valid command & number of registers
 
-    if (ee895_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
+    if (ee_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
     memcpy(buf, &commandBuffer[3], nreg * 2); // Copy to output buffer
     return 0;
 }
 
-int32_t ee895_write(uint16_t addr, uint16_t value)
+static int32_t ee_write(uint16_t addr, uint16_t value)
 {
     int32_t ret;
     uint8_t commandBuffer[2 * EE895_MAX_REG_READ + 8];
@@ -126,7 +165,7 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     commandBuffer[1] = 0x06; // Write multiple holding registers
     *((uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
     *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
-    *((uint16_t*)&commandBuffer[6]) = ee895_modbus_crc(commandBuffer, 6); // CRC computation
+    *((uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(3);
@@ -135,9 +174,35 @@ int32_t ee895_write(uint16_t addr, uint16_t value)
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Read from slave
 
     if (commandBuffer[1] != 0x06 || (ntoh16(*((uint16_t*)&commandBuffer[4]))) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
-    if (ee895_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
+    if (ee_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
 
     return 0;
+}
+
+int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf)
+{
+    int32_t ret;
+    busy_wait_ms(250);
+
+    // for specific registers add delay
+    if (((addr >= REG_T_C_FLOAT) || ((addr + nreg) >= REG_T_C_FLOAT)) && (addr <= REG_P_PSI_FLOAT)) {
+        busy_wait_ms(750);
+    }
+    if (((addr >= REG_T_C_INT16) || ((addr + nreg) >= REG_T_C_INT16)) && (addr <= REG_P_PSI_INT16)) {
+        busy_wait_ms(750);
+    }
+
+    ret = ee_read(addr, nreg, buf); // Read data from sensor
+    return ret;
+}
+
+int32_t ee895_write_reg(uint16_t addr, uint16_t value)
+{
+    int32_t ret;
+    busy_wait_ms(250);
+    ret = ee_write(addr, value); // Write data to address
+    busy_wait_ms(10);
+    return ret;
 }
 
 void ee895_get_value(sensor_t* ee895)
@@ -151,7 +216,7 @@ void ee895_get_value(sensor_t* ee895)
             #ifdef DEBUG
             msg("info", "Meas finished");
             #endif
-            ee895_power(ee895, false); // Power off
+            ee_power(ee895, false); // Power off
             ee895->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
@@ -160,7 +225,7 @@ void ee895_get_value(sensor_t* ee895)
             #ifdef DEBUG
             msg("info", "Meas started");
             #endif
-            ee895_power(ee895, true); // Power off
+            ee_power(ee895, true); // Power off
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
             if (ee895->config->single_meas_mode) 
             {
@@ -175,7 +240,7 @@ void ee895_get_value(sensor_t* ee895)
             #ifdef DEBUG
             msg("info", "Read trigger ready");
             #endif
-            ret = ee895_read(REG_STATUS, 1, tempBuffer); // Read status register
+            ret = ee_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
             {
                 ee895->co2 = NAN; // Set values to NaN
@@ -187,7 +252,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             if (tempBuffer[1] & 0x02) // On trigger ready
             {
-                ret = ee895_write(REG_MEAS_TRIGGER, 1); // Send trigger
+                ret = ee_write(REG_MEAS_TRIGGER, 1); // Send trigger
                 msg("info", "Sending trigger");
                 if (ret != 0) // On invalid write
                 {
@@ -220,7 +285,7 @@ void ee895_get_value(sensor_t* ee895)
             #ifdef DEBUG
             msg("info", "Read status");
             #endif
-            ret = ee895_read(REG_STATUS, 1, tempBuffer); // Reading status register
+            ret = ee_read(REG_STATUS, 1, tempBuffer); // Reading status register
             if (ret != 0) // On invalid read
             {
                 ee895->co2 = NAN; // Set values to NaN
@@ -252,7 +317,7 @@ void ee895_get_value(sensor_t* ee895)
             #ifdef DEBUG
             msg("info", "Read value");
             #endif
-            ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
+            ret = ee_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
             if (ret != 0) // On invalid read
             {
                 ee895->temperature = NAN; // Set values to NaN
@@ -275,7 +340,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             ee895->temperature = val; // Assign value
 
-            ret = ee895_read(REG_CO2_RAW_FLOAT, 2, tempBuffer); // Read co2
+            ret = ee_read(REG_CO2_RAW_FLOAT, 2, tempBuffer); // Read co2
             if (ret != 0) // On invalid read
             {
                 ee895->co2 = NAN; // Set values to NaN
@@ -296,7 +361,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             ee895->co2 = val; // Assign value
 
-            ret = ee895_read(REG_P_MBAR_FLOAT, 2, tempBuffer); // Read pressure
+            ret = ee_read(REG_P_MBAR_FLOAT, 2, tempBuffer); // Read pressure
             if (ret != 0) // On invalid read
             {
                 ee895->pressure = NAN; // Set value to NaN
@@ -314,69 +379,48 @@ void ee895_get_value(sensor_t* ee895)
     }
 }
 
-int32_t ee895_read_reg(uint16_t addr, uint16_t nreg, uint8_t* buf)
-{
-    int32_t ret;
-    busy_wait_ms(250);
-
-    // for specific registers add delay
-    if (((addr >= REG_T_C_FLOAT) || ((addr + nreg) >= REG_T_C_FLOAT)) && (addr <= REG_P_PSI_FLOAT)) {
-        busy_wait_ms(750);
-    }
-    if (((addr >= REG_T_C_INT16) || ((addr + nreg) >= REG_T_C_INT16)) && (addr <= REG_P_PSI_INT16)) {
-        busy_wait_ms(750);
-    }
-
-    ret = ee895_read(addr, nreg, buf); // Read data from sensor
-    return ret;
-}
-
-int32_t ee895_write_reg(uint16_t addr, uint16_t value)
-{
-    int32_t ret;
-    busy_wait_ms(250);
-    ret = ee895_write(addr, value); // Write data to address
-    busy_wait_ms(10);
-    return ret;
-}
-
-void ee895_power(sensor_t* ee895, bool on)
-{
-    if (!ee895->config->power_global_control) // If power not controlled globally
-    {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
-    }
-}
-
 int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
 {
     int32_t ret;
 
     ee895->config = config; // Save configuration
-    ee895_power(ee895, true); // Power on
+    ee_power(ee895, true); // Power on
 
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) // Read sensor name
     {
-        ee895_power(ee895, false); // Power off
+        ee_power(ee895, false); // Power off
         return ret;
     }
     if (strcmp(fw_read_name, "EE895") != 0) // Check sensor name
     {
-        ee895_power(ee895, false); // Power off
+        ee_power(ee895, false); // Power off
         return ERROR_UNKNOWN_SENSOR;
     }
 
     ret = ee_write_config(config); // Write configuration to sensor
 
-    ee895_power(ee895, false); // Power off
+    ee_power(ee895, false); // Power off
 
     return ret;
 }
 
-int32_t ee_write_config(sensor_config_t* config)
+int32_t ee895_read_config(sensor_config_t* config)
+{
+    int32_t ret;
+    uint8_t buf[6] = {0};
+
+    if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
+    config->meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval
+    config->filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
+    config->co2_offset = (int16_t)ntoh16(*((uint16_t*)&buf[4])); // Save offset
+
+    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
+    config->single_meas_mode = (bool)ntoh16(*((uint16_t*)&buf[0])); // Save measurement mode
+    return SUCCESS;
+}
+
+static int32_t ee_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[6] = {0};
@@ -407,18 +451,12 @@ int32_t ee_write_config(sensor_config_t* config)
     return SUCCESS;
 }
 
-int32_t ee895_read_config(sensor_config_t* config)
+static inline void ee_power(sensor_t* ee895, bool on)
 {
-    int32_t ret;
-    uint8_t buf[6] = {0};
-
-    if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
-    config->meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval
-    config->filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
-    config->co2_offset = (int16_t)ntoh16(*((uint16_t*)&buf[4])); // Save offset
-
-    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
-    config->single_meas_mode = (bool)ntoh16(*((uint16_t*)&buf[0])); // Save measurement mode
-    return SUCCESS;
+    if (!ee895->config->power_global_control) // If power not controlled globally
+    {
+        // Read power vector
+        // Check if bit turned [on]
+        // Write power vector
+    }
 }
-

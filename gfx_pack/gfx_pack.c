@@ -1,69 +1,70 @@
+/**
+ * @file gfx_pack.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Implements communication with Pimoroni GFX Pack for Raspberry Pi PICO
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "gfx_pack.h"
 #include "monospace_font.c"
 #include "string.h"
 #include <stdio.h>
 
-#define GFX_PACK_SPI spi0
-#define GFX_PACK_RESET_PIN 21
-#define GFX_PACK_CHIP_SELECT_PIN 17
-#define GFX_PACK_SERIAL_CLOCK_PIN 18
-#define GFX_PACK_MASTER_OUT_SLAVE_IN_PIN 19
-#define GFX_PACK_MASTER_IN_SLAVE_OUT_PIN 2147483647
-#define GFX_PACK_DATA_COMMAND_PIN 20
-#define GFX_PACK_BACKLIGHT_PIN 9
-#define GFX_PACK_SPI_BAUDRATE 10000000
-
-#define GFX_PACK_DISPLAY_WIDTH 128
+#define GFX_PACK_DISPLAY_WIDTH  128
 #define GFX_PACK_DISPLAY_HEIGHT 64
-#define GFX_PACK_PAGE_SIZE 128
+#define GFX_PACK_PAGE_SIZE      128
 
-#define GFX_PACK_CHAR_WIDTH 6
-#define GFX_PACK_CHAR_HEIGHT 10
+#define GFX_PACK_CHAR_WIDTH     6
+#define GFX_PACK_CHAR_HEIGHT    10
 
-#define REG_DISPOFF     0xAE      //
-#define REG_DISPON      0xAF      //
-#define REG_SETSTARTLINE 0x40     //
-#define REG_STARTLINE_MASK 0x3f   //
-#define REG_RATIO       0x20      //
-#define REG_SETPAGESTART 0xb0     //
-#define REG_PAGESTART_MASK 0x07   //
-#define REG_SETCOLL 0x00          //# 0x00-0x0f: Set lower column address */
-#define REG_COLL_MASK 0x0f        //
-#define REG_SETCOLH 0x10          //# 0x10-0x1f: Set higher column address */
-#define REG_COLH_MASK 0x0F        //
-#define REG_SEG_DIR_NORMAL 0xa0   //# 0xa0: Column address 0 is mapped to SEG0 */
-#define REG_SEG_DIR_REV 0xa1      //# 0xa1: Column address 128 is mapped to SEG0
-#define REG_DISPNORMAL 0xa6       //# 0xa6: Normal display */
-#define REG_DISPINVERSE 0xa7      //# 0xa7: Inverse display
-#define REG_DISPRAM 0xa4          //# 0xa4: Resume to RAM content display */
-#define REG_DISPENTIRE 0xa5       //# 0xa5: Entire display
-#define REG_BIAS_1_9 0xa2         //# 0xa2: Select BIAS setting 1/9 */
-#define REG_BIAS_1_7 0xa3         //# 0xa3: Select BIAS setting 1/7
-#define REG_ENTER_RMWMODE 0xe0    //# 0xe0: Enter the Read Modify Write mode */
-#define REG_EXIT_RMWMODE 0xee     //# 0xee: Leave the Read Modify Write mode */
-#define REG_EXIT_SOFTRST 0xe2     //# 0xe2: Software RESET
-#define REG_SETCOMNORMAL 0xc0     //# 0xc0: Set COM output direction, normal mode */
-#define REG_SETCOMREVERSE 0xc8    //# 0xc8: Set COM output direction, reverse mode
-#define REG_POWERCTRL_VF 0x29     //# 0x29: Control built-in power circuit */
-#define REG_POWERCTRL_VR 0x2a     //# 0x2a: Control built-in power circuit */
-#define REG_POWERCTRL_VB 0x2c     //# 0x2c: Control built-in power circuit */
-#define REG_POWERCTRL 0x2f        //# 0x2f: Control built-in power circuit
-#define REG_REG_RES_RR0 0x21      //# 0x21: Regulation Resistior ratio */
-#define REG_REG_RES_RR1 0x22      //# 0x22: Regulation Resistior ratio */
-#define REG_REG_RES_RR2 0x24      //# 0x24: Regulation Resistior ratio
-#define REG_SETCONTRAST 0x81      //# 0x81: Set contrast level
-#define REG_SETBOOSTER 0xf8       //# Set booster level */
-#define REG_SETBOOSTER4X 0x00     //# Set booster level */
-#define REG_SETBOOSTER5X 0x01     //# Set booster level
+#define REG_DISPOFF             0xAE //
+#define REG_DISPON              0xAF //
+#define REG_SETSTARTLINE        0x40 //
+#define REG_STARTLINE_MASK      0x3f //
+#define REG_RATIO               0x20 //
+#define REG_SETPAGESTART        0xb0 //
+#define REG_PAGESTART_MASK      0x07 //
+#define REG_SETCOLL             0x00 //# 0x00-0x0f: Set lower column address */
+#define REG_COLL_MASK           0x0f //
+#define REG_SETCOLH             0x10 //# 0x10-0x1f: Set higher column address */
+#define REG_COLH_MASK           0x0F //
+#define REG_SEG_DIR_NORMAL      0xa0 //# 0xa0: Column address 0 is mapped to SEG0 */
+#define REG_SEG_DIR_REV         0xa1 //# 0xa1: Column address 128 is mapped to SEG0
+#define REG_DISPNORMAL          0xa6 //# 0xa6: Normal display */
+#define REG_DISPINVERSE         0xa7 //# 0xa7: Inverse display */
+#define REG_DISPRAM             0xa4 //# 0xa4: Resume to RAM content display */
+#define REG_DISPENTIRE          0xa5 //# 0xa5: Entire display */
+#define REG_BIAS_1_9            0xa2 //# 0xa2: Select BIAS setting 1/9 */
+#define REG_BIAS_1_7            0xa3 //# 0xa3: Select BIAS setting 1/7 */
+#define REG_ENTER_RMWMODE       0xe0 //# 0xe0: Enter the Read Modify Write mode */
+#define REG_EXIT_RMWMODE        0xee //# 0xee: Leave the Read Modify Write mode */
+#define REG_EXIT_SOFTRST        0xe2 //# 0xe2: Software RESET */
+#define REG_SETCOMNORMAL        0xc0 //# 0xc0: Set COM output direction, normal mode */
+#define REG_SETCOMREVERSE       0xc8 //# 0xc8: Set COM output direction, reverse mode */
+#define REG_POWERCTRL_VF        0x29 //# 0x29: Control built-in power circuit */
+#define REG_POWERCTRL_VR        0x2a //# 0x2a: Control built-in power circuit */
+#define REG_POWERCTRL_VB        0x2c //# 0x2c: Control built-in power circuit */
+#define REG_POWERCTRL           0x2f //# 0x2f: Control built-in power circuit
+#define REG_REG_RES_RR0         0x21 //# 0x21: Regulation Resistior ratio */
+#define REG_REG_RES_RR1         0x22 //# 0x22: Regulation Resistior ratio */
+#define REG_REG_RES_RR2         0x24 //# 0x24: Regulation Resistior ratio */
+#define REG_SETCONTRAST         0x81 //# 0x81: Set contrast level */
+#define REG_SETBOOSTER          0xf8 //# Set booster level */
+#define REG_SETBOOSTER4X        0x00 //# Set booster level */
+#define REG_SETBOOSTER5X        0x01 //# Set booster level */
 
 // Frame buffer for the display
-uint8_t framebuffer[GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT / 8] = {0};
+static uint8_t framebuffer[GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT / 8] = {0};
 
 /**
  * @brief Function that performs the initialization sequence
  * 
  */
-void gfx_pack_init_sequence(void);
+static inline void gfx_pack_init_sequence(void);
 
 /**
  * @brief Sends a command to the GFX Pack
@@ -72,9 +73,9 @@ void gfx_pack_init_sequence(void);
  * @param len Length of the data send
  * @param data Data to be sent to the GFX Pack
  */
-void command(uint8_t command, size_t len, const char* data);
+static void command(uint8_t command, size_t len, const char* data);
 
-uint8_t* get_char_map(char c);
+static inline uint8_t* get_char_map(char c);
 
 void gfx_pack_init(void)
 {
@@ -144,7 +145,7 @@ void gfx_pack_init(void)
     gfx_pack_set_backlight(255); // Turn backlight to max
 }
 
-void gfx_pack_init_sequence(void)
+static inline void gfx_pack_init_sequence(void)
 {
     command(REG_BIAS_1_7, 0, NULL);
     command(REG_SEG_DIR_NORMAL, 0, NULL); // normal row direction
@@ -159,7 +160,7 @@ void gfx_pack_init_sequence(void)
     command(REG_DISPRAM, 0, NULL); // Display RAM contents
 }
 
-void command(uint8_t command, size_t len, const char* data)
+static void command(uint8_t command, size_t len, const char* data)
 {
     gpio_put(GFX_PACK_CHIP_SELECT_PIN, 0); // Enable GFX Communication
     gpio_put(GFX_PACK_DATA_COMMAND_PIN, 0); // Command mode
@@ -290,7 +291,7 @@ void gfx_pack_reset(void)
     sleep_ms(10);
 }
 
-uint8_t* get_char_map(char c)
+static inline uint8_t* get_char_map(char c)
 {
     switch (c)
     {

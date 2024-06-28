@@ -1,3 +1,14 @@
+/**
+ * @file sensor_config.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Sensors configuration
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef CONFIG
 #define CONFIG
 

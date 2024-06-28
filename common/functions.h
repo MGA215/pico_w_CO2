@@ -1,8 +1,23 @@
-#include "pico/stdlib.h"
+/**
+ * @file functions.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Defines useful functions
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
+#ifndef FUNCTIONS
+#define FUNCTIONS
+
 #include "structs.h"
 #include "math.h"
 #include "error_codes.h"
 #include <string.h>
+#include "pico/stdlib.h"
+
 /**
  * @brief Converts 16-bit value to the other endian
  * 
@@ -31,6 +46,8 @@ float byte2float(uint32_t byte_value);
  * @brief Initializes the sensor structure
  * 
  * @param sensor Sensor structure
+ * @param input_index Sensor index
  */
-void common_init_struct(sensor_t* sensor);
+void common_init_struct(sensor_t* sensor, uint8_t input_index);
 
+#endif
