@@ -22,7 +22,7 @@
 #define CO2_MIN_RANGE 0
 #define CO2_MAX_RANGE 10000
 
-#define msg(x) printf("[%llu] [CDM7162] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [CDM7162] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Sets device operation mode to power down
@@ -179,7 +179,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
-            msg("Meas finished");
+            msg("info", "Meas finished");
             #endif
             cdm7162_power(cdm7162, false); // Power off
             cdm7162->wake_time = at_the_end_of_time; // Disable sensor timer
@@ -188,7 +188,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
-            msg("Meas started");
+            msg("info", "Meas started");
             #endif
             cdm7162_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
@@ -199,7 +199,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         case MEAS_READ_STATUS: // Reading status
         {
             #ifdef DEBUG
-            msg("Read status");
+            msg("info", "Read status");
             #endif
             ret = cdm7162_read(REG_STATUS, &buf[0], 1); // Read status
             if (ret != 0) // On invalid read
@@ -227,7 +227,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         case MEAS_READ_VALUE: // Reading measured value
         {
             #ifdef DEBUG
-            msg("Read value");
+            msg("info", "Read value");
             #endif
             ret = cdm7162_read(REG_CO2_L, buf, 2); // Read measured CO2
             if (ret != 0) // On invalid read

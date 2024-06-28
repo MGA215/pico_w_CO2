@@ -24,7 +24,7 @@
 #define REG_ALTITUDE_PRESSURE 0x76
 #define REG_TH_CONTROL 0x8C
 
-#define msg(x) printf("[%llu] [COZIR-LP3] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [COZIR-LP3] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 
 /**
@@ -73,7 +73,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_FINISHED:
         {
             #ifdef DEBUG
-            msg("Meas finished");
+            msg("info", "Meas finished");
             #endif
             cozir_lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
@@ -82,7 +82,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_STARTED:
         {
             #ifdef DEBUG
-            msg("Meas started");
+            msg("info", "Meas started");
             #endif
             cozir_lp3_power(cozir_lp3, true);
             cozir_lp3->wake_time = make_timeout_time_ms(2000);
@@ -92,7 +92,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_READ_VALUE:
         {
             #ifdef DEBUG
-            msg("Read value");
+            msg("info", "Read value");
             #endif
             ret = cozir_lp3_read(REG_CO2, tempBuffer, 2);
             if (ret != 0)

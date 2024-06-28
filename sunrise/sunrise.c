@@ -98,7 +98,7 @@
 #define REG_ABC_PRESSURE_H 0xDE
 #define REG_ABC_PRESSURE_L 0xDF
 
-#define msg(x) printf("[%llu] [SUNRISE] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [SUNRISE] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief returns error code according to the error register value
@@ -275,7 +275,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
-            msg("Meas finished");
+            msg("info", "Meas finished");
             #endif
             sunrise_power(sunrise, false); // Power off
             sunrise->wake_time = at_the_end_of_time; // Disable timer
@@ -284,7 +284,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
-            msg("Meas start");
+            msg("info", "Meas start");
             #endif
             sunrise_power(sunrise, true); // Power on
             sunrise->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
@@ -295,7 +295,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_READ_MODE: // Reading mode
         {
             #ifdef DEBUG
-            msg("Read mode");
+            msg("info", "Read mode");
             #endif
             uint8_t data;
             ret = sunrise_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
@@ -330,7 +330,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
             #ifdef DEBUG
-            msg("Write measure command");
+            msg("info", "Write measure command");
             #endif
             uint8_t buf[24] = {0};
             if (memcmp(sunrise->state_reg, buf, 24)) // If last state was zeros (not set)
@@ -360,7 +360,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_READ_VALUE: // Reading measurement data
         {
             #ifdef DEBUG
-            msg("Read value");
+            msg("info", "Read value");
             #endif
             uint8_t buf[10] = {0};
             ret = sunrise_read(REG_ERR_H, buf, 10); // Read data
@@ -411,7 +411,7 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_READ_STATUS: // Reading status registers
         {
             #ifdef DEBUG
-            msg("Read status");
+            msg("info", "Read status");
             #endif
             ret = sunrise_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 24); // Read status registers
             if (ret != 0) // On invalid read

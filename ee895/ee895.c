@@ -49,7 +49,7 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
-#define msg(x) printf("[%llu] [EE895] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [EE895] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes Modbus CRC for specified buffer
@@ -149,7 +149,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
-            msg("Meas finished");
+            msg("info", "Meas finished");
             #endif
             ee895_power(ee895, false); // Power off
             ee895->wake_time = at_the_end_of_time; // Disable timer
@@ -158,7 +158,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
-            msg("Meas started");
+            msg("info", "Meas started");
             #endif
             ee895_power(ee895, true); // Power off
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
@@ -173,7 +173,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
             #ifdef DEBUG
-            msg("Read trigger ready");
+            msg("info", "Read trigger ready");
             #endif
             ret = ee895_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
@@ -188,7 +188,7 @@ void ee895_get_value(sensor_t* ee895)
             if (tempBuffer[1] & 0x02) // On trigger ready
             {
                 ret = ee895_write(REG_MEAS_TRIGGER, 1); // Send trigger
-                printf("Sending trigger...\n");
+                msg("info", "Sending trigger");
                 if (ret != 0) // On invalid write
                 {
                     ee895->co2 = NAN; // Set values to NaN
@@ -218,7 +218,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_READ_STATUS: // Reading status
         {
             #ifdef DEBUG
-            msg("Read status");
+            msg("info", "Read status");
             #endif
             ret = ee895_read(REG_STATUS, 1, tempBuffer); // Reading status register
             if (ret != 0) // On invalid read
@@ -250,7 +250,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_READ_VALUE: // Reading values
         {
             #ifdef DEBUG
-            msg("Read value");
+            msg("info", "Read value");
             #endif
             ret = ee895_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
             if (ret != 0) // On invalid read

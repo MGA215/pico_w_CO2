@@ -1,8 +1,8 @@
 #include "main.h"
 
-#define msg(source, message) printf("[%llu] [MAIN-"source"] "message"\n", to_us_since_boot(get_absolute_time()) / 1000)
-#define msgbuf(source, message) printf("[%llu] [MAIN-"source"] %s\n", to_us_since_boot(get_absolute_time()) / 1000, message)
-#define msgbufstr(source, message) printf("[%llu] [MAIN-%s] "message"\n", to_us_since_boot(get_absolute_time()) / 1000, source)
+#define msg(severity, source, message) printf("[%12llu] ["severity"] [MAIN-"source"] "message"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msgbuf(severity, source, message) printf("[%12llu] ["severity"] [MAIN-"source"] %s\n", to_us_since_boot(get_absolute_time()) / 1000, message)
+#define msgbufstr(severity, source, message) printf("[%12llu] ["severity"] [MAIN-%s] "message"\n", to_us_since_boot(get_absolute_time()) / 1000, source)
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -327,7 +327,7 @@ void init_sensors(void)
         #if DEBUG
         uint8_t buf3[18];
         snprintf(buf3, 18, "Init structure %i", i);
-        msgbuf("SENSOR", buf3);
+        msgbuf("info", "SENSOR", buf3);
         #endif
         common_init_struct(&sensors[i]); // Initialize sensor structures
         if (configuration_map[i] != NULL) sensors[i].sensor_type = configuration_map[i]->sensor_type; // Copy sensor type to sensor structure
@@ -347,7 +347,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("EE895", buf);
+                    msgbuf("info", "EE895", buf);
                     #endif
                     ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
                     break;
@@ -357,7 +357,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("CDM7162", buf);
+                    msgbuf("info", "CDM7162", buf);
                     #endif
                     ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
                     break;
@@ -367,7 +367,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("SUNRISE", buf);
+                    msgbuf("info", "SUNRISE", buf);
                     #endif
                     ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
                     break;
@@ -377,7 +377,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("SUNLIGHT", buf);
+                    msgbuf("info", "SUNLIGHT", buf);
                     #endif
                     ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
                     break;
@@ -387,7 +387,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("SCD30", buf);
+                    msgbuf("info", "SCD30", buf);
                     #endif
                     ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
                     break;
@@ -397,7 +397,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("SCD41", buf);
+                    msgbuf("info", "SCD41", buf);
                     #endif
                     ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
                     break;
@@ -407,7 +407,7 @@ void init_sensors(void)
                     #if DEBUG
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("CozIR-LP3", buf);
+                    msgbuf("info", "CozIR-LP3", buf);
                     #endif
                     ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
                     break;
@@ -416,7 +416,7 @@ void init_sensors(void)
                 default:
                 {
                     #if DEBUG
-                    msg("SENSOR", "Unknown sensor, init abort");
+                    msg("ERROR", "SENSOR", "Unknown sensor, init abort");
                     #endif
                     sensors[i].state = ERROR_UNKNOWN_SENSOR;
                     break;
@@ -426,11 +426,13 @@ void init_sensors(void)
             #if DEBUG
             if (!ret)
             {
-                msg("SENSOR", "Init success");
+                msg("info", "SENSOR", "Init success");
             }
             else
             {
-                msg("SENSOR", "Init failed");
+                uint8_t buf3[20];
+                snprintf(buf3, 20, "Init failed: %i", ret);
+                msgbuf("ERROR", "SENSOR", buf3);
             }
             #endif
             sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
@@ -482,7 +484,7 @@ void read_sensors_start()
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
     {
         #if DEBUG
-        msg("SENSOR", "Measurement start");
+        msg("info", "SENSOR", "Measurement start");
         #endif
         for (int i = 0; i < 8; i++)
         {
@@ -532,7 +534,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("EE895", buf);
+                        msgbuf("info", "EE895", buf);
                         #endif
                         ee895_get_value(&(sensors[i])); // Read EE895 values
                         break;
@@ -542,7 +544,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("CDM7162", buf);
+                        msgbuf("info", "CDM7162", buf);
                         #endif
                         cdm7162_get_value(&(sensors[i])); // Read CDM7162 values
                         break;
@@ -552,7 +554,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("SUNRISE", buf);
+                        msgbuf("info", "SUNRISE", buf);
                         #endif
                         sunrise_get_value(&(sensors[i])); // Read SUNRISE values
                         break;
@@ -562,7 +564,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("SUNLIGHT", buf);
+                        msgbuf("info", "SUNLIGHT", buf);
                         #endif
                         sunlight_get_value(&(sensors[i])); // Read SUNLIGHT values
                         break;
@@ -572,7 +574,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("SCD30", buf);
+                        msgbuf("info", "SCD30", buf);
                         #endif
                         scd30_get_value(&(sensors[i])); // Read SCD30 values
                         break;
@@ -582,7 +584,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("SCD41", buf);
+                        msgbuf("info", "SCD41", buf);
                         #endif
                         scd41_get_value(&(sensors[i])); // Read SCD41 values
                         break;
@@ -592,7 +594,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
-                        msgbuf("CozIR-LP3", buf);
+                        msgbuf("info", "CozIR-LP3", buf);
                         #endif
                         cozir_lp3_get_value(&(sensors[i])); // Read CozIR-LP3 values
                         break;
@@ -601,7 +603,7 @@ void read_sensors()
                     default:
                     {
                         #if DEBUG
-                        msg("SENSOR", "Reading unknown sensor");
+                        msg("ERROR", "SENSOR", "Reading unknown sensor");
                         #endif
                         sensors[i].state = ERROR_UNKNOWN_SENSOR;
                         break;
@@ -610,9 +612,15 @@ void read_sensors()
                 #if DEBUG
                 if (sensors[i].state && sensors[i].state != ERROR_NO_MEAS)
                 {
-                    uint8_t buf[28];
-                    snprintf(buf, 28, "Reading sensor %i failed", i);
-                    msgbuf("SENSOR", buf);
+                    uint8_t buf2[36];
+                    snprintf(buf2, 36, "Reading sensor %i failed: %i", i, sensors[i].state);
+                    msgbuf("ERROR", "SENSOR", buf2);
+                }
+                else if (sensors[i].meas_state == MEAS_FINISHED && sensors[i].state == SUCCESS)
+                {
+                    uint8_t buf2[36];
+                    snprintf(buf2, 36, "Successfully read sensor %i", i);
+                    msgbuf("info", "SENSOR", buf2);
                 }
                 #endif
             }
@@ -627,7 +635,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("EE895", buf);
+                        msgbuf("info", "EE895", buf);
                         #endif
                         ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
                         break;
@@ -637,7 +645,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("CDM7162", buf);
+                        msgbuf("info", "CDM7162", buf);
                         #endif
                         ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
                         break;
@@ -647,7 +655,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("SUNRISE", buf);
+                        msgbuf("info", "SUNRISE", buf);
                         #endif
                         ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
                         break;
@@ -657,7 +665,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("SUNLIGHT", buf);
+                        msgbuf("info", "SUNLIGHT", buf);
                         #endif
                         ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
                         break;
@@ -667,7 +675,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("SCD30", buf);
+                        msgbuf("info", "SCD30", buf);
                         #endif
                         ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
                         break;
@@ -677,7 +685,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("SCD41", buf);
+                        msgbuf("info", "SCD41", buf);
                         #endif
                         ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
                         break;
@@ -687,7 +695,7 @@ void read_sensors()
                         #if DEBUG
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
-                        msgbuf("CozIR-LP3", buf);
+                        msgbuf("info", "CozIR-LP3", buf);
                         #endif
                         ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
                         break;
@@ -696,7 +704,7 @@ void read_sensors()
                     default:
                     {
                         #if DEBUG
-                        msg("SENSOR", "Unknown sensor, init abort");
+                        msg("ERROR", "SENSOR", "Unknown sensor, init abort");
                         #endif
                         sensors[i].state = ERROR_UNKNOWN_SENSOR;
                         break;
@@ -706,11 +714,13 @@ void read_sensors()
                 #if DEBUG
                 if (!ret)
                 {
-                    msg("SENSOR", "Init success");
+                    msg("info", "SENSOR", "Init success");
                 }
                 else
                 {
-                    msg("SENSOR", "Init failed");
+                    uint8_t buf3[20];
+                    snprintf(buf3, 20, "Init failed: %i", ret);
+                    msgbuf("ERROR", "SENSOR", buf3);
                 }
                 #endif
                 sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;

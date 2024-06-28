@@ -15,7 +15,7 @@
 
 #define SCD30_ADDR 0x61
 
-#define msg(x) printf("[%llu] [SCD30] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [SCD30] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes CRC for specified buffer
@@ -103,14 +103,14 @@ void scd30_get_value(sensor_t* scd30)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            msg("Meas finished");
+            msg("info", "Meas finished");
             scd30_power(scd30, false); // Power off
             scd30->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started
         {
-            msg("Meas start");
+            msg("info", "Meas start");
             scd30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
@@ -119,7 +119,7 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            msg("read state");
+            msg("info", "Read state");
             ret = scd30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -149,7 +149,7 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            msg("read value");
+            msg("info", "Read value");
             uint16_t buf[6];
             ret = scd30_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)

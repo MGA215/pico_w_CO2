@@ -36,7 +36,7 @@
 
 #define SCD41_ADDR 0x62
 
-#define msg(x) printf("[%llu] [SCD41] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msg(severity, x) printf("[%12llu] ["severity"] [SCD41] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
 
 /**
  * @brief Computes CRC for specified buffer
@@ -138,7 +138,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_FINISHED: // Measurement finished
         {
             #ifdef DEBUG
-            msg("Meas finished");
+            msg("info", "Meas finished");
             #endif
             scd41_power(scd41, false); // Power off
             scd41->wake_time = at_the_end_of_time; // Disable timer
@@ -147,7 +147,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_STARTED: // Measurement started
         {
             #ifdef DEBUG
-            msg("Meas started");
+            msg("info", "Meas started");
             #endif
             scd41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
@@ -159,7 +159,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_READ_MODE:
         {
             #ifdef DEBUG
-            msg("Read mode");
+            msg("info", "Read mode");
             #endif
             uint16_t val = 0;
             if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
@@ -196,7 +196,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
             #ifdef DEBUG
-            msg("Write measure command");
+            msg("info", "Write measure command");
             #endif
             ret = scd41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
             if (ret != 0) // On invalid write
@@ -215,7 +215,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_READ_STATUS: // Reading status
         {
             #ifdef DEBUG
-                msg("Read status");
+                msg("info", "Read status");
                 uint16_t val = 0;
                 if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
                 printf("[%u] [SCD41] Pressure: %u\n", to_ms_since_boot(get_absolute_time()), val);
@@ -256,7 +256,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_READ_VALUE: // Reading values
         {
             #ifdef DEBUG
-                msg("Read value");
+                msg("info", "Read value");
                 uint16_t val = 0;
                 if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
                 printf("[%u] [SCD41] Pressure: %u\n", to_ms_since_boot(get_absolute_time()), val);
