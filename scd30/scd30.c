@@ -274,54 +274,62 @@ static int32_t s30_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint16_t val;
-    if ((ret = s30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read start continuous measurement & pressure
-    if (config->enable_pressure_comp != (val != 0))
+    sensor_config_t read_config;
+    if ((ret = scd30_read_config(&read_config)) != 0) return ret; // Read config
+
+    if (config->enable_pressure_comp != read_config.enable_pressure_comp ||
+        (config->enable_pressure_comp && (config->pressure != read_config.pressure))) // Check pressure enable and value
     {
-        if (config->enable_pressure_comp) // If pressure compensation enabled
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Pressure");
+        #endif
+        if (config->enable_pressure_comp) // Pressure compensation enabled
         {
-            if ((ret = s30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret;
+            if ((ret = s30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
         }
-        else // pressure compensation disabled
+        else // Pressure compensation disabled
         {
-            if ((ret = s30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret;
+            if ((ret = s30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
         }
     }
 
-    if ((ret = s30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret; // Read measurement interval
-    if (val != config->meas_period)
+    if (read_config.meas_period != config->meas_period) // Check mesaurement period
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Measurement period");
+        #endif
         if ((ret = s30_write_value(CMD_MEAS_INTERVAL, config->meas_period)) != 0) return ret; // Set measurement interval
     }
 
-    if ((ret = s30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret; // Read auto calibration
-    if (config->enable_abc != (val != 0))
+    if (config->enable_abc != read_config.enable_abc) // Check abc enabled
     {
-        if (config->enable_abc) // If autocal enabled
-        {
-            if ((ret = s30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
-        }
-        else // Autocal disabled
-        {
-            if ((ret = s30_write_value(CMD_AUTO_CAL, 0)) != 0) return ret;
-        }
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Enable/Disable ABC");
+        #endif
+        if ((ret = s30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
     }
 
-    if ((ret = s30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
-    if ((uint16_t)(config->temperature_offset * 100) != val)
+    if (read_config.temperature_offset != config->temperature_offset) // Check temperature offset
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Temperature offset");
+        #endif
         if ((ret = s30_write_value(CMD_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret; // Set temperature offset
     }
 
-    if ((ret = s30_read(CMD_ALTITUDE_COMP, &val, 1)) != 0) return ret; // Read altitude
-    if (config->enable_altitude_comp != (val != 0))
+    if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
+        (config->enable_altitude_comp && (config->altitude != read_config.altitude))) // Check altitude enable and value
     {
-        if (config->enable_altitude_comp) // If altitude compensation enabled
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Altitude");
+        #endif
+        if (config->enable_altitude_comp) // Altitude compensation enabled
         {
-            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret;
+            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret; // Write altitude
         }
         else // Altitude compensation disabled
         {
-            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret;
+            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret; // Disable altitude compensation
         }
     }
 
