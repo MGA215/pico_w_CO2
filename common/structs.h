@@ -64,6 +64,7 @@ typedef struct sensor_config
 
     // Pressure/altitude compensation
     bool enable_pressure_comp; // Enable pressure compensation                                                  CDM7162, SUNRISE, SUNLIGHT, SCD30, SCD41, CozIR-LP3
+    // CDM7162: pressure in range 800 .. 1055
     uint16_t pressure; // Pressure value                                                                        CDM7162, SUNRISE, SUNLIGHT, SCD30, SCD41, CozIR-LP3
     bool enable_altitude_comp; // Enable altitude compensation                                                  CDM7162, SCD30, SCD41
     uint16_t altitude; // Altitude value                                                                        CDM7162, SCD30, SCD41
@@ -71,8 +72,9 @@ typedef struct sensor_config
     // Calibration
     bool long_term_adj_1; // Enable long term adjustment 1                                                      CDM7162
     bool long_term_adj_2; // Enable long term adjustment 2                                                      CDM7162
-    uint16_t target_LTA; // Target co2 concentration LTA                                                         CDM7162
-    uint16_t period_LTA; // Period of the LTA; bit 7 .. months, 6 .. weeks, 7:6 = 00 .. days                     CDM7162
+    // CDM7162 target_LTA range: 300 .. 555 ppm
+    uint16_t target_LTA; // Target co2 concentration LTA                                                        CDM7162
+    uint16_t period_LTA; // Period of the LTA in days; bit 7 .. (*30), 6 .. (*7), 7:6 = 00 .. (*1); range 0..63 CDM7162
     bool enable_abc; // Enable ABC calibration                                                                  SUNRISE, SUNLIGHT, SCD30, SCD41, CozIR-LP3
     uint16_t abc_init_period; // Initial ABC calibration period                                                 SCD41, CozIR-LP3
     uint16_t abc_period; // Set ABC calibration period (set 0 to disable for SUN*)                              SUNRISE, SUNLIGHT, SCD41, CozIR-LP3
@@ -80,8 +82,9 @@ typedef struct sensor_config
     
     // Alarm
     bool alarm_en; // Enable alarm                                                                              CozIR-LP3
-    uint16_t alarm_treshold_co2_high; // Alarm high treshold (CDM7162: ppm / 10)                                CDM7162, CozIR-LP3
-    uint16_t alarm_treshold_co2_low; // Alarm low treshold (CDM7162: ppm / 10)                                  CDM7162
+    // CDM7162 alarm range: 0 .. 2550 ppm; alarm uses hysteresis
+    uint16_t alarm_treshold_co2_high; // Alarm high treshold                                                    CDM7162, CozIR-LP3
+    uint16_t alarm_treshold_co2_low; // Alarm low treshold                                                      CDM7162
 
     // Power
     bool power_global_control; // Power controlled globally

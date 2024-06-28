@@ -51,19 +51,4 @@ extern int32_t cdm7162_read_config(sensor_config_t* config);
  */
 extern int32_t cdm7162_reset(void);
 
-// /**
-//  * @brief Sets atmospheric pressure for pressure correction
-//  * 
-//  * @param pressure Pressure in hPa
-//  * @return int32_t Return code
-//  */
-// int32_t cdm7162_set_atm_pressure(uint16_t pressure);
-
-// /**
-//  * @brief Sets default atmospheric pressure 1013 hPa
-//  * 
-//  * @return int32_t Return code
-//  */
-// int32_t cdm7162_set_default_atm_pressure(void);
-
 #endif

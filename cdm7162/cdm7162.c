@@ -108,7 +108,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas finished");
             #endif
             cdm_power(cdm7162, false); // Power off
@@ -117,7 +117,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas started");
             #endif
             cdm_power(cdm7162, true); // Power on
@@ -128,7 +128,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read status");
             #endif
             ret = cdm_read(REG_STATUS, &buf[0], 1); // Read status
@@ -156,7 +156,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_VALUE: // Reading measured value
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read value");
             #endif
             ret = cdm_read(REG_CO2_L, buf, 2); // Read measured CO2
@@ -200,13 +200,37 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
 int32_t cdm7162_read_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint8_t buf;
-    if ((ret = cdm_read(REG_FUNC, &buf, 1)) != 0) return ret; // Read functions register
-    config->enable_PWM_pin = buf & (0b1 << 0); // Save data from the function register
-    config->enable_pressure_comp = buf & (0b1 << 2);
-    config->PWM_range_high = buf & (0b1 << 3);
-    config->long_term_adj_2 = buf & (0b1 << 4);
-    config->long_term_adj_1 = buf & (0b1 << 5);
+    uint8_t buf[4] = {0xFF};
+    if ((ret = cdm_read(REG_FUNC, buf, 1)) != 0) return ret; // Read functions register
+    printf("enable pwm pin: %i\n", config->enable_PWM_pin);
+    printf("read enable pwm pin: %i\n", (bool)(buf[0] & (0b1 << 0)));
+    config->enable_PWM_pin = (bool)(buf[0] & (0b1 << 0)); // Save data from the function register
+    printf("set pwm pin: %i\n", config->enable_PWM_pin);
+    config->enable_pressure_comp = buf[0] & (0b1 << 2);
+    config->PWM_range_high = buf[0] & (0b1 << 3);
+    config->long_term_adj_2 = buf[0] & (0b1 << 4);
+    config->long_term_adj_1 = buf[0] & (0b1 << 5);
+
+    if ((ret = cdm_read(REG_ATM_PRESSURE, buf, 1)) != 0) return ret; // Read saved pressure
+    config->pressure = (uint16_t)buf[0] + 800u;
+
+    config->enable_altitude_comp = config->enable_pressure_comp;
+    if ((ret = cdm_read(REG_ALTITUDE, buf, 1)) != 0) return ret; // Read saved altitude
+    config->altitude = (uint16_t)buf[0] * 10u;
+
+    if ((ret = cdm_read(REG_ALARM_CO2_H, buf, 1)) != 0) return ret; // Read saved alarm high treshold
+    config->alarm_treshold_co2_high = (uint16_t)buf[0] * 10u;
+
+    if ((ret = cdm_read(REG_ALARM_CO2_L, buf, 1)) != 0) return ret; // Read saved alarm low treshold
+    config->alarm_treshold_co2_low = (uint16_t)buf[0] * 10u;
+
+    if ((ret = cdm_read(REG_LTA_TARGET, buf, 1)) != 0) return ret; // Read saved LTA target value
+    config->target_LTA = (uint16_t)buf[0] + 300u;
+
+    if ((ret = cdm_read(REG_LTA_PERIOD, buf, 1)) != 0) return ret; // Read saved LTA period
+    config->period_LTA = (uint16_t)(buf[0] & 0b00111111);
+    if (buf[0] & (0b1 << 6)) config->period_LTA *= 7; // Week bit H
+    else if (buf[0] & (0b1 << 7)) config->period_LTA *= 30; // Month bit H
     return SUCCESS;
 }
 
@@ -222,55 +246,78 @@ static int32_t cdm_write_config(sensor_config_t* config)
     if (buf != 0x06) // If not in measurement mode
     {
         if ((ret = cdm_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
-        return ret; 
+            return ret; 
         busy_wait_ms(100);
     }
-
-    if ((ret = cdm_read(REG_FUNC, &buf, 1)) != 0) // Read set functions
-        return ret; 
+    sensor_config_t read_config;
+    if ((ret = cdm7162_read_config(&read_config)) != 0) return ret; // Read configuration
+    printf("outside: %i\n", read_config.enable_PWM_pin);
     busy_wait_ms(10);
 
-    if (((buf & 0b100) >> 2) == (bool)(config->enable_pressure_comp) &&
-        ((buf & 0b001) >> 0) == (bool)(config->enable_PWM_pin) &&
-        ((buf & 0b001) >> 3) == (bool)(config->PWM_range_high) &&
-        ((buf & 0b001) >> 4) == (bool)(config->long_term_adj_2) &&
-        ((buf & 0b001) >> 5) == (bool)(config->long_term_adj_1)) 
-        {
-            return SUCCESS; // All functions correctly set
-        }
-
-    uint8_t func_settings = 0;
-    if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
-    if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
-    if (config->PWM_range_high) func_settings |= (0b1 << 3);
-    if (config->long_term_adj_2) func_settings |= (0b1 << 4);
-    if (config->long_term_adj_1) func_settings |= (0b1 << 5);
-    if ((ret = cdm_write(REG_FUNC, func_settings)) != 0) // Set functions
+    if (!(read_config.enable_PWM_pin == config->enable_PWM_pin && // Check for different flag
+        ((read_config.enable_pressure_comp && (config->enable_pressure_comp || config->enable_altitude_comp)) ||
+        (!read_config.enable_pressure_comp && !config->enable_pressure_comp && !config->enable_altitude_comp)) &&
+        read_config.PWM_range_high == config->PWM_range_high &&
+        read_config.long_term_adj_1 == config->long_term_adj_1 &&
+        read_config.long_term_adj_2 == config->long_term_adj_2))
     {
-        return ret; 
+        uint8_t func_settings = 0;
+        if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
+        if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
+        if (config->PWM_range_high) func_settings |= (0b1 << 3);
+        if (config->long_term_adj_2) func_settings |= (0b1 << 4);
+        if (config->long_term_adj_1) func_settings |= (0b1 << 5);
+        if ((ret = cdm_write(REG_FUNC, func_settings)) != 0) // Set functions
+        {
+            return ret; 
+        }
+    }
+
+    if (read_config.pressure != config->pressure) // Check pressure
+    {
+        if ((ret = cdm_write(REG_ATM_PRESSURE, (uint8_t)(config->pressure - 800))) != 0) return ret; // Write pressure
+    }
+    if (read_config.altitude != config->altitude) // Check altitude
+    {
+        if ((ret = cdm_write(REG_ALTITUDE, (uint8_t)(config->altitude / 10))) != 0) return ret; // Write altitude
+    }
+
+    if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high) // Check high alarm
+    {
+        if ((ret = cdm_write(REG_ALARM_CO2_H, (uint8_t)(config->alarm_treshold_co2_high / 10))) != 0) return ret; // Write high alarm
+    }
+    if (read_config.alarm_treshold_co2_low != config->alarm_treshold_co2_low) // Check low alarm
+    {
+        if ((ret = cdm_write(REG_ALARM_CO2_L, (uint8_t)(config->alarm_treshold_co2_low / 10))) != 0) return ret; // Write low alarm
+    }
+
+    if (read_config.target_LTA != config->target_LTA) // Check target LTA
+    {
+        if ((ret = cdm_write(REG_LTA_TARGET, (uint8_t)(config->target_LTA - 300))) != 0) return ret; // Write target LTA concentration
+    }
+    
+    if (read_config.period_LTA != config->period_LTA) // Check period LTA
+    {
+        buf = 0;
+        uint8_t val;
+        if (config->period_LTA % 30 == 0)
+        {
+            buf &= (0b1 << 7); // Set months bit
+            val = config->period_LTA / 30;
+        }
+        else if (config->period_LTA % 7 == 0)
+        {
+            buf &= (0b1 << 6);
+            val = config->period_LTA / 7;
+        }
+        if (val < 64)
+        {
+            buf += val;
+            if ((ret = cdm_write(REG_LTA_PERIOD, buf)) != 0) return ret; // Write period LTA
+        }
     }
     return SUCCESS;
 }
-
-// int32_t cdm7162_set_atm_pressure(uint16_t pressure)
-// {
-//     int32_t ret;
-//     if (pressure < 800 || pressure > 1055) return CDM7162_ERROR_RANGE; // Pressure out of range
-//     uint8_t hpa = pressure - 800; // Convert to value for the sensor
-
-//     uint8_t hpa_reg;
-//     if ((ret = cdm_read(REG_ATM_PRESSURE, &hpa_reg, 1)) != 0) return ret; // Read set pressure
-//     if (hpa == hpa_reg) return SUCCESS;
-
-//     ret = cdm_write(REG_ATM_PRESSURE, hpa); // Write pressure value
-//     busy_wait_ms(100);
-//     return ret;
-// }
-
-// int32_t cdm7162_set_default_atm_pressure(void)
-// {
-//     return cdm7162_set_atm_pressure(1013); // Set pressure to 1013 hPa
-// }
 
 static inline void cdm_power(sensor_t* cdm7162, bool on)
 {

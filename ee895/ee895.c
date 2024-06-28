@@ -213,7 +213,7 @@ void ee895_get_value(sensor_t* ee895)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas finished");
             #endif
             ee_power(ee895, false); // Power off
@@ -222,7 +222,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas started");
             #endif
             ee_power(ee895, true); // Power off
@@ -237,7 +237,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read trigger ready");
             #endif
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Read status register
@@ -282,7 +282,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read status");
             #endif
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Reading status register
@@ -314,7 +314,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read value");
             #endif
             ret = ee_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature

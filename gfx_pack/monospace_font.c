@@ -1,3 +1,14 @@
+/**
+ * @file monospace_font.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Defines pixels of a monospace font
+ * @version 0.1
+ * @date 2024-06-28
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "pico/stdlib.h"
 static uint8_t font_A[9] = {0x70, 0x88, 0x88, 0x88, 0xF8, 0x88, 0x88, 0x00, 0x00};
 static uint8_t font_B[9] = {0xF0, 0x88, 0x88, 0xF0, 0x88, 0x88, 0xF0, 0x00, 0x00};

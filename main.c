@@ -335,7 +335,7 @@ void init_sensors(void)
 
     for (uint8_t i = 0; i < 8; i++)
     {
-        #if DEBUG
+        #if DEBUG_INFO
         uint8_t buf3[18];
         snprintf(buf3, 18, "Init structure %i", i);
         msgbuf("info", "SENSOR", buf3);
@@ -355,7 +355,7 @@ void init_sensors(void)
             {
                 case EE895:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "EE895", buf);
@@ -365,7 +365,7 @@ void init_sensors(void)
                 }
                 case CDM7162:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "CDM7162", buf);
@@ -375,7 +375,7 @@ void init_sensors(void)
                 }
                 case SUNRISE:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "SUNRISE", buf);
@@ -385,7 +385,7 @@ void init_sensors(void)
                 }
                 case SUNLIGHT:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "SUNLIGHT", buf);
@@ -395,7 +395,7 @@ void init_sensors(void)
                 }
                 case SCD30:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "SCD30", buf);
@@ -405,7 +405,7 @@ void init_sensors(void)
                 }
                 case SCD41:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "SCD41", buf);
@@ -415,7 +415,7 @@ void init_sensors(void)
                 }
                 case COZIR_LP3:
                 {
-                    #if DEBUG
+                    #if DEBUG_INFO
                     uint8_t buf[24];
                     snprintf(buf, 24, "Init sensor %i...", i);
                     msgbuf("info", "CozIR-LP3", buf);
@@ -434,15 +434,17 @@ void init_sensors(void)
                 }
             }
             if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
-            #if DEBUG
+            #if DEBUG_INFO
             if (!ret)
             {
                 msg("info", "SENSOR", "Init success");
             }
-            else
+            #endif
+            #if DEBUG
+            if (ret)
             {
-                uint8_t buf3[20];
-                snprintf(buf3, 20, "Init failed: %i", ret);
+                uint8_t buf3[36];
+                snprintf(buf3, 36, "Init sensor %i failed: %i", i, ret);
                 msgbuf("ERROR", "SENSOR", buf3);
             }
             #endif
@@ -494,7 +496,7 @@ void read_sensors_start()
 {
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
     {
-        #if DEBUG
+        #if DEBUG_INFO
         msg("info", "SENSOR", "Measurement start");
         #endif
         for (int i = 0; i < 8; i++)
@@ -542,7 +544,7 @@ void read_sensors()
                 {
                     case EE895:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "EE895", buf);
@@ -552,7 +554,7 @@ void read_sensors()
                     }
                     case CDM7162:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "CDM7162", buf);
@@ -562,7 +564,7 @@ void read_sensors()
                     }
                     case SUNRISE:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "SUNRISE", buf);
@@ -572,7 +574,7 @@ void read_sensors()
                     }
                     case SUNLIGHT:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "SUNLIGHT", buf);
@@ -582,7 +584,7 @@ void read_sensors()
                     }
                     case SCD30:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "SCD30", buf);
@@ -592,7 +594,7 @@ void read_sensors()
                     }
                     case SCD41:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "SCD41", buf);
@@ -602,7 +604,7 @@ void read_sensors()
                     }
                     case COZIR_LP3:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Reading sensor %i...", i);
                         msgbuf("info", "CozIR-LP3", buf);
@@ -627,7 +629,9 @@ void read_sensors()
                     snprintf(buf2, 36, "Reading sensor %i failed: %i", i, sensors[i].state);
                     msgbuf("ERROR", "SENSOR", buf2);
                 }
-                else if (sensors[i].meas_state == MEAS_FINISHED && sensors[i].state == SUCCESS && !(sensor_measurement_vector & (0b1 << i)))
+                #endif
+                #if DEBUG_INFO
+                if (sensors[i].meas_state == MEAS_FINISHED && sensors[i].state == SUCCESS && !(sensor_measurement_vector & (0b1 << i)))
                 {
                     uint8_t buf2[36];
                     snprintf(buf2, 36, "Successfully read sensor %i", i);
@@ -643,7 +647,7 @@ void read_sensors()
                 {
                     case EE895:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "EE895", buf);
@@ -653,7 +657,7 @@ void read_sensors()
                     }
                     case CDM7162:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "CDM7162", buf);
@@ -663,7 +667,7 @@ void read_sensors()
                     }
                     case SUNRISE:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "SUNRISE", buf);
@@ -673,7 +677,7 @@ void read_sensors()
                     }
                     case SUNLIGHT:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "SUNLIGHT", buf);
@@ -683,7 +687,7 @@ void read_sensors()
                     }
                     case SCD30:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "SCD30", buf);
@@ -693,7 +697,7 @@ void read_sensors()
                     }
                     case SCD41:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "SCD41", buf);
@@ -703,7 +707,7 @@ void read_sensors()
                     }
                     case COZIR_LP3:
                     {
-                        #if DEBUG
+                        #if DEBUG_INFO
                         uint8_t buf[24];
                         snprintf(buf, 24, "Init sensor %i...", i);
                         msgbuf("info", "CozIR-LP3", buf);
@@ -722,15 +726,17 @@ void read_sensors()
                     }
                 }
                 if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
-                #if DEBUG
+                #if DEBUG_INFO
                 if (!ret)
                 {
                     msg("info", "SENSOR", "Init success");
                 }
-                else
+                #endif
+                #if DEBUG
+                if (ret)
                 {
-                    uint8_t buf3[20];
-                    snprintf(buf3, 20, "Init failed: %i", ret);
+                    uint8_t buf3[36];
+                    snprintf(buf3, 36, "Init sensor %i failed: %i", i, ret);
                     msgbuf("ERROR", "SENSOR", buf3);
                 }
                 #endif

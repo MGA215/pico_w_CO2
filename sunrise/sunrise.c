@@ -211,7 +211,7 @@ void sunrise_get_value(sensor_t* sunrise)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas finished");
             #endif
             sr_power(sunrise, false); // Power off
@@ -220,7 +220,7 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas start");
             #endif
             sr_power(sunrise, true); // Power on
@@ -231,7 +231,7 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_MODE: // Reading mode
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read mode");
             #endif
             uint8_t data;
@@ -266,7 +266,7 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Write measure command");
             #endif
             uint8_t buf[24] = {0};
@@ -296,7 +296,7 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_VALUE: // Reading measurement data
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read value");
             #endif
             uint8_t buf[10] = {0};
@@ -347,7 +347,7 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_STATUS: // Reading status registers
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read status");
             #endif
             ret = sr_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 24); // Read status registers

@@ -112,7 +112,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
     {
         case MEAS_FINISHED:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas finished");
             #endif
             lp3_power(cozir_lp3, false); // Power off
@@ -121,7 +121,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_STARTED:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas started");
             #endif
             lp3_power(cozir_lp3, true);
@@ -131,7 +131,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_READ_VALUE:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read value");
             #endif
             ret = lp3_read(REG_CO2, tempBuffer, 2);

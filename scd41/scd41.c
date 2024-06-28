@@ -184,7 +184,7 @@ void scd41_get_value(sensor_t* scd41)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas finished");
             #endif
             s41_power(scd41, false); // Power off
@@ -193,7 +193,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Meas started");
             #endif
             s41_power(scd41, true); // Power off
@@ -205,7 +205,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_MODE:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Read mode");
             #endif
             uint16_t val = 0;
@@ -242,7 +242,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
             msg("info", "Write measure command");
             #endif
             ret = s41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
@@ -261,7 +261,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
                 msg("info", "Read status");
                 uint16_t val = 0;
                 if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
@@ -302,7 +302,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #ifdef DEBUG
+            #if DEBUG_INFO
                 msg("info", "Read value");
                 uint16_t val = 0;
                 if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
