@@ -411,8 +411,8 @@ int32_t ee895_read_config(sensor_config_t* config)
     uint8_t buf[6] = {0};
 
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
-    config->meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval
-    config->filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
+    config->meas_period = (uint16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval
+    config->filter_coeff = (uint16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
     config->co2_offset = (int16_t)ntoh16(*((uint16_t*)&buf[4])); // Save offset
 
     if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
@@ -425,28 +425,34 @@ static int32_t ee_write_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[6] = {0};
 
-    bool single_meas_mode = config->single_meas_mode ? 1 : 0; // just to be sure - true in C doesnt have to be 1
+    sensor_config_t read_config;
+    if ((ret = ee895_read_config(&read_config)) != 0) return ret; // Read config
 
-    if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
-    int16_t meas_period = (int16_t)ntoh16(*((uint16_t*)&buf[0]));
-    int16_t filter_coeff = (int16_t)ntoh16(*((uint16_t*)&buf[2]));
-    int16_t offset = (int16_t)ntoh16(*((uint16_t*)&buf[4]));
-
-    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
-
-    if (meas_period != config->meas_period * 10) { // If measurement period already set
-        if ((ret = ee895_write_reg(REG_MEAS_INTERVAL, (uint16_t)config->meas_period * 10)) != 0) return ret;
+    if (read_config.meas_period != config->meas_period * 10) { // If measurement period changed
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing measurement period");
+        #endif
+        if ((ret = ee895_write_reg(REG_MEAS_INTERVAL, config->meas_period * 10)) != 0) return ret;
     }
-    if (filter_coeff != config->filter_coeff) { // If filter coeff already set
-        if ((ret = ee895_write_reg(REG_MEAS_FILTER, (uint16_t)config->filter_coeff)) != 0) return ret;
+    if (read_config.filter_coeff != config->filter_coeff) { // If filter coeff changed
+    #if DEBUG_WARN
+        msg("Warn", "Config - Writing filter coefficient");
+        #endif
+        if ((ret = ee895_write_reg(REG_MEAS_FILTER, config->filter_coeff)) != 0) return ret;
     }
-    if (offset != config->co2_offset) // If offset already set
+    if (read_config.co2_offset != config->co2_offset) // If offset changed
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing co2 offset");
+        #endif
         if ((ret = ee895_write_reg(REG_MEAS_OFFSET, (uint16_t)config->co2_offset)) != 0) return ret;
     }
-    if (ntoh16(*((uint16_t*)&buf[0])) != single_meas_mode) // If measurement mode already set
+    if (read_config.single_meas_mode != config->single_meas_mode) // If measurement mode changed
     {
-        if ((ret = ee895_write_reg(REG_MEAS_MODE, (uint16_t)single_meas_mode)) != 0) return ret;
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing measurement mode");
+        #endif
+        if ((ret = ee895_write_reg(REG_MEAS_MODE, config->single_meas_mode)) != 0) return ret;
     }
     return SUCCESS;
 }

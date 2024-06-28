@@ -39,9 +39,9 @@ typedef enum meas_state_fsm
 typedef struct sensor_config
 {
     // Measurement
-    int16_t meas_period; // Set measurement period in s (default 15 for EE895)                                  EE895, SUNRISE, SUNLIGHT, SCD30
+    uint16_t meas_period; // Set measurement period in s (default 15 for EE895)                                  EE895, SUNRISE, SUNLIGHT, SCD30
     bool single_meas_mode; // Enable single masurement mode                                                     EE895, SUNRISE, SUNLIGHT, SCD41
-    int16_t filter_coeff; // Set filter coefficient (default 4)                                                 EE895
+    uint16_t filter_coeff; // Set filter coefficient (default 4)                                                 EE895
     uint16_t meas_samples; // Set number of samples to measure (default 4)                                      SUNRISE, SUNLIGHT
     bool enable_static_IIR; // Enable static IIR filtering (possibly smoothing)                                 SUNRISE, SUNLIGHT
     bool enable_dynamic_IIR; // Enable dynamic IIR filtering (reacting to spikes, works if static IIR is on)    SUNRISE, SUNLIGHT

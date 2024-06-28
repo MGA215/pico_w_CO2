@@ -263,9 +263,6 @@ void scd41_get_value(sensor_t* scd41)
         {
             #if DEBUG_INFO
                 msg("info", "Read status");
-                uint16_t val = 0;
-                if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
-                printf("[%u] [SCD41] Pressure: %u\n", to_ms_since_boot(get_absolute_time()), val);
             #endif
             ret = s41_read(CMD_GET_DATA_RDY_STATUS, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read

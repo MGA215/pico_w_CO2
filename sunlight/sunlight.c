@@ -147,14 +147,6 @@ static int sl_write(uint8_t addr, uint8_t* buf, uint16_t len);
 static int sl_write_config(sensor_config_t* config);
 
 /**
- * @brief Writes config for the meter control register
- * 
- * @param config Config for the SUNLIGHT sensor
- * @return int Return code
- */
-static inline int sl_write_meter_control(sensor_config_t* config);
-
-/**
  * @brief Switches sensor power [on] if not controlled globally
  * 
  * @param sunlight Sensor structure
@@ -384,14 +376,15 @@ int sunlight_init(sensor_t* sunlight, sensor_config_t* config)
 int sunlight_read_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint8_t buf[11] = {0};
+    uint8_t buf[13] = {0};
     uint8_t data = 0;
-    if ((ret = sl_read(REG_MEAS_MODE, buf, 11)) != 0) return ret; // Read measurement registers
+    if ((ret = sl_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
     config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
     config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
     config->abc_period = ntoh16(*((uint16_t*)&buf[5]));
     config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
+    config->static_IIR_filter_coeff = buf[12];
 
     if ((ret = sl_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
     config->enable_nRDY = data & 0b1 << 0; // Save meter control data
@@ -407,39 +400,51 @@ int sunlight_read_config(sensor_config_t* config)
 static int sl_write_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint8_t buf[11] = {0};
-    uint8_t command_buf[11] = {0};
-    command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
-    *((uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
-    *((uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
-    *((uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
+    sensor_config_t read_config;
+    if ((ret = sunlight_read_config(&read_config)) != 0) return ret; // Read SUNRISE config
 
-    *((uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
+    if (read_config.enable_nRDY != config->enable_nRDY ||
+        read_config.enable_abc != config->enable_abc ||
+        read_config.enable_static_IIR != config->enable_static_IIR ||
+        read_config.enable_dynamic_IIR != config->enable_dynamic_IIR ||
+        read_config.enable_pressure_comp != config->enable_pressure_comp ||
+        read_config.invert_nRDY != config->invert_nRDY)
+    {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing Meter Control");
+        #endif
+        uint8_t data = 0; // meter control vector
+        data |= config->enable_nRDY;
+        data |= config->enable_abc << 1;
+        data |= config->enable_static_IIR << 2;
+        data |= config->enable_dynamic_IIR << 3;
+        data |= config->enable_pressure_comp << 4;
+        data |= config->invert_nRDY << 5;
 
-    if ((ret = sl_write_meter_control(config)) != 0) return ret; // Write meter control register
+        if ((ret = sl_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
+    }
+    if (read_config.meas_period != config->meas_period ||
+        read_config.meas_samples != config->meas_samples ||
+        read_config.abc_period != config->abc_period ||
+        read_config.single_meas_mode != config->single_meas_mode ||
+        read_config.abc_target_value != config->abc_target_value ||
+        read_config.static_IIR_filter_coeff != config->static_IIR_filter_coeff)
+    {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing full configuration");
+        #endif
+        uint8_t command_buf[13] = {0};
+        command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
+        *((uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
+        *((uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
+        *((uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
 
-    if ((ret = sl_read(REG_MEAS_MODE, buf, 11)) != 0) return ret; // Read measurement registers
-    if (memcmp(buf, command_buf, 11) == 0) return SUCCESS; // If registers already set return SUCCESS
-    if ((ret = sl_write(REG_MEAS_MODE, command_buf, 11)) != 0) return ret; // Write measurement registers
-    return SUCCESS;
-}
+        *((uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
 
-static inline int sl_write_meter_control(sensor_config_t* config)
-{
-    uint8_t data = 0; // Prepare command
-    data |= config->enable_nRDY;
-    data |= config->enable_abc << 1;
-    data |= config->enable_static_IIR << 2;
-    data |= config->enable_dynamic_IIR << 3;
-    data |= config->enable_pressure_comp << 4;
-    data |= config->invert_nRDY << 5;
+        command_buf[12] = config->static_IIR_filter_coeff;
 
-    uint8_t buf;
-    int32_t ret;
-    if ((ret = sl_read(REG_METER_CONTROL, &buf, 1)) != 0) return ret; // Read meter control register
-    if (data == buf) return SUCCESS; // If already set return SUCCESS
-
-    if ((ret = sl_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
+        if ((ret = sl_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
+    }
     return SUCCESS;
 }
 

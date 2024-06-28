@@ -242,6 +242,9 @@ static int32_t cdm_write_config(sensor_config_t* config)
     busy_wait_ms(10);
     if (buf != 0x06) // If not in measurement mode
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing OP mode");
+        #endif
         if ((ret = cdm_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
             return ret; 
         busy_wait_ms(100);
@@ -257,6 +260,9 @@ static int32_t cdm_write_config(sensor_config_t* config)
         read_config.long_term_adj_1 == config->long_term_adj_1 &&
         read_config.long_term_adj_2 == config->long_term_adj_2))
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing function flags");
+        #endif
         uint8_t func_settings = 0;
         if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
         if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
@@ -271,24 +277,39 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
     if (read_config.pressure != config->pressure) // Check pressure
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing pressure");
+        #endif
         if ((ret = cdm_write(REG_ATM_PRESSURE, (uint8_t)(config->pressure - 800))) != 0) return ret; // Write pressure
     }
     if (read_config.altitude != config->altitude) // Check altitude
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing altitude");
+        #endif
         if ((ret = cdm_write(REG_ALTITUDE, (uint8_t)(config->altitude / 10))) != 0) return ret; // Write altitude
     }
 
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high) // Check high alarm
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing alarm high treshold");
+        #endif
         if ((ret = cdm_write(REG_ALARM_CO2_H, (uint8_t)(config->alarm_treshold_co2_high / 10))) != 0) return ret; // Write high alarm
     }
     if (read_config.alarm_treshold_co2_low != config->alarm_treshold_co2_low) // Check low alarm
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing alarm low treshold");
+        #endif
         if ((ret = cdm_write(REG_ALARM_CO2_L, (uint8_t)(config->alarm_treshold_co2_low / 10))) != 0) return ret; // Write low alarm
     }
 
     if (read_config.target_LTA != config->target_LTA) // Check target LTA
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing LTA target value");
+        #endif
         if ((ret = cdm_write(REG_LTA_TARGET, (uint8_t)(config->target_LTA - 300))) != 0) return ret; // Write target LTA concentration
     }
     
@@ -308,6 +329,9 @@ static int32_t cdm_write_config(sensor_config_t* config)
         }
         if (val < 64)
         {
+            #if DEBUG_WARN
+            msg("Warn", "Config - Writing LTA period");
+            #endif
             buf += val;
             if ((ret = cdm_write(REG_LTA_PERIOD, buf)) != 0) return ret; // Write period LTA
         }
