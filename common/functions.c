@@ -32,6 +32,6 @@ void common_init_struct(sensor_t* sensor)
     sensor->measurement_iterator = 0;
     sensor->state = ERROR_SENSOR_NOT_INITIALIZED;
     sensor->timeout_iterator = 0;
-    sensor->wake_time = make_timeout_time_us(UINT64_MAX);
+    sensor->wake_time = at_the_end_of_time;
     memset(sensor->state_reg, 0x00, 26);
 }

@@ -105,7 +105,7 @@ void scd30_get_value(sensor_t* scd30)
         {
             msg("Meas finished");
             scd30_power(scd30, false); // Power off
-            scd30->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+            scd30->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started

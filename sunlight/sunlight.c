@@ -272,7 +272,7 @@ void sunlight_get_value(sensor_t* sunlight)
             msg("Meas finished");
             #endif
             sunlight_power(sunlight, false); // Power off
-            sunlight->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+            sunlight->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement start

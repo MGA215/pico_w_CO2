@@ -76,7 +76,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             msg("Meas finished");
             #endif
             cozir_lp3_power(cozir_lp3, false); // Power off
-            cozir_lp3->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
+            cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED:

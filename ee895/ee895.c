@@ -152,7 +152,7 @@ void ee895_get_value(sensor_t* ee895)
             msg("Meas finished");
             #endif
             ee895_power(ee895, false); // Power off
-            ee895->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+            ee895->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started
@@ -369,15 +369,11 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
         return ERROR_UNKNOWN_SENSOR;
     }
 
-    if ((ret = ee_write_config(config)) != 0) // Write configuration to sensor
-    {
-        ee895_power(ee895, false); // Power off
-        return ret;
-    }
+    ret = ee_write_config(config); // Write configuration to sensor
 
     ee895_power(ee895, false); // Power off
 
-    return SUCCESS;
+    return ret;
 }
 
 int32_t ee_write_config(sensor_config_t* config)

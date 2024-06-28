@@ -141,7 +141,7 @@ void scd41_get_value(sensor_t* scd41)
             msg("Meas finished");
             #endif
             scd41_power(scd41, false); // Power off
-            scd41->wake_time = make_timeout_time_ms(UINT32_MAX); // Disable timer
+            scd41->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started

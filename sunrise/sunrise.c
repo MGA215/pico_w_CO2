@@ -139,9 +139,6 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
     sr_wake_up(); // Wake up sensor
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNRISE_ADDR, command_buffer, len + 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Write data to sensor
     busy_wait_ms(12);
-    // uint8_t resp[len];
-    // if ((ret = i2c_read_timeout_us(I2C_SENSOR, SUNRISE_ADDR, resp, len, false, 1000)) < 0) return ret;
-    // if (memcmp(buf, resp, len)) return SUNRISE_ERROR_WRITE_RESP;
     return SUCCESS;
 }
 
@@ -177,7 +174,11 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
     if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
     if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
 
-    if ((ret = sr_write_config(config)) != 0) return ret; // Write configuration
+    if ((ret = sr_write_config(config)) != 0) // Write configuration
+    {
+        sunrise_power(sunrise, false); // Power off
+        return ret;
+    }
 
     sunrise_reset(); // Reset sensor
 
@@ -277,7 +278,7 @@ void sunrise_get_value(sensor_t* sunrise)
             msg("Meas finished");
             #endif
             sunrise_power(sunrise, false); // Power off
-            sunrise->wake_time = make_timeout_time_ms(INT32_MAX); // Disable timer
+            sunrise->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started

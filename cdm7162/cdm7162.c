@@ -182,7 +182,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             msg("Meas finished");
             #endif
             cdm7162_power(cdm7162, false); // Power off
-            cdm7162->wake_time = make_timeout_time_ms(INT32_MAX); // Disable sensor timer
+            cdm7162->wake_time = at_the_end_of_time; // Disable sensor timer
             return;
         }
         case MEAS_STARTED: // Measurement started
