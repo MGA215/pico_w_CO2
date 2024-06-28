@@ -69,7 +69,11 @@ int main()
     int32_t ret;
     if ((ret = init()) != 0) // init function
     {
-        printf("Init error: %i\n", ret);
+        #if DEBUG
+        uint8_t buf[44];
+        snprintf(buf, 44, "Initialization failure: %i; Aborting...", ret);
+        msgbuf("[FATAL]", "INIT", buf);
+        #endif
         return ret;
     } 
 
@@ -77,7 +81,11 @@ int main()
         sleep_ms(1);
         if ((ret = loop()) != 0) // main loop
         {
-            printf("Loop error: %i\n", ret);
+            #if DEBUG
+            uint8_t buf[36];
+            snprintf(buf, 36, "Loop failure: %i; Aborting...", ret);
+            msgbuf("FATAL", "LOOP", buf);
+            #endif
             return ret;
         }
     }

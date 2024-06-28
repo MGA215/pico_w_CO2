@@ -15,7 +15,7 @@
 #include "common/structs.h"
 static bool global_power = true;
 
-static sensor_config_t sensor_config_0 = {
+static sensor_config_t sensor_config_00 = {
     .sensor_type = EE895,
     .meas_period = 15,
     .single_meas_mode = false,
@@ -28,7 +28,7 @@ static sensor_config_t sensor_config_0 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_1 = {
+static sensor_config_t sensor_config_01 = {
     .sensor_type = CDM7162,
     .enable_PWM_pin = false,
     .PWM_range_high = false,
@@ -49,7 +49,7 @@ static sensor_config_t sensor_config_1 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_2 = {
+static sensor_config_t sensor_config_02 = {
     .sensor_type = SUNRISE,
     .meas_period = 14,
     .single_meas_mode = false,
@@ -71,7 +71,7 @@ static sensor_config_t sensor_config_2 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_3 = {
+static sensor_config_t sensor_config_03 = {
     .sensor_type = SUNLIGHT,
     .meas_period = 14,
     .single_meas_mode = false,
@@ -93,7 +93,7 @@ static sensor_config_t sensor_config_3 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_4 = {
+static sensor_config_t sensor_config_04 = {
     .sensor_type = SCD30,
     .meas_period = 2,
     .temperature_offset = 0,
@@ -109,7 +109,7 @@ static sensor_config_t sensor_config_4 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_5 = {
+static sensor_config_t sensor_config_05 = {
     .sensor_type = SCD41,
     .single_meas_mode = false,
     .temperature_offset = 4,
@@ -127,7 +127,7 @@ static sensor_config_t sensor_config_5 = {
     .power_5V = false,
 };
 
-static sensor_config_t sensor_config_6 = {
+static sensor_config_t sensor_config_06 = {
     .sensor_type = COZIR_LP3,
     .digital_filter = 16,
     .enable_PWM_pin = false,

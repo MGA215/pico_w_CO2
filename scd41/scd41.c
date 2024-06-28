@@ -291,7 +291,9 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->humidity = NAN;
                 scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
-                printf("Read status failed, abort...\n");
+                #if DEBUG
+                msg("ERROR", "Read status failed, abort...");
+                #endif
                 return;
             }
             scd41->wake_time = make_timeout_time_ms(100); // Check status after 100 ms
@@ -301,9 +303,6 @@ void scd41_get_value(sensor_t* scd41)
         {
             #if DEBUG_INFO
                 msg("info", "Read value");
-                uint16_t val = 0;
-                if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
-                printf("[%u] [SCD41] Pressure: %u\n", to_ms_since_boot(get_absolute_time()), val);
             #endif
             uint16_t buf[6];
             ret = s41_read(CMD_READ_MEAS, buf, 6); // Read measured data

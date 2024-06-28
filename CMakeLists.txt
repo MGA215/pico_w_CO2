@@ -71,6 +71,7 @@ add_subdirectory(scd41)
 add_subdirectory(cozir-lp3)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
+target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
