@@ -65,6 +65,9 @@
 
 #define SERIALIZE_BUFFER_LEN 32
 
+#define MUX0_ADDR 0x70
+#define MUX1_ADDR 0x71
+
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;
