@@ -30,6 +30,7 @@
 #include "scd30/scd30.h"
 #include "scd41/scd41.h"
 #include "cozir-lp3/cozir-lp3.h"
+#include "cm1107n/cm1107n.h"
 
 /**
  * @brief Initializes pins, buses, modules; runs only once

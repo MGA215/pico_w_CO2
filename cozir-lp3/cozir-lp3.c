@@ -108,6 +108,15 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
 {
     int32_t ret;
     uint8_t tempBuffer[5];
+    if (cozir_lp3->config->sensor_type != COZIR_LP3) // Check for correct sensor type
+    {
+        cozir_lp3->meas_state = MEAS_FINISHED;
+        cozir_lp3->state = ERROR_UNKNOWN_SENSOR;
+        cozir_lp3->co2 = NAN;
+        cozir_lp3->humidity = NAN;
+        cozir_lp3->temperature = NAN;
+        return;
+    } 
     switch(cozir_lp3->meas_state)
     {
         case MEAS_FINISHED:
@@ -150,12 +159,18 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             cozir_lp3->state = SUCCESS;
             return;
         }
+        default:
+        {
+            cozir_lp3->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config)
 {
     int32_t ret;
+    if (config->sensor_type != COZIR_LP3) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     cozir_lp3->config = config;
     lp3_power(cozir_lp3, true);
 
@@ -168,6 +183,7 @@ int32_t cozir_lp3_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[2];
+    config->sensor_type = COZIR_LP3;
     if ((ret = lp3_read(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
     config->pressure = ntoh16(*((uint16_t*)(&buf[0])));
     config->enable_pressure_comp = config->pressure != 1013;
@@ -199,10 +215,13 @@ static int32_t lp3_write_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[2];
     sensor_config_t read_config;
-    cozir_lp3_read_config(&read_config);
+    if ((ret = cozir_lp3_read_config(&read_config)) != 0) return ret;
     
     if (read_config.enable_pressure_comp != config->enable_pressure_comp || read_config.pressure != config->pressure)
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing pressure");
+        #endif
         if (config->enable_pressure_comp && read_config.pressure != config->pressure)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->pressure);
@@ -217,12 +236,18 @@ static int32_t lp3_write_config(sensor_config_t* config)
 
     if (read_config.enable_PWM_pin != config->enable_PWM_pin)
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing PWM pin");
+        #endif
         buf[0] = config->enable_PWM_pin ? 0b1 << 7 : 0;
         if ((ret = lp3_write(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
     }
 
     if (read_config.enable_abc != config->enable_abc)
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing ABC enable");
+        #endif
         buf[0] = config->enable_abc ? 0b10 : 0b00;
         if ((ret = lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     }
@@ -230,22 +255,34 @@ static int32_t lp3_write_config(sensor_config_t* config)
     {
         if (read_config.abc_init_period != config->abc_init_period)
         {
+            #if DEBUG_WARN
+            msg("Warn", "Config - Writing ABC initial period");
+            #endif
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_init_period);
             if ((ret = lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.abc_period != config->abc_period)
         {
+            #if DEBUG_WARN
+            msg("Warn", "Config - Writing ABC standard period");
+            #endif
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_period);
             if ((ret = lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.abc_target_value != config->abc_target_value)
         {
+            #if DEBUG_WARN
+            msg("Warn", "Config - Writing ABC target value");
+            #endif
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_target_value);
             if ((ret = lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
         }
     }
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high)
     {
+        #if DEBUG_WARN
+            msg("Warn", "Config - Writing alarm treshold");
+            #endif
         if (config->alarm_en)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->alarm_treshold_co2_high);

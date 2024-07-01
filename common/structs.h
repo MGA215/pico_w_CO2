@@ -23,7 +23,8 @@ typedef enum sensor_type
     SUNLIGHT = 3,
     SCD30 = 4,
     SCD41 = 5,
-    COZIR_LP3 = 6
+    COZIR_LP3 = 6,
+    CM1107N = 7
 } sensor_type_e;
 
 typedef enum meas_state_fsm
@@ -105,7 +106,8 @@ typedef struct sensor
     absolute_time_t wake_time;
     sensor_config_t* config;
     sensor_type_e sensor_type;
-    uint8_t input_index;
+    uint8_t input_index; // Index of the input connector
+    uint8_t power_index; // Index in the power vector
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
 } sensor_t;
 #endif

@@ -197,7 +197,14 @@ static int sl_write(uint8_t addr, uint8_t* buf, uint16_t len)
 void sunlight_get_value(sensor_t* sunlight)
 {
     int32_t ret;
-
+    if (sunlight->config->sensor_type != SUNLIGHT) // Check for correct sensor type
+    {
+        sunlight->meas_state = MEAS_FINISHED;
+        sunlight->state = ERROR_UNKNOWN_SENSOR;
+        sunlight->co2 = NAN;
+        sunlight->temperature = NAN;
+        return;
+    } 
     switch (sunlight->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -350,13 +357,18 @@ void sunlight_get_value(sensor_t* sunlight)
             sunlight->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
+        default:
+        {
+            sunlight->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int sunlight_init(sensor_t* sunlight, sensor_config_t* config)
 {
     int32_t ret;
-    
+    if (config->sensor_type != SUNLIGHT) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     sunlight->config = config; // Save sensor config
 
     sl_power(sunlight, true); // Power on
@@ -378,6 +390,7 @@ int sunlight_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[13] = {0};
     uint8_t data = 0;
+    config->sensor_type = SUNLIGHT;
     if ((ret = sl_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
     config->meas_period = ntoh16(*((uint16_t*)&buf[1]));

@@ -11,6 +11,15 @@
 
 #include "functions.h"
 
+/**
+ * @brief Get the input and power index from sensor index
+ * 
+ * @param internal_index Index of the sensor in programm (generated from loop iteration)
+ * @param input_index Index of the input (should be the same as the input index)
+ * @param power_index Index in the power vector
+ */
+void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t* power_index);
+
 float byte2float(uint32_t byte_value)
 {
     uint8_t* bytes = (uint8_t*)&byte_value;
@@ -45,6 +54,12 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->state = ERROR_SENSOR_NOT_INITIALIZED;
     sensor->timeout_iterator = 0;
     sensor->wake_time = at_the_end_of_time;
-    sensor->input_index = input_index;
+    get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
     memset(sensor->state_reg, 0x00, 26);
+}
+
+void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t* power_index)
+{
+    *input_index = internal_index;
+    *power_index = internal_index;
 }

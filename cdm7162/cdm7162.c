@@ -104,6 +104,13 @@ void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
     uint8_t buf[2];
+    if (cdm7162->config->sensor_type != CDM7162) // Check for correct sensor type
+    {
+        cdm7162->meas_state = MEAS_FINISHED;
+        cdm7162->state = ERROR_UNKNOWN_SENSOR;
+        cdm7162->co2 = NAN;
+        return;
+    } 
     switch (cdm7162->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -180,6 +187,11 @@ void cdm7162_get_value(sensor_t* cdm7162)
             cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
+        default:
+        {
+            cdm7162->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
@@ -187,6 +199,7 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf;
+    if (config->sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     cdm7162->config = config; // Save config
     cdm_power(cdm7162, true); // Power on
 
@@ -201,6 +214,7 @@ int32_t cdm7162_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[4] = {0xFF};
+    config->sensor_type = CDM7162;
     if ((ret = cdm_read(REG_FUNC, buf, 1)) != 0) return ret; // Read functions register
     config->enable_PWM_pin = (bool)(buf[0] & (0b1 << 0)); // Save data from the function register
     config->enable_pressure_comp = buf[0] & (0b1 << 2);

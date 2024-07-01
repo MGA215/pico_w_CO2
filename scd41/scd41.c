@@ -180,6 +180,15 @@ void scd41_get_value(sensor_t* scd41)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
+    if (scd41->config->sensor_type != SCD41) // Check for correct sensor type
+    {
+        scd41->meas_state = MEAS_FINISHED;
+        scd41->state = ERROR_UNKNOWN_SENSOR;
+        scd41->co2 = NAN;
+        scd41->humidity = NAN;
+        scd41->temperature = NAN;
+        return;
+    } 
     switch(scd41->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -323,12 +332,18 @@ void scd41_get_value(sensor_t* scd41)
             scd41->state = SUCCESS; // Set state
             return;
         }
+        default:
+        {
+            scd41->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
 {
     int32_t ret;
+    if (config->sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     scd41->config = config;
     s41_power(scd41, true); // Turn sensor power on
 
@@ -341,6 +356,7 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
 {
     int32_t ret;
     uint16_t val;
+    config->sensor_type = SCD41;
 
     if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop measurement
 
@@ -388,12 +404,18 @@ static int32_t s41_write_config(sensor_config_t* config)
 
     if (config->enable_abc != read_config.enable_abc)
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing ABC enable");
+        #endif
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, config->enable_abc)) != 0) return ret;
         changed = true;
     }
 
     if ((config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing temperature offset");
+        #endif
         if ((ret = s41_write_value(CMD_SET_T_OFFSET, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)))) != 0) return ret; // Write temperature offset
         changed = true;
     }
@@ -401,6 +423,9 @@ static int32_t s41_write_config(sensor_config_t* config)
     if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
         config->enable_altitude_comp && (config->altitude != read_config.altitude)) // Check altitude
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing altitude");
+        #endif
         if (config->enable_altitude_comp) // If altitude compensation should be enabled
         {
             if ((ret = s41_write_value(CMD_SET_ALTITUDE, config->altitude)) != 0) return ret;
@@ -414,11 +439,17 @@ static int32_t s41_write_config(sensor_config_t* config)
 
     if (config->abc_init_period != read_config.abc_init_period) // Check ABC initial period
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing ABC initial period");
+        #endif
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_INIT_PER, config->abc_init_period)) != 0) return ret; // Set ABC initial period
     }
 
     if (config->abc_period != read_config.abc_period) // Check ABC standard period
     {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing ABC period");
+        #endif
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_STANDARD_PER, config->abc_period)) != 0) return ret; // Set ABC standard period
     }
 

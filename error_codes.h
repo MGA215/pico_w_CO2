@@ -87,3 +87,12 @@
 
 // CozIR-LP3 Errors
 #define COZIR_LP3_ERROR_NREG_REG -601 // Error CozIR-LP3 - specified number of registers is invalid
+
+// CUBIC CM1107N
+#define CM1107N_ERROR_CRC -703 // Error CM1107N - Invalid CRC
+#define CM1107N_ERROR_FATAL -707 // Error CM1107N - Sensor error
+#define CM1107N_ERROR_CAL -710 // Error CM1107N - Sensor not calibrated
+#define CM1107N_ERROR_OUT_OF_RANGE -712 // Error CM1107N - Measurement out of range
+#define CM1107N_ERROR_LIGHT_AGING -720 // Error CM1107N - Sensor light aging
+#define CM1107N_ERROR_DRIFT -721 // Error CM1107N - Sensor drifting
+#define CM1107N_ERROR_PREHEATING -722 // Error CM1107N - Sensor preheating

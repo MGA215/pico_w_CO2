@@ -209,6 +209,15 @@ void ee895_get_value(sensor_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
     int32_t ret;
+    if (ee895->config->sensor_type != EE895) // Check for correct sensor type
+    {
+        ee895->meas_state = MEAS_FINISHED;
+        ee895->state = ERROR_UNKNOWN_SENSOR;
+        ee895->co2 = NAN;
+        ee895->pressure = NAN;
+        ee895->temperature = NAN;
+        return;
+    } 
     switch(ee895->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -376,13 +385,18 @@ void ee895_get_value(sensor_t* ee895)
             ee895->state = SUCCESS; // Set state
             return;
         }
+        default:
+        {
+            ee895->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
 {
     int32_t ret;
-
+    if (config->sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     ee895->config = config; // Save configuration
     ee_power(ee895, true); // Power on
 
@@ -409,6 +423,7 @@ int32_t ee895_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[6] = {0};
+    config->sensor_type = EE895;
 
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
     config->meas_period = (uint16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval

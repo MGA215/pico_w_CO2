@@ -198,7 +198,14 @@ static int sr_write(uint8_t addr, uint8_t* buf, uint16_t len)
 void sunrise_get_value(sensor_t* sunrise)
 {
     int32_t ret;
-
+    if (sunrise->config->sensor_type != SUNRISE) // Check for correct sensor type
+    {
+        sunrise->meas_state = MEAS_FINISHED;
+        sunrise->state = ERROR_UNKNOWN_SENSOR;
+        sunrise->co2 = NAN;
+        sunrise->temperature = NAN;
+        return;
+    } 
     switch (sunrise->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -351,13 +358,18 @@ void sunrise_get_value(sensor_t* sunrise)
             sunrise->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
+        default:
+        {
+            sunrise->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
 {
     int32_t ret;
-    
+    if (config->sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     sunrise->config = config; // Save sensor config
 
     sr_power(sunrise, true); // Power on
@@ -384,6 +396,7 @@ int sunrise_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[13] = {0};
     uint8_t data = 0;
+    config->sensor_type = SUNRISE;
     if ((ret = sr_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
     config->meas_period = ntoh16(*((uint16_t*)&buf[1]));

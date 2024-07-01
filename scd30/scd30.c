@@ -150,6 +150,15 @@ void scd30_get_value(sensor_t* scd30)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
+    if (scd30->config->sensor_type != SCD30) // Check for correct sensor type
+    {
+        scd30->meas_state = MEAS_FINISHED;
+        scd30->state = ERROR_UNKNOWN_SENSOR;
+        scd30->co2 = NAN;
+        scd30->humidity = NAN;
+        scd30->temperature = NAN;
+        return;
+    } 
     switch(scd30->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -231,12 +240,18 @@ void scd30_get_value(sensor_t* scd30)
             scd30->state = SUCCESS; // Set state
             return;
         }
+        default:
+        {
+            scd30->meas_state = MEAS_FINISHED;
+            return;
+        }
     }
 }
 
 int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
 {
     int32_t ret;
+    if (config->sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     scd30->config = config; // Save configuration
     s30_power(scd30, true); // Power on
 
@@ -249,6 +264,7 @@ int32_t scd30_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint16_t val;
+    config->sensor_type = SCD30;
     if ((ret = s30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
     config->enable_pressure_comp = (val != 0);

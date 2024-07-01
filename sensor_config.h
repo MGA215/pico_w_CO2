@@ -145,4 +145,16 @@ static sensor_config_t sensor_config_06 = {
     .pressure_en = false,
     .power_5V = false,
 };
+
+static sensor_config_t sensor_config_07 = {
+    .sensor_type = CM1107N,
+    .enable_abc = false,
+    .abc_target_value = 400,
+    .abc_period = 7,
+    .co2_en = true,
+    .temp_en = false,
+    .RH_en = false,
+    .pressure_en = false,
+    .power_5V = true
+};
 #endif

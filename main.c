@@ -72,7 +72,7 @@ int main()
         #if DEBUG
         uint8_t buf[44];
         snprintf(buf, 44, "Initialization failure: %i; Aborting...", ret);
-        msgbuf("[FATAL]", "INIT", buf);
+        msgbuf("FATAL", "INIT", buf);
         #endif
         return ret;
     } 
@@ -298,6 +298,11 @@ void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
             snprintf(buf, len, "GSS CozIR-LP3");
             break;
         }
+        case CM1107N:
+        {
+            snprintf(buf, len, "Cubic CM1107N");
+            break;
+        }
         default:
         {
             memset(buf, 0x00, len);
@@ -349,8 +354,7 @@ void init_sensors(void)
         msgbuf("info", "SENSOR", buf3);
         #endif
         common_init_struct(&sensors[i], i); // Initialize sensor structures
-        if (configuration_map[i] != NULL) sensors[i].sensor_type = configuration_map[i]->sensor_type; // Copy sensor type to sensor structure
-        else sensors[i].sensor_type = UNKNOWN;
+        sensors[i].sensor_type = configuration_map[i] != NULL ? configuration_map[i]->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
     }
 
 
@@ -429,6 +433,16 @@ void init_sensors(void)
                     msgbuf("info", "CozIR-LP3", buf);
                     #endif
                     ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
+                    break;
+                }
+                case CM1107N:
+                {
+                    #if DEBUG_INFO
+                    uint8_t buf[24];
+                    snprintf(buf, 24, "Init sensor %i...", i);
+                    msgbuf("info", "CM1107N", buf);
+                    #endif
+                    ret = cm1107n_init(&(sensors[i]), configuration_map[i]); // Initialize CM1107N sensor
                     break;
                 }
                 
@@ -620,6 +634,16 @@ void read_sensors()
                         cozir_lp3_get_value(&(sensors[i])); // Read CozIR-LP3 values
                         break;
                     }
+                    case CM1107N:
+                    {
+                        #if DEBUG_INFO
+                        uint8_t buf[24];
+                        snprintf(buf, 24, "Reading sensor %i...", i);
+                        msgbuf("info", "CM1107N", buf);
+                        #endif
+                        cm1107n_get_value(&(sensors[i])); // Read CM1107N values
+                        break;
+                    }
                     
                     default:
                     {
@@ -721,6 +745,16 @@ void read_sensors()
                         msgbuf("info", "CozIR-LP3", buf);
                         #endif
                         ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
+                        break;
+                    }
+                    case CM1107N:
+                    {
+                        #if DEBUG_INFO
+                        uint8_t buf[24];
+                        snprintf(buf, 24, "Init sensor %i...", i);
+                        msgbuf("info", "CM1107N", buf);
+                        #endif
+                        ret = cm1107n_init(&(sensors[i]), configuration_map[i]); // Initialize CM1107N sensor
                         break;
                     }
                     
