@@ -12,7 +12,18 @@
 #ifndef MUX_MODULE
 #define MUX_MODULE
 
+#include "pico/stdlib.h"
+#include "error_codes.h"
+#include "common/constants.h"
+#include "hardware/i2c.h"
 
+/**
+ * @brief Enables sensor in the MUX
+ * 
+ * @param sensor_index Index of the sensor
+ * @return int32_t Return code
+ */
+int32_t mux_enable_sensor(uint8_t sensor_index);
 
 
 

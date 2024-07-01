@@ -19,9 +19,13 @@
 #define ERROR_NO_MEAS 5 // Error No measurement has been performed yet
 #define ERROR_UNKNOWN_SENSOR 6 // Error Sensor identification failed - unknown sensor
 
+// Serialization errors
 #define ERROR_SERIALIZATION_BUFFER_LEN 11 // Error - serialization buffer is too short
 #define ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE 12 // Error - deserialized value is out of range for specified sensor 
 #define ERROR_DESERIALIZATION_FAILURE 13 // Error - deserialization failed
+
+// MUX errors
+#define ERROR_MUX_INVALID_INDEX 21 // Error - invalid MUX index
 
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
