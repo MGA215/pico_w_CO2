@@ -19,6 +19,7 @@
 #include "common/constants.h"
 #include "sensor_config.h"
 #include "config_map.h"
+#include "common/serialize.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"

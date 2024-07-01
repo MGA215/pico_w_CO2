@@ -63,7 +63,7 @@
 #define EN_1 26
 #define EN_2 27
 
-
+#define SERIALIZE_BUFFER_LEN 32
 
 
 // value representing the interval between display draws in ms

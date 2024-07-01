@@ -77,6 +77,18 @@ int main()
         return ret;
     } 
 
+    uint8_t buf[SERIALIZE_BUFFER_LEN] = {0};
+    if ((ret = serializer_serialize(&sensor_config_06, buf, SERIALIZE_BUFFER_LEN)) != 0)
+    {
+        msg("ERROR", "Serializer", "FAILED SERIALIZATION");
+    }
+    sensor_config_t test_config;
+    if ((ret = serializer_deserialize(&test_config, buf, SERIALIZE_BUFFER_LEN)) != 0)
+    {
+        msg("ERROR", "Serializer", "FAILED DESERIALIZATION");
+    }
+    sleep_ms(100000);
+
     while (true) {
         sleep_ms(1);
         if ((ret = loop()) != 0) // main loop

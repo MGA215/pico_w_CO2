@@ -24,7 +24,7 @@
  * @param network Value to be converted
  * @return uint16_t Converted value
  */
-uint16_t ntoh16(uint16_t network);
+extern uint16_t ntoh16(uint16_t network);
 
 /**
  * @brief Swaps halves of a 32-bit value
@@ -32,7 +32,7 @@ uint16_t ntoh16(uint16_t network);
  * @param network Value to be converted
  * @return uint16_t Converted value
  */
-uint32_t ntoh32(uint32_t network);
+extern uint32_t ntoh32(uint32_t network);
 
 /**
  * @brief converts byte representation of a float to float
@@ -40,7 +40,15 @@ uint32_t ntoh32(uint32_t network);
  * @param byte_value bytes of the float
  * @return float output value
  */
-float byte2float(uint32_t byte_value);
+extern float byte2float(uint32_t byte_value);
+
+/**
+ * @brief Converts float into its byte representation
+ * 
+ * @param float_value float value
+ * @return uint32_t bytes of the float
+ */
+extern uint32_t float2byte(float float_value);
 
 /**
  * @brief Initializes the sensor structure
@@ -48,6 +56,6 @@ float byte2float(uint32_t byte_value);
  * @param sensor Sensor structure
  * @param input_index Sensor index
  */
-void common_init_struct(sensor_t* sensor, uint8_t input_index);
+extern void common_init_struct(sensor_t* sensor, uint8_t input_index);
 
 #endif

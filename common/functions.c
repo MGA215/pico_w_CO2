@@ -33,6 +33,17 @@ float byte2float(uint32_t byte_value)
     return output;
 }
 
+uint32_t float2byte(float float_value)
+{
+    uint8_t bytes[4];
+    bytes[0] = *((uint8_t*)(&float_value) + 3);
+    bytes[1] = *((uint8_t*)(&float_value) + 2);
+    bytes[2] = *((uint8_t*)(&float_value) + 1);
+    bytes[3] = *((uint8_t*)(&float_value) + 0);
+
+    return *((uint32_t*)&bytes[0]);
+}
+
 uint16_t ntoh16(uint16_t network)
 {
     return (network >> 8) | ((network & 0x00FF) << 8);

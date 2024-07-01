@@ -40,14 +40,12 @@ typedef enum meas_state_fsm
 typedef struct sensor_config
 {
     // Measurement
-    uint16_t meas_period; // Set measurement period in s (default 15 for EE895)                                  EE895, SUNRISE, SUNLIGHT, SCD30
+    uint16_t meas_period; // Set measurement period in s (default 15 for EE895)                                 EE895, SUNRISE, SUNLIGHT, SCD30
     bool single_meas_mode; // Enable single masurement mode                                                     EE895, SUNRISE, SUNLIGHT, SCD41
-    uint16_t filter_coeff; // Set filter coefficient (default 4)                                                 EE895
+    uint16_t filter_coeff; // Set filter coefficient (default 4 EE895, 16 CozIR (1 .. 255), SUN* 4 (2 .. 10))   EE895, CozIR-LP3, SUNRISE, SUNLIGHT
     uint16_t meas_samples; // Set number of samples to measure (default 4)                                      SUNRISE, SUNLIGHT
     bool enable_static_IIR; // Enable static IIR filtering (possibly smoothing)                                 SUNRISE, SUNLIGHT
     bool enable_dynamic_IIR; // Enable dynamic IIR filtering (reacting to spikes, works if static IIR is on)    SUNRISE, SUNLIGHT
-    uint8_t static_IIR_filter_coeff; // Static IIR filtration, 2 .. 10                                          SUNRISE, SUNLIGHT
-    uint8_t digital_filter; // 1 .. 255, default 16                                                             CozIR-LP3
     bool co2_en; // Sensor measures CO2
     bool temp_en; // Sensor measures temperature
     bool RH_en; // Sensor measures humidity
@@ -71,12 +69,9 @@ typedef struct sensor_config
     uint16_t altitude; // Altitude value                                                                        CDM7162, SCD30, SCD41
 
     // Calibration
-    bool long_term_adj_1; // Enable long term adjustment 1                                                      CDM7162
-    bool long_term_adj_2; // Enable long term adjustment 2                                                      CDM7162
-    // CDM7162 target_LTA range: 300 .. 555 ppm
-    uint16_t target_LTA; // Target co2 concentration LTA                                                        CDM7162
-    uint16_t period_LTA; // Period of the LTA in days; bit 7 .. (*30), 6 .. (*7), 7:6 = 00 .. (*1); range 0..63 CDM7162
     bool enable_abc; // Enable ABC calibration                                                                  SUNRISE, SUNLIGHT, SCD30, SCD41, CozIR-LP3
+    bool enable_alternate_abc; // Enable ABC alternate algorithm                                                CDM7162
+    // CDM7162 abc_target_value range: 300 .. 555 ppm
     uint16_t abc_init_period; // Initial ABC calibration period                                                 SCD41, CozIR-LP3
     uint16_t abc_period; // Set ABC calibration period (set 0 to disable for SUN*)                              SUNRISE, SUNLIGHT, SCD41, CozIR-LP3
     uint16_t abc_target_value; // Set ABC calibration target value (default 400 ppm)                            SUNRISE, SUNLIGHT, CozIR-LP3

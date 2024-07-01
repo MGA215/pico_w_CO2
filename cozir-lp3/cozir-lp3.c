@@ -184,6 +184,9 @@ int32_t cozir_lp3_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[2];
     config->sensor_type = COZIR_LP3;
+    if ((ret = lp3_read(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
+    config->filter_coeff = buf[0];
+
     if ((ret = lp3_read(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
     config->pressure = ntoh16(*((uint16_t*)(&buf[0])));
     config->enable_pressure_comp = config->pressure != 1013;
@@ -217,6 +220,15 @@ static int32_t lp3_write_config(sensor_config_t* config)
     sensor_config_t read_config;
     if ((ret = cozir_lp3_read_config(&read_config)) != 0) return ret;
     
+    if (config->filter_coeff != read_config.filter_coeff)
+    {
+        #if DEBUG_WARN
+        msg("Warn", "Config - Writing filter coefficient");
+        #endif
+        buf[0] = (uint8_t)config->filter_coeff;
+        if ((ret = lp3_write(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
+    }
+
     if (read_config.enable_pressure_comp != config->enable_pressure_comp || read_config.pressure != config->pressure)
     {
         #if DEBUG_WARN
