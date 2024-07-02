@@ -109,6 +109,7 @@
 #define REG_ABC_PRESSURE_L          0xDF
 
 #define msg(severity, x) printf("[%12llu] ["severity"] [SUNLIGHT] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define msgbuf(severity, x) printf("[%12llu] ["severity"] [SUNLIGHT] %s\n", to_us_since_boot(get_absolute_time()) / 1000, x)
 
 /**
  * @brief returns error code according to the error register value
@@ -389,15 +390,10 @@ int sunlight_read_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[13] = {0};
-    uint8_t data = 0;
+    uint8_t data = 0xFF;
     config->sensor_type = SUNLIGHT;
-    if ((ret = sl_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
-    config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
-    config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
-    config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
-    config->abc_period = ntoh16(*((uint16_t*)&buf[5]));
-    config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
-    config->filter_coeff = (uint16_t)buf[12];
+
+    //sl_write(REG_CLEAR_ERROR, &data, 1); // Wake sensor up
 
     if ((ret = sl_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
     config->enable_nRDY = data & 0b1 << 0; // Save meter control data
@@ -407,9 +403,24 @@ int sunlight_read_config(sensor_config_t* config)
     config->enable_pressure_comp = data & 0b1 << 4;
     config->invert_nRDY = data & 0b1 << 5;
 
+    if ((ret = sl_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
+    config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
+    config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
+    config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
+    config->abc_period = ntoh16(*((uint16_t*)&buf[5]));
+    config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
+    config->filter_coeff = (uint16_t)buf[12];
+
     if ((ret = sl_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
     config->pressure = ntoh16(*((uint16_t*)&buf[0])) / 10;
 
+    // #if DEBUG
+    // if ((ret = sl_read(REG_ERR_H, buf, 2)) != 0) return ret;
+    // uint16_t val = ntoh16(*((uint16_t*)&buf[0]));
+    // snprintf(buf, 13, "Error: 0x%x", val);
+    // msgbuf("ERROR", buf);
+    // return sl_get_error(val);
+    // #endif
     return SUCCESS;
 }
 
@@ -472,10 +483,6 @@ static int sl_write_config(sensor_config_t* config)
 
         if ((ret = sl_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
     }
-    // sunlight_reset();
-
-    // sunlight_read_config(&read_config);
-    // sleep_ms(100);
     return SUCCESS;
 }
 

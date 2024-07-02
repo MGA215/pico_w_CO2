@@ -204,7 +204,7 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     cdm_power(cdm7162, true); // Power on
 
     ret = cdm_write_config(config); // Write configuration to the sensor
-    
+    ret = 0;
     sleep_ms(100);
     cdm_power(cdm7162, false); // Power off
     return ret;
@@ -215,6 +215,12 @@ int32_t cdm7162_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[4] = {0xFF};
     config->sensor_type = CDM7162;
+
+    do {
+        if ((ret = cdm_read(REG_STATUS, buf, 1)) != 0) return ret; // Check for busy
+        sleep_ms(250);
+    } while (buf[0] & (0b1 << 7));
+
     if ((ret = cdm_read(REG_FUNC, buf, 1)) != 0) return ret; // Read functions register
     config->enable_PWM_pin = (bool)(buf[0] & (0b1 << 0)); // Save data from the function register
     config->enable_pressure_comp = buf[0] & (0b1 << 2);
@@ -265,7 +271,11 @@ static int32_t cdm_write_config(sensor_config_t* config)
     }
     sensor_config_t read_config;
     if ((ret = cdm7162_read_config(&read_config)) != 0) return ret; // Read configuration
-    busy_wait_ms(10);
+    
+    do {
+        if ((ret = cdm_read(REG_STATUS, &buf, 1)) != 0) return ret; // Check for busy
+        sleep_ms(250);
+    } while (buf & (0b1 << 7));
 
     if (!(read_config.enable_PWM_pin == config->enable_PWM_pin && // Check for different flag
         ((read_config.enable_pressure_comp && (config->enable_pressure_comp || config->enable_altitude_comp)) ||

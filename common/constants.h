@@ -54,7 +54,7 @@
 #define GFX_PACK_BUTTON_D 15
 #define GFX_PACK_BUTTON_E 22
 
-#define MUX_RST 26
+#define MUX_RST 16
 
 #define GFX_PACK_SPI spi0
 #define GFX_PACK_SPI_BAUDRATE 10000000

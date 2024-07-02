@@ -55,7 +55,7 @@ uint8_t sensor_timer_vector;
 uint8_t sensor_measurement_vector; 
 
 // Vector of active sensors
-uint8_t active_sensors = 0b01111111;
+uint8_t active_sensors = 0b00000010;
 
 
 /**
@@ -925,3 +925,4 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         }
     }
 }
+

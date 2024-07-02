@@ -359,6 +359,7 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
     config->sensor_type = SCD41;
 
     if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop measurement
+    sleep_ms(500);
 
     if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
