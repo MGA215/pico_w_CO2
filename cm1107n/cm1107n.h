@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#ifndef CM1107N_MODULE
-#define CM1107N_MODULE
+#ifndef __CM1107N_H__
+#define __CM1107N_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

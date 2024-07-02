@@ -157,8 +157,8 @@ void cm1107n_get_value(sensor_t* cm1107n)
     {
         case MEAS_FINISHED:
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             cm_power(cm1107n, false); // Power off
             cm1107n->wake_time = at_the_end_of_time; // Disable timer
@@ -166,8 +166,8 @@ void cm1107n_get_value(sensor_t* cm1107n)
         }
         case MEAS_STARTED:
         {
-            #if DEBUG_INFO
-            msg("info", "Meas started");
+            #if DEBUG_TRACE
+            msg("trace", "Meas started");
             #endif
             cm_power(cm1107n, true); // Power on
             cm1107n->wake_time = make_timeout_time_ms(1000); // Timeout in 1 s - power stabilization
@@ -177,8 +177,8 @@ void cm1107n_get_value(sensor_t* cm1107n)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #if DEBUG_INFO
-            msg("info", "Trigger measurement");
+            #if DEBUG_TRACE
+            msg("trace", "Trigger measurement");
             #endif
             ret = cm_write_command(CMD_READ_DATA); // Sent measurement trigger
             if (ret != 0) // On invalid write
@@ -194,8 +194,8 @@ void cm1107n_get_value(sensor_t* cm1107n)
         }
         case MEAS_READ_VALUE:
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             ret = cm_read(CMD_READ_DATA, tempBuffer, 3); // Read measurement
             if (ret != 0) // On invalid read

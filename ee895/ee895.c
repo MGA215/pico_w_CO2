@@ -222,8 +222,8 @@ void ee895_get_value(sensor_t* ee895)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             ee_power(ee895, false); // Power off
             ee895->wake_time = at_the_end_of_time; // Disable timer
@@ -231,8 +231,8 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_INFO
-            msg("info", "Meas started");
+            #if DEBUG_TRACE
+            msg("trace", "Meas started");
             #endif
             ee_power(ee895, true); // Power off
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
@@ -246,8 +246,8 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #if DEBUG_INFO
-            msg("info", "Read trigger ready");
+            #if DEBUG_TRACE
+            msg("trace", "Read trigger ready");
             #endif
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
@@ -262,7 +262,7 @@ void ee895_get_value(sensor_t* ee895)
             if (tempBuffer[1] & 0x02) // On trigger ready
             {
                 ret = ee_write(REG_MEAS_TRIGGER, 1); // Send trigger
-                msg("info", "Sending trigger");
+                msg("trace", "Sending trigger");
                 if (ret != 0) // On invalid write
                 {
                     ee895->co2 = NAN; // Set values to NaN
@@ -291,8 +291,8 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_INFO
-            msg("info", "Read status");
+            #if DEBUG_TRACE
+            msg("trace", "Read status");
             #endif
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Reading status register
             if (ret != 0) // On invalid read
@@ -323,8 +323,8 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             ret = ee_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
             if (ret != 0) // On invalid read

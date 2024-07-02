@@ -115,7 +115,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
+            #if DEBUG_TRACE
             msg("info", "Meas finished");
             #endif
             cdm_power(cdm7162, false); // Power off
@@ -124,7 +124,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_INFO
+            #if DEBUG_TRACE
             msg("info", "Meas started");
             #endif
             cdm_power(cdm7162, true); // Power on
@@ -135,7 +135,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_INFO
+            #if DEBUG_TRACE
             msg("info", "Read status");
             #endif
             ret = cdm_read(REG_STATUS, &buf[0], 1); // Read status
@@ -163,7 +163,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_VALUE: // Reading measured value
         {
-            #if DEBUG_INFO
+            #if DEBUG_TRACE
             msg("info", "Read value");
             #endif
             ret = cdm_read(REG_CO2_L, buf, 2); // Read measured CO2
@@ -236,7 +236,7 @@ int32_t cdm7162_read_config(sensor_config_t* config)
     config->alarm_treshold_co2_low = (uint16_t)buf[0] * 10u;
 
     if ((ret = cdm_read(REG_LTA_TARGET, buf, 1)) != 0) return ret; // Read saved LTA target value
-    config->enable_abc = (uint16_t)buf[0] + 300u;
+    config->abc_target_value = (uint16_t)buf[0] + 300u;
 
     if ((ret = cdm_read(REG_LTA_PERIOD, buf, 1)) != 0) return ret; // Read saved LTA period
     config->abc_period = (uint16_t)(buf[0] & 0b00111111);

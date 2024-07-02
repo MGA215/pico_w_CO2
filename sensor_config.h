@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef CONFIG
-#define CONFIG
+#ifndef __SENSOR_CONFIG_H__
+#define __SENSOR_CONFIG_H__
 
 #include "common/structs.h"
 static bool global_power = true;

@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef SCD30_MODULE
-#define SCD30_MODULE
+#ifndef __SCD30_H__
+#define __SCD30_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

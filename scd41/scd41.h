@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef SCD41_MODULE
-#define SCD41_MODULE
+#ifndef __SCD41_H__
+#define __SCD41_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

@@ -210,8 +210,8 @@ void sunrise_get_value(sensor_t* sunrise)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             sr_power(sunrise, false); // Power off
             sunrise->wake_time = at_the_end_of_time; // Disable timer
@@ -219,8 +219,8 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_INFO
-            msg("info", "Meas start");
+            #if DEBUG_TRACE
+            msg("trace", "Meas start");
             #endif
             sr_power(sunrise, true); // Power on
             sunrise->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
@@ -230,8 +230,8 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_MODE: // Reading mode
         {
-            #if DEBUG_INFO
-            msg("info", "Read mode");
+            #if DEBUG_TRACE
+            msg("trace", "Read mode");
             #endif
             uint8_t data;
             ret = sr_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
@@ -265,8 +265,8 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
-            #if DEBUG_INFO
-            msg("info", "Write measure command");
+            #if DEBUG_TRACE
+            msg("trace", "Write measure command");
             #endif
             uint8_t buf[26] = {0};
             if (memcmp(sunrise->state_reg, buf, 26)) // If last state was zeros (not set)
@@ -295,8 +295,8 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_VALUE: // Reading measurement data
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             uint8_t buf[10] = {0};
             ret = sr_read(REG_ERR_H, buf, 10); // Read data
@@ -346,8 +346,8 @@ void sunrise_get_value(sensor_t* sunrise)
         }
         case MEAS_READ_STATUS: // Reading status registers
         {
-            #if DEBUG_INFO
-            msg("info", "Read status");
+            #if DEBUG_TRACE
+            msg("trace", "Read status");
             #endif
             ret = sr_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 26); // Read status registers
             if (ret != 0) // On invalid read
@@ -468,7 +468,7 @@ static int sr_write_config(sensor_config_t* config)
         if ((ret = sr_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
     }
 
-    if (read_config.pressure != config->pressure) // Check pressure
+    if (read_config.pressure != config->pressure && config->enable_pressure_comp) // Check pressure
     {
         #if DEBUG_WARN
         msg("Warn", "Config - writing pressure");

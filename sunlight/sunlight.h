@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef SUNLIGHT_MODULE
-#define SUNLIGHT_MODULE
+#ifndef __SUNLIGHT_H__
+#define __SUNLIGHT_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef MUX_MODULE
-#define MUX_MODULE
+#ifndef __MUX_H__
+#define __MUX_H__
 
 #include "pico/stdlib.h"
 #include "error_codes.h"

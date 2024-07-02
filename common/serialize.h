@@ -9,6 +9,9 @@
  * 
  */
 
+#ifndef __SERIALIZE_H__
+#define __SERIALIZE_H__
+
 #include "structs.h"
 #include "constants.h"
 #include "../error_codes.h"
@@ -34,3 +37,4 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8
  */
 int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uint8_t len);
 
+#endif

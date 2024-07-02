@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef CDM7162_MODULE
-#define CDM7162_MODULE
+#ifndef __CDM7162_H__
+#define __CDM7162_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#ifndef CONSTANTS
-#define CONSTANTS
+#ifndef __CONSTANTS_H__
+#define __CONSTANTS_H__
 
 #include "structs.h"
 #include "sensor_config.h"
@@ -21,6 +21,12 @@
         #define DEBUG_WARN 1
         #ifndef DEBUG_INFO
             #define DEBUG_INFO 1
+            #ifndef DEBUG_DEBUG
+                #define DEBUG_DEBUG 0
+                #ifndef DEBUG_TRACE
+                    #define DEBUG_TRACE 0
+                #endif
+            #endif
         #endif
     #endif
 #endif
@@ -48,7 +54,7 @@
 #define GFX_PACK_BUTTON_D 15
 #define GFX_PACK_BUTTON_E 22
 
-#define MUX_RST 16
+#define MUX_RST 26
 
 #define GFX_PACK_SPI spi0
 #define GFX_PACK_SPI_BAUDRATE 10000000

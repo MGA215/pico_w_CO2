@@ -163,8 +163,8 @@ void scd30_get_value(sensor_t* scd30)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             s30_power(scd30, false); // Power off
             scd30->wake_time = at_the_end_of_time; // Disable timer
@@ -172,8 +172,8 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_INFO
-            msg("info", "Meas start");
+            #if DEBUG_TRACE
+            msg("trace", "Meas start");
             #endif
             s30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
@@ -183,8 +183,8 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_INFO
-            msg("info", "Read state");
+            #if DEBUG_TRACE
+            msg("trace", "Read state");
             #endif
             ret = s30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
@@ -215,8 +215,8 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             uint16_t buf[6];
             ret = s30_read(CMD_READ_MEAS, buf, 6); // Read measured data

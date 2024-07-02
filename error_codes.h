@@ -9,6 +9,9 @@
  * 
  */
 
+#ifndef __ERROR_CODES_H__
+#define __ERROR_CODES_H__
+
 #define SUCCESS 0
 
 // Main Errors
@@ -26,6 +29,7 @@
 
 // MUX errors
 #define ERROR_MUX_INVALID_INDEX 21 // Error - invalid MUX index
+#define ERROR_SENSOR_MUX_FAILED 22 // Error - MUX failed
 
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
@@ -104,3 +108,6 @@
 #define CM1107N_ERROR_LIGHT_AGING -720 // Error CM1107N - Sensor light aging
 #define CM1107N_ERROR_DRIFT -721 // Error CM1107N - Sensor drifting
 #define CM1107N_ERROR_PREHEATING -722 // Error CM1107N - Sensor preheating
+
+
+#endif

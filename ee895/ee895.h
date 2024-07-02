@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef EE895_MODULE
-#define EE895_MODULE
+#ifndef __EE895_H__
+#define __EE895_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

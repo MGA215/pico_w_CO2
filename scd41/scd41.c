@@ -193,8 +193,8 @@ void scd41_get_value(sensor_t* scd41)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             s41_power(scd41, false); // Power off
             scd41->wake_time = at_the_end_of_time; // Disable timer
@@ -202,8 +202,8 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_INFO
-            msg("info", "Meas started");
+            #if DEBUG_TRACE
+            msg("trace", "Meas started");
             #endif
             s41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
@@ -214,8 +214,8 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_MODE:
         {
-            #if DEBUG_INFO
-            msg("info", "Read mode");
+            #if DEBUG_TRACE
+            msg("trace", "Read mode");
             #endif
             uint16_t val = 0;
             if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
@@ -251,8 +251,8 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #if DEBUG_INFO
-            msg("info", "Write measure command");
+            #if DEBUG_TRACE
+            msg("trace", "Write measure command");
             #endif
             ret = s41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
             if (ret != 0) // On invalid write
@@ -270,8 +270,8 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_INFO
-                msg("info", "Read status");
+            #if DEBUG_TRACE
+                msg("trace", "Read status");
             #endif
             ret = s41_read(CMD_GET_DATA_RDY_STATUS, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
@@ -310,8 +310,8 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #if DEBUG_INFO
-                msg("info", "Read value");
+            #if DEBUG_TRACE
+                msg("trace", "Read value");
             #endif
             uint16_t buf[6];
             ret = s41_read(CMD_READ_MEAS, buf, 6); // Read measured data
@@ -362,7 +362,7 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
 
     if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
-    config->enable_pressure_comp = (val != 0);
+    config->enable_pressure_comp = (val != 1013);
 
     if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
     config->enable_abc = (bool)val;
@@ -395,8 +395,8 @@ static int32_t s41_write_config(sensor_config_t* config)
     bool changed = false;
     sensor_config_t read_config;
 
-    if ((ret = s41_write_command(CMD_WAKE_UP)) != 0) return ret; // Trying to wake sensor up
-    sleep_ms(30);
+    // if ((ret = s41_write_command(CMD_WAKE_UP)) != 0) return ret; // Trying to wake sensor up
+    // sleep_ms(30);
     if ((ret = scd41_read_config(&read_config, config->single_meas_mode)) != 0) return ret; // Read config
 
     if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop periodic measurement
@@ -411,7 +411,7 @@ static int32_t s41_write_config(sensor_config_t* config)
         changed = true;
     }
 
-    if ((config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
+    if (fabs(config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
     {
         #if DEBUG_WARN
         msg("Warn", "Config - Writing temperature offset");

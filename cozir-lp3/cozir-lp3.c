@@ -121,8 +121,8 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
     {
         case MEAS_FINISHED:
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
@@ -130,8 +130,8 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_STARTED:
         {
-            #if DEBUG_INFO
-            msg("info", "Meas started");
+            #if DEBUG_TRACE
+            msg("trace", "Meas started");
             #endif
             lp3_power(cozir_lp3, true);
             cozir_lp3->wake_time = make_timeout_time_ms(2000);
@@ -140,8 +140,8 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_READ_VALUE:
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             ret = lp3_read(REG_CO2, tempBuffer, 2);
             if (ret != 0)

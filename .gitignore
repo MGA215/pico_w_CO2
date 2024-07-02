@@ -7,3 +7,4 @@ build
 *.pdf
 notes.txt
 config_map.h
+logs

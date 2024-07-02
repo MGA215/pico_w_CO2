@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef STRUCTS
-#define STRUCTS
+#ifndef __STRUCTS_H__
+#define __STRUCTS_H__
 
 #include "pico/stdlib.h"
 

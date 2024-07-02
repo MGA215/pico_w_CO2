@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef FUNCTIONS
-#define FUNCTIONS
+#ifndef __FUNCTIONS_H__
+#define __FUNCTIONS_H__
 
 #include "structs.h"
 #include "math.h"

@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef GFX_PACK_MODULE
-#define GFX_PACK_MODULE
+#ifndef __GFX_PACK_H__
+#define __GFX_PACK_H__
 
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"

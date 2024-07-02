@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef COZIR_LP3_MODULE
-#define COZIR_LP3_MODULE
+#ifndef __COZIR_LP3_H__
+#define __COZIR_LP3_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"

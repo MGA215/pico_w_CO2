@@ -209,8 +209,8 @@ void sunlight_get_value(sensor_t* sunlight)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_INFO
-            msg("info", "Meas finished");
+            #if DEBUG_TRACE
+            msg("trace", "Meas finished");
             #endif
             sl_power(sunlight, false); // Power off
             sunlight->wake_time = at_the_end_of_time; // Disable timer
@@ -218,8 +218,8 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_STARTED: // Measurement start
         {
-            #if DEBUG_INFO
-            msg("info", "Meas start");
+            #if DEBUG_TRACE
+            msg("trace", "Meas start");
             #endif
             sl_power(sunlight, true); // Power on
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
@@ -229,8 +229,8 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_MODE: // Reading mode
         {
-            #if DEBUG_INFO
-            msg("info", "Read mode");
+            #if DEBUG_TRACE
+            msg("trace", "Read mode");
             #endif
             uint8_t data;
             ret = sl_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
@@ -264,8 +264,8 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
-            #if DEBUG_INFO
-            msg("info", "Write measure command");
+            #if DEBUG_TRACE
+            msg("trace", "Write measure command");
             #endif
             uint8_t buf[26] = {0}; 
             if (memcmp(sunlight->state_reg, buf, 26)) // If last state was zeros (not set)
@@ -294,8 +294,8 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_VALUE: // Reading measurement data
         {
-            #if DEBUG_INFO
-            msg("info", "Read value");
+            #if DEBUG_TRACE
+            msg("trace", "Read value");
             #endif
             uint8_t buf[10] = {0};
             ret = sl_read(REG_ERR_H, buf, 10); // Read data
@@ -345,8 +345,8 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_STATUS: // Reading status registers
         {
-            #if DEBUG_INFO
-            msg("info", "Read status");
+            #if DEBUG_TRACE
+            msg("trace", "Read status");
             #endif
             ret = sl_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 26); // Read status registers
             if (ret != 0) // On invalid read
@@ -462,7 +462,7 @@ static int sl_write_config(sensor_config_t* config)
         if ((ret = sl_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
     }
 
-    if (read_config.pressure != config->pressure) // Check pressure
+    if (read_config.pressure != config->pressure && config->enable_pressure_comp) // Check pressure
     {
         #if DEBUG_WARN
         msg("Warn", "Config - writing pressure");
@@ -472,6 +472,10 @@ static int sl_write_config(sensor_config_t* config)
 
         if ((ret = sl_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
     }
+    // sunlight_reset();
+
+    // sunlight_read_config(&read_config);
+    // sleep_ms(100);
     return SUCCESS;
 }
 
@@ -490,6 +494,7 @@ int sunlight_reset(void)
     int32_t ret;
     uint8_t data = 0xFF;
     if ((ret = sl_write(REG_SOFT_RESET, &data, 1)) != 0) return ret; // Send reset command to sensor
+    sleep_ms(100);
     return SUCCESS;
 }
 

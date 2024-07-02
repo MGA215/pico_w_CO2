@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef SUNRISE_MODULE
-#define SUNRISE_MODULE
+#ifndef __SUNRISE_H__
+#define __SUNRISE_H__
 
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
