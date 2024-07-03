@@ -18,13 +18,23 @@
 #include "hardware/i2c.h"
 
 /**
- * @brief Enables sensor in the MUX
+ * @brief Enables sensor in the multiplexer
  * 
  * @param sensor_index Index of the sensor
  * @return int32_t Return code
  */
 int32_t mux_enable_sensor(uint8_t sensor_index);
 
+/**
+ * @brief Resets multiplexer
+ * 
+ */
+void mux_reset(void);
 
+/**
+ * @brief Initializes multiplexer pins
+ * 
+ */
+void mux_init(void);
 
 #endif

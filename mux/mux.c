@@ -22,5 +22,22 @@ int32_t mux_enable_sensor(uint8_t sensor_index)
     return SUCCESS;
 }
 
+void mux_reset(void)
+{
+    gpio_put(MUX_RST, 0);
+    sleep_ms(10);
+    gpio_put(MUX_RST, 1);
+    sleep_us(100);
+    return;
+}
 
+void mux_init(void)
+{
+    gpio_init(MUX_RST);
+    gpio_set_function(MUX_RST, GPIO_FUNC_SIO);
+    gpio_set_drive_strength(MUX_RST, GPIO_DRIVE_STRENGTH_12MA);
+    gpio_set_dir(MUX_RST, GPIO_OUT);
+    gpio_put(MUX_RST, 1);
+    return;
+}
 

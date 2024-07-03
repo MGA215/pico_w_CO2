@@ -160,6 +160,15 @@ void set_power_mode(void);
 void reset_i2c(void);
 
 /**
+ * @brief 
+ * 
+ * @param sensor_index 
+ * @return true if sensor should be tried to be read again
+ * @return false if sensor should not be tried to be read again
+ */
+bool read_single_sensor(uint8_t sensor_index);
+
+/**
  * @brief Creates a sensor name string according to the sensor type
  * 
  * @param sensor Sensor structure

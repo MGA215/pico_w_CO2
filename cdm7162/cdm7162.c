@@ -82,10 +82,10 @@ static int32_t cdm_deinit(void); // DO NOT USE - Writes to EEPROM
 static int32_t cdm_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
     int32_t ret;
-    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US * 3)) < 0) return ret; // Write address
     
     busy_wait_ms(2);
-    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US)) < 0) return ret; // Read number of bytes from the address
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read number of bytes from the address
     return SUCCESS;
 }
 
@@ -93,9 +93,9 @@ static int32_t cdm_write(uint8_t addr, uint8_t value)
 {
     int32_t ret;
     uint8_t buf[2] = {addr, value};
-    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, 2, true, I2C_TIMEOUT_US)) < 0) return ret; // Write value
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, 2, true, I2C_TIMEOUT_US * 3)) < 0) return ret; // Write value
     busy_wait_ms(2);
-    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, &buf[0], 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Confirm saved value
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, &buf[0], 1, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Confirm saved value
     if (buf[0] != value) return CDM7162_ERROR_WRITE_RESP; // Incorrect value returned
     return SUCCESS;
 }
@@ -270,6 +270,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
         busy_wait_ms(100);
     }
     sensor_config_t read_config;
+    bool power_down = false;
     if ((ret = cdm7162_read_config(&read_config)) != 0) return ret; // Read configuration
     
     do {
@@ -287,6 +288,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing function flags");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         uint8_t func_settings = 0;
         if (config->enable_PWM_pin) func_settings |= (0b1 << 0);
         if (config->enable_pressure_comp) func_settings |= (0b1 << 2);
@@ -304,6 +311,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing pressure");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         if ((ret = cdm_write(REG_ATM_PRESSURE, (uint8_t)(config->pressure - 800))) != 0) return ret; // Write pressure
     }
     if (read_config.altitude != config->altitude) // Check altitude
@@ -311,6 +324,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing altitude");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         if ((ret = cdm_write(REG_ALTITUDE, (uint8_t)(config->altitude / 10))) != 0) return ret; // Write altitude
     }
 
@@ -319,6 +338,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing alarm high treshold");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         if ((ret = cdm_write(REG_ALARM_CO2_H, (uint8_t)(config->alarm_treshold_co2_high / 10))) != 0) return ret; // Write high alarm
     }
     if (read_config.alarm_treshold_co2_low != config->alarm_treshold_co2_low) // Check low alarm
@@ -326,6 +351,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing alarm low treshold");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         if ((ret = cdm_write(REG_ALARM_CO2_L, (uint8_t)(config->alarm_treshold_co2_low / 10))) != 0) return ret; // Write low alarm
     }
 
@@ -334,6 +365,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         #if DEBUG_WARN
         msg("Warn", "Config - Writing LTA target value");
         #endif
+        if (!power_down)
+        {
+            if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+            power_down = true;
+            busy_wait_ms(100);
+        }
         if ((ret = cdm_write(REG_LTA_TARGET, (uint8_t)(config->abc_target_value - 300))) != 0) return ret; // Write target LTA concentration
     }
     
@@ -356,9 +393,22 @@ static int32_t cdm_write_config(sensor_config_t* config)
             #if DEBUG_WARN
             msg("Warn", "Config - Writing LTA period");
             #endif
+            if (!power_down)
+            {
+                if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
+                power_down = true;
+                busy_wait_ms(100);
+            }
             buf += val;
             if ((ret = cdm_write(REG_LTA_PERIOD, buf)) != 0) return ret; // Write period LTA
         }
+    }
+    
+    if (power_down) // If config changed turn power back on
+    {
+        if ((ret = cdm_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
+            return ret; 
+        busy_wait_ms(100);
     }
     return SUCCESS;
 }

@@ -14,20 +14,28 @@
 #include "structs.h"
 #include "sensor_config.h"
 
-// Set DEBUG to 0 to disable logging into console
+// DEBUG severity: set to 0 to disable all lower severity levels
 #ifndef DEBUG
     #define DEBUG 1
+    #if DEBUG
     #ifndef DEBUG_WARN
         #define DEBUG_WARN 1
+        #if DEBUG_WARN
         #ifndef DEBUG_INFO
             #define DEBUG_INFO 1
+            #if DEBUG_INFO
             #ifndef DEBUG_DEBUG
                 #define DEBUG_DEBUG 0
+                #if DEBUG_DEBUG
                 #ifndef DEBUG_TRACE
                     #define DEBUG_TRACE 0
                 #endif
+                #endif
+            #endif
             #endif
         #endif
+        #endif
+    #endif
     #endif
 #endif
 
