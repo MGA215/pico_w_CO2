@@ -179,6 +179,7 @@ void scd30_get_value(sensor_t* scd30)
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             scd30->timeout_iterator = 0; // Initialize read status timeout iterator
+            scd30->state = SUCCESS;
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -257,6 +258,11 @@ int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
 
     ret = s30_write_config(config); // Write configuration to sensor
     s30_power(scd30, false); // Power off
+    if (!ret)
+    {
+        if (scd30->meas_state == MEAS_STARTED) scd30->wake_time = make_timeout_time_ms(3000);
+    }
+    else scd30->meas_state = MEAS_FINISHED;
     return ret;
 }
 

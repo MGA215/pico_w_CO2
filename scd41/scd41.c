@@ -188,7 +188,7 @@ void scd41_get_value(sensor_t* scd41)
         scd41->humidity = NAN;
         scd41->temperature = NAN;
         return;
-    } 
+    }
     switch(scd41->meas_state)
     {
         case MEAS_FINISHED: // Measurement finished
@@ -208,6 +208,7 @@ void scd41_get_value(sensor_t* scd41)
             s41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
+            scd41->state = SUCCESS;
             scd41->timeout_iterator = 0; // Initialize read status timeout iterator
             scd41->measurement_iterator = 0; // Initialize read single measurement iterator
             return;
@@ -349,6 +350,11 @@ int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
 
     ret = s41_write_config(config); // Write config to the sensor
     s41_power(scd41, false); // Power off
+    if (!ret)
+    {
+        if (scd41->meas_state == MEAS_STARTED) scd41->wake_time = make_timeout_time_ms(5000);
+    }
+    else scd41->meas_state = MEAS_FINISHED;
     return ret;
 }
 

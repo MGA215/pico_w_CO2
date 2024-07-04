@@ -171,6 +171,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             #endif
             cm_power(cm1107n, true); // Power on
             cm1107n->wake_time = make_timeout_time_ms(1000); // Timeout in 1 s - power stabilization
+            cm1107n->state = SUCCESS;
             cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next FSM state - trigger measurement
             cm1107n->timeout_iterator = 0;
             return;
@@ -258,6 +259,11 @@ int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config)
 
     ret = cm_write_config(config); // Write configuration to sensor
     cm_power(cm1107n, false); // Power off
+    if (!ret)
+    {
+        if (cm1107n->meas_state == MEAS_STARTED) cm1107n->wake_time = make_timeout_time_ms(3000);
+    }
+    else cm1107n->meas_state = MEAS_FINISHED;
     return ret;
 }
 

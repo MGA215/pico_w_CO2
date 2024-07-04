@@ -242,6 +242,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             else ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
             ee895->timeout_iterator = 0; // Initialize read status timeout iterator
+            ee895->state = SUCCESS;
             return;
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
@@ -415,6 +416,11 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
     ret = ee_write_config(config); // Write configuration to sensor
 
     ee_power(ee895, false); // Power off
+    if (!ret)
+    {
+        if (ee895->meas_state == MEAS_STARTED) ee895->wake_time = make_timeout_time_ms(1000);
+    }
+    else ee895->meas_state = MEAS_FINISHED;
 
     return ret;
 }

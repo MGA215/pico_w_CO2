@@ -606,7 +606,7 @@ void read_sensors()
             sensor_timer_vector &= ~(0b1 << i); // Clear timer reached bit
             for (uint8_t j = 0; j < 2; j++)
             {
-                if ((!read_single_sensor(i))) break; // If reading successful break
+                if (read_single_sensor(i)) break; // If reading successful break
             }
         }
         if (sensors[i].meas_state == MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << i); // If measurement completed clear sensor measurement bit
@@ -642,10 +642,13 @@ bool read_single_sensor(uint8_t sensor_index)
         mux_reset(); // Reset MUX
         return false; // Repeat measurement
     }
-    if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_SENSOR_NOT_INITIALIZED && sensors[sensor_index].state != ERROR_NO_MEAS)
+    if (sensors[sensor_index].state && // Sensor not initialized
+        sensors[sensor_index].state != ERROR_SENSOR_NOT_INITIALIZED && 
+        sensors[sensor_index].state != ERROR_NO_MEAS)
     {
         reset_i2c(); // Reset I2C
         common_init_struct(&sensors[sensor_index], sensor_index); // Init sensor struct
+        sensors[sensor_index].meas_state = MEAS_STARTED;
         switch (configuration_map[sensor_index]->sensor_type) // Init on sensor type
         {
             case EE895:
@@ -740,15 +743,16 @@ bool read_single_sensor(uint8_t sensor_index)
                 return true; // Unknown sensor - don't repeat measurement
             }
         }
-        #if DEBUG_INFO
-        if (!ret)
+        if (!ret) // Init successful
         {
+            #if DEBUG_INFO
             uint8_t buf[36];
             snprintf(buf, 36, "Init sensor %i success", sensor_index);
             msgbuf("info", "SENSOR", buf);
+            #endif
+            sensors[sensor_index].state = ERROR_NO_MEAS;
         }
-        #endif
-        if (ret) // Init not successful
+        else // Init not successful
         {
             #if DEBUG
             uint8_t buf3[36];
@@ -758,11 +762,12 @@ bool read_single_sensor(uint8_t sensor_index)
             reset_i2c(); // Reset I2C
             mux_reset(); // Reset MUX
             sleep_ms(10);
+            sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED;
+            return false;
         }
-        sensors[sensor_index].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Assign init return successful
-        if (sensors[sensor_index].state == ERROR_SENSOR_INIT_FAILED) return false; // If init failed repeat measurement
     }
-    if (sensors[sensor_index].state == SUCCESS || sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
+    if (sensors[sensor_index].state == SUCCESS || 
+        sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
     {
         switch (configuration_map[sensor_index]->sensor_type) // Get value based on sensor type
         {

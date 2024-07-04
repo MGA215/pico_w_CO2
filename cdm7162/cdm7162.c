@@ -130,6 +130,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             cdm_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
+            cdm7162->state = SUCCESS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
@@ -204,9 +205,13 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     cdm_power(cdm7162, true); // Power on
 
     ret = cdm_write_config(config); // Write configuration to the sensor
-    ret = 0;
     sleep_ms(100);
     cdm_power(cdm7162, false); // Power off
+    if (!ret)
+    {
+        if (cdm7162->meas_state == MEAS_STARTED) cdm7162->wake_time = make_timeout_time_ms(3000);
+    }
+    else cdm7162->meas_state = MEAS_FINISHED;
     return ret;
 }
 

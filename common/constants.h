@@ -25,10 +25,10 @@
             #define DEBUG_INFO 1
             #if DEBUG_INFO
             #ifndef DEBUG_DEBUG
-                #define DEBUG_DEBUG 0
+                #define DEBUG_DEBUG 1
                 #if DEBUG_DEBUG
                 #ifndef DEBUG_TRACE
-                    #define DEBUG_TRACE 0
+                    #define DEBUG_TRACE 1
                 #endif
                 #endif
             #endif

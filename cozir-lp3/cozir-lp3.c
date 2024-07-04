@@ -126,6 +126,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             #endif
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
+            cozir_lp3->state = SUCCESS;
             return;
         }
         case MEAS_STARTED:
@@ -176,6 +177,11 @@ int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config)
 
     ret = lp3_write_config(config);
     lp3_power(cozir_lp3, false);
+    if (!ret)
+    {
+        if (cozir_lp3->meas_state == MEAS_STARTED) cozir_lp3->wake_time = make_timeout_time_ms(3000);
+    }
+    else cozir_lp3->meas_state = MEAS_FINISHED;
     return ret;
 }
 

@@ -226,6 +226,7 @@ void sunlight_get_value(sensor_t* sunlight)
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunlight->timeout_iterator = 0; // Initialize iterator value
+            sunlight->state = SUCCESS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -383,6 +384,11 @@ int sunlight_init(sensor_t* sunlight, sensor_config_t* config)
     sunlight_reset(); // Reset sensor
     
     sl_power(sunlight, false); // Power off
+    if (!ret)
+    {
+        if (sunlight->meas_state == MEAS_STARTED) sunlight->wake_time = make_timeout_time_ms(3000);
+    }
+    else sunlight->meas_state = MEAS_FINISHED;
     return SUCCESS;
 }
 

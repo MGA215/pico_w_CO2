@@ -163,8 +163,8 @@ void reset_i2c(void);
  * @brief 
  * 
  * @param sensor_index 
- * @return true if sensor should be tried to be read again
- * @return false if sensor should not be tried to be read again
+ * @return true if sensor was successfully read or fatal error has been encountered
+ * @return false if sensor reading failed and should be tried again
  */
 bool read_single_sensor(uint8_t sensor_index);
 
