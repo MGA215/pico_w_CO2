@@ -11,10 +11,6 @@
 
 #include "main.h"
 
-#define msg(severity, source, message) printf("[%12llu] ["severity"] [MAIN-"source"] "message"\n", to_us_since_boot(get_absolute_time()) / 1000)
-#define msgbuf(severity, source, message) printf("[%12llu] ["severity"] [MAIN-"source"] %s\n", to_us_since_boot(get_absolute_time()) / 1000, message)
-#define msgbufstr(severity, source, message) printf("[%12llu] ["severity"] [MAIN-%s] "message"\n", to_us_since_boot(get_absolute_time()) / 1000, source)
-
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
 
@@ -69,11 +65,7 @@ int main()
     int32_t ret;
     if ((ret = init()) != 0) // init function
     {
-        #if DEBUG
-        uint8_t buf[44];
-        snprintf(buf, 44, "Initialization failure: %i; Aborting...", ret);
-        msgbuf("FATAL", "INIT", buf);
-        #endif
+        print_ser_output(SEVERITY_FATAL, "MAIN-STDIO", "Initialization failure: %i; Aborting...", ret);
         return ret;
     } 
 
@@ -81,11 +73,7 @@ int main()
         sleep_ms(1);
         if ((ret = loop()) != 0) // main loop
         {
-            #if DEBUG
-            uint8_t buf[36];
-            snprintf(buf, 36, "Loop failure: %i; Aborting...", ret);
-            msgbuf("FATAL", "LOOP", buf);
-            #endif
+            print_ser_output(SEVERITY_FATAL, "MAIN-LOOP", "Loop failure: %i; Aborting...", ret);
             return ret;
         }
     }
@@ -358,11 +346,7 @@ void init_sensors(void)
 
     for (uint8_t i = 0; i < 8; i++)
     {
-        #if DEBUG_DEBUG
-        uint8_t buf3[18];
-        snprintf(buf3, 18, "Init structure %i", i);
-        msgbuf("debug", "SENSOR", buf3);
-        #endif
+        print_ser_output(SEVERITY_DEBUG, "MAIN-SENSOR", "Init structure %i", i);
         common_init_struct(&sensors[i], i); // Initialize sensor structures
         sensors[i].sensor_type = configuration_map[i] != NULL ? configuration_map[i]->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
     }
@@ -375,11 +359,7 @@ void init_sensors(void)
             reset_i2c();
             if ((ret = mux_enable_sensor(i)) != 0) 
             {
-                #if DEBUG
-                uint8_t buf[36];
-                snprintf(buf, 36, "Failed to mux sensor %i: e%i", i, ret);
-                msgbuf("ERROR", "MUX", buf);
-                #endif
+                print_ser_output(SEVERITY_ERROR, "MAIN-MUX", "Failed to mux sensor %i: e%i", i, ret);
                 gpio_put(MUX_RST, 0);
                 sleep_us(1);
                 gpio_put(MUX_RST, 1);
@@ -390,113 +370,63 @@ void init_sensors(void)
             {
                 case EE895:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "EE895", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-EE895", "Init sensor %i...", i);
                     ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
                     break;
                 }
                 case CDM7162:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "CDM7162", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-CDM7162", "Init sensor %i...", i);
                     ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
                     break;
                 }
                 case SUNRISE:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "SUNRISE", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-SUNRISE", "Init sensor %i...", i);
                     ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
                     break;
                 }
                 case SUNLIGHT:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "SUNLIGHT", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-SUNLIGHT", "Init sensor %i...", i);
                     ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
                     break;
                 }
                 case SCD30:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "SCD30", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-SCD30", "Init sensor %i...", i);
                     ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
                     break;
                 }
                 case SCD41:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "SCD41", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-SCD41", "Init sensor %i...", i);
                     ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
                     break;
                 }
                 case COZIR_LP3:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "CozIR-LP3", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-CozIR-LP3", "Init sensor %i...", i);
                     ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
                     break;
                 }
                 case CM1107N:
                 {
-                    #if DEBUG_DEBUG
-                    uint8_t buf[24];
-                    snprintf(buf, 24, "Init sensor %i...", i);
-                    msgbuf("debug", "CM1107N", buf);
-                    #endif
+                    print_ser_output(SEVERITY_DEBUG, "MAIN-CM1107N", "Init sensor %i...", i);
                     ret = cm1107n_init(&(sensors[i]), configuration_map[i]); // Initialize CM1107N sensor
                     break;
                 }
                 
                 default:
                 {
-                    #if DEBUG
-                    uint8_t buf[36];
-                    snprintf(buf, 36, "Unknown sensor %i, init abort", i);
-                    msgbuf("ERROR", "SENSOR", buf);
-                    #endif
+                    print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Unknown sensor %i, init abort", i);
                     sensors[i].state = ERROR_UNKNOWN_SENSOR;
                     break;
                 }
             }
             if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
-            #if DEBUG_INFO
-            if (!ret)
-            {
-                uint8_t buf[36];
-                snprintf(buf, 36, "Init sensor %i success", i);
-                msgbuf("info", "SENSOR", buf);
-            }
-            #endif
-            #if DEBUG
-            if (ret)
-            {
-                uint8_t buf3[36];
-                snprintf(buf3, 36, "Init sensor %i failed: %i", i, ret);
-                msgbuf("ERROR", "SENSOR", buf3);
-            }
-            #endif
+            if (!ret) print_ser_output(SEVERITY_INFO, "MAIN-SENSOR", "Init sensor %i success", i);
+            if (ret) print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Init sensor %i failed: %i", i, ret);
             sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
         }
     }
@@ -508,22 +438,16 @@ void reset_i2c(void)
 {
     i2c_deinit(I2C_SENSOR);
 
-    gpio_pull_down(I2C_SCL);
     gpio_set_function(I2C_SCL, GPIO_FUNC_SIO);
     gpio_set_dir(I2C_SCL, GPIO_OUT);
-    sleep_us(100);
+    sleep_us(10);
     gpio_put(I2C_SCL, 0);
-    sleep_ms(1);
+    sleep_us(100);
     gpio_put(I2C_SCL, 1);
     sleep_us(10);
     gpio_pull_up(I2C_SCL);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     sleep_us(100);
-
-    // gpio_put(MUX_RST, 0);
-    // sleep_ms(100);
-    // gpio_put(MUX_RST, 1);
-    // sleep_ms(1);
 
     i2c_init(I2C_SENSOR, I2C_BAUDRATE);
 }
@@ -562,9 +486,7 @@ void read_sensors_start()
 {
     if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
     {
-        #if DEBUG_INFO
-        msg("info", "SENSOR", "Measurement start");
-        #endif
+        print_ser_output(SEVERITY_INFO, "MAIN-SENSOR", "Measurement start");
         for (int i = 0; i < 8; i++)
         {
             if (sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue; // If not initialized sensor (aka disabled) continue
@@ -629,13 +551,10 @@ bool read_single_sensor(uint8_t sensor_index)
     int32_t ret;
     bool repeat_on_error = true;
     
+    reset_i2c();
     if ((ret = mux_enable_sensor(sensor_index)) != 0) // Mux to sensor
     {
-        #if DEBUG
-        uint8_t buf[36];
-        snprintf(buf, 36, "Failed to mux sensor %i: e%i", sensor_index, ret);
-        msgbuf("ERROR", "MUX", buf);
-        #endif
+        print_ser_output(SEVERITY_ERROR, "MAIN-MUX", "Failed to mux sensor %i: e%i", sensor_index, ret);
         reset_i2c(); // Reset i2c
         common_init_struct(&sensors[sensor_index], sensor_index); // Reset sensor
         sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED; // Set sensor state to MUX failed
@@ -653,112 +572,68 @@ bool read_single_sensor(uint8_t sensor_index)
         {
             case EE895:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "EE895", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-EE895", "Init sensor %i...", sensor_index);
                 ret = ee895_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize EE895 sensor
                 break;
             }
             case CDM7162:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "CDM7162", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CDM7162", "Init sensor %i...", sensor_index);
                 ret = cdm7162_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CDM7162 sensor
                 break;
             }
             case SUNRISE:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "SUNRISE", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SUNRISE", "Init sensor %i...", sensor_index);
                 ret = sunrise_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SUNRISE sensor
                 break;
             }
             case SUNLIGHT:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "SUNLIGHT", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SUNLIGHT", "Init sensor %i...", sensor_index);
                 ret = sunlight_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SUNLIGHT sensor
                 break;
             }
             case SCD30:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "SCD30", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SCD30", "Init sensor %i...", sensor_index);
                 ret = scd30_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SCD30 sensor
                 break;
             }
             case SCD41:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "SCD41", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SCD41", "Init sensor %i...", sensor_index);
                 ret = scd41_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SCD41 sensor
                 break;
             }
             case COZIR_LP3:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "CozIR-LP3", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CozIR-LP3", "Init sensor %i...", sensor_index);
                 ret = cozir_lp3_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CozIR-LP3 sensor
                 break;
             }
             case CM1107N:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Init sensor %i...", sensor_index);
-                msgbuf("debug", "CM1107N", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CM1107N", "Init sensor %i...", sensor_index);
                 ret = cm1107n_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CM1107N sensor
                 break;
             }
             
             default:
             {
-                #if DEBUG
-                uint8_t buf[36];
-                snprintf(buf, 36, "Unknown sensor %i, init abort", sensor_index);
-                msgbuf("ERROR", "SENSOR", buf);
-                #endif
+                print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Unknown sensor %i, init abort", sensor_index);
                 sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR;
                 return true; // Unknown sensor - don't repeat measurement
             }
         }
         if (!ret) // Init successful
         {
-            #if DEBUG_INFO
-            uint8_t buf[36];
-            snprintf(buf, 36, "Init sensor %i success", sensor_index);
-            msgbuf("info", "SENSOR", buf);
-            #endif
+            print_ser_output(SEVERITY_INFO, "MAIN-SENSOR", "Init sensor %i success", sensor_index);
             sensors[sensor_index].state = ERROR_NO_MEAS;
         }
         else // Init not successful
         {
-            #if DEBUG
-            uint8_t buf3[36];
-            snprintf(buf3, 36, "Init sensor %i failed: %i", sensor_index, ret);
-            msgbuf("ERROR", "SENSOR", buf3);
-            #endif
+            print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Init sensor %i failed: %i", sensor_index, ret);
             reset_i2c(); // Reset I2C
             mux_reset(); // Reset MUX
             sleep_ms(10);
@@ -773,115 +648,72 @@ bool read_single_sensor(uint8_t sensor_index)
         {
             case EE895:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "EE895", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-EE895", "Reading sensor %i...", sensor_index);
                 ee895_get_value(&(sensors[sensor_index])); // Read EE895 values
                 break;
             }
             case CDM7162:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "CDM7162", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CDM7162", "Reading sensor %i...", sensor_index);
                 cdm7162_get_value(&(sensors[sensor_index])); // Read CDM7162 values
                 break;
             }
             case SUNRISE:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "SUNRISE", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SUNRISE", "Reading sensor %i...", sensor_index);
                 sunrise_get_value(&(sensors[sensor_index])); // Read SUNRISE values
                 break;
             }
             case SUNLIGHT:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "SUNLIGHT", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SUNLIGHT", "Reading sensor %i...", sensor_index);
                 sunlight_get_value(&(sensors[sensor_index])); // Read SUNLIGHT values
                 break;
             }
             case SCD30:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "SCD30", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SCD30", "Reading sensor %i...", sensor_index);
                 scd30_get_value(&(sensors[sensor_index])); // Read SCD30 values
                 break;
             }
             case SCD41:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "SCD41", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-SCD41", "Reading sensor %i...", sensor_index);
                 scd41_get_value(&(sensors[sensor_index])); // Read SCD41 values
                 break;
             }
             case COZIR_LP3:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "CozIR-LP3", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CozIR-LP3", "Reading sensor %i...", sensor_index);
                 cozir_lp3_get_value(&(sensors[sensor_index])); // Read CozIR-LP3 values
                 break;
             }
             case CM1107N:
             {
-                #if DEBUG_DEBUG
-                uint8_t buf[24];
-                snprintf(buf, 24, "Reading sensor %i...", sensor_index);
-                msgbuf("debug", "CM1107N", buf);
-                #endif
+                print_ser_output(SEVERITY_DEBUG, "MAIN-CM1107N", "Reading sensor %i...", sensor_index);
                 cm1107n_get_value(&(sensors[sensor_index])); // Read CM1107N values
                 break;
             }
             default:
             {
-                #if DEBUG
-                uint8_t buf[36];
-                snprintf(buf, 36, "Reading unknown sensor %i", sensor_index);
-                msgbuf("ERROR", "SENSOR", buf);
-                #endif
+                print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Reading unknown sensor %i", sensor_index);
                 sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR; // Unknown sensor
                 return true; // Unknown sensor - don't repeat measurement
             }
         }
         if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS) // Reading not successful
         {
-            #if DEBUG
-            uint8_t buf2[36];
-            snprintf(buf2, 36, "Reading sensor %i failed: %i", sensor_index, sensors[sensor_index].state);
-            msgbuf("ERROR", "SENSOR", buf2);
-            #endif
+            print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Reading sensor %i failed: %i", sensor_index, sensors[sensor_index].state);
+            sleep_us(100);
             reset_i2c(); // Reset I2C
             mux_reset(); // Reset MUX
-            sleep_ms(10);
+            sleep_us(100);
             return false; // Reading failed, repeat measurement
         }
-        #if DEBUG_INFO
         if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && !(sensor_measurement_vector & (0b1 << sensor_index)))
         {
-            uint8_t buf2[36];
-            snprintf(buf2, 36, "Successfully read sensor %i", sensor_index);
-            msgbuf("info", "SENSOR", buf2);
+            print_ser_output(SEVERITY_INFO, "MAIN-SENSOR", "Successfully read sensor %i", sensor_index);
         }
-        #endif
     }
     return true; // Sensor successfully read
 }

@@ -47,7 +47,7 @@
 
 #define SCD41_ADDR 0x62
 
-#define msg(severity, x) printf("[%12llu] ["severity"] [SCD41] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define DEBUG_SOURCE "SCD41"
 
 /**
  * @brief Computes CRC for specified buffer
@@ -193,18 +193,14 @@ void scd41_get_value(sensor_t* scd41)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas finished");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
             s41_power(scd41, false); // Power off
             scd41->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas started");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
             s41_power(scd41, true); // Power off
             scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
@@ -215,9 +211,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_MODE:
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read mode");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read mode");
             uint16_t val = 0;
             if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
             if (scd41->config->enable_pressure_comp) // Pressure compensation enabled
@@ -252,9 +246,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            #if DEBUG_TRACE
-            msg("trace", "Write measure command");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Write measure command");
             ret = s41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
             if (ret != 0) // On invalid write
             {
@@ -271,9 +263,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_TRACE
-                msg("trace", "Read status");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read status");
             ret = s41_read(CMD_GET_DATA_RDY_STATUS, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -301,9 +291,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->humidity = NAN;
                 scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
-                #if DEBUG
-                msg("ERROR", "Read status failed, abort...");
-                #endif
+                print_ser_output(SEVERITY_ERROR, DEBUG_SOURCE, "Read status failed, abort...");
                 return;
             }
             scd41->wake_time = make_timeout_time_ms(100); // Check status after 100 ms
@@ -311,9 +299,7 @@ void scd41_get_value(sensor_t* scd41)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #if DEBUG_TRACE
-                msg("trace", "Read value");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
             uint16_t buf[6];
             ret = s41_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)
@@ -411,18 +397,14 @@ static int32_t s41_write_config(sensor_config_t* config)
 
     if (config->enable_abc != read_config.enable_abc)
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing ABC enable");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC enable");
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, config->enable_abc)) != 0) return ret;
         changed = true;
     }
 
     if (fabs(config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing temperature offset");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing temperature offset");
         if ((ret = s41_write_value(CMD_SET_T_OFFSET, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)))) != 0) return ret; // Write temperature offset
         changed = true;
     }
@@ -430,9 +412,7 @@ static int32_t s41_write_config(sensor_config_t* config)
     if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
         config->enable_altitude_comp && (config->altitude != read_config.altitude)) // Check altitude
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing altitude");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing altitude");
         if (config->enable_altitude_comp) // If altitude compensation should be enabled
         {
             if ((ret = s41_write_value(CMD_SET_ALTITUDE, config->altitude)) != 0) return ret;
@@ -446,25 +426,19 @@ static int32_t s41_write_config(sensor_config_t* config)
 
     if (config->abc_init_period != read_config.abc_init_period) // Check ABC initial period
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing ABC initial period");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC initial period");
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_INIT_PER, config->abc_init_period)) != 0) return ret; // Set ABC initial period
     }
 
     if (config->abc_period != read_config.abc_period) // Check ABC standard period
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing ABC period");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC period");
         if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_STANDARD_PER, config->abc_period)) != 0) return ret; // Set ABC standard period
     }
 
     if (changed) // If value was changed save settings to EEPROM
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - writing config to EEPROM");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Saving config to EEPROM");
         if ((ret = s41_write_command(CMD_PERSIST_SETTINGS)) != 0) return ret; // Save settings to EEPROM
         sleep_ms(800);
     }

@@ -25,9 +25,9 @@ int32_t mux_enable_sensor(uint8_t sensor_index)
 void mux_reset(void)
 {
     gpio_put(MUX_RST, 0);
-    sleep_ms(10);
-    gpio_put(MUX_RST, 1);
     sleep_us(100);
+    gpio_put(MUX_RST, 1);
+    sleep_us(10);
     return;
 }
 

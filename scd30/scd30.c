@@ -26,7 +26,7 @@
 #define CMD_FW_VERSION          0xD100
 #define CMD_SOFT_RESET          0xD304
 
-#define msg(severity, x) printf("[%12llu] ["severity"] [SCD30] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
+#define DEBUG_SOURCE "SCD30"
 
 /**
  * @brief Computes CRC for specified buffer
@@ -163,18 +163,14 @@ void scd30_get_value(sensor_t* scd30)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas finished");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
             s30_power(scd30, false); // Power off
             scd30->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas start");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas start");
             s30_power(scd30, true); // Power off
             scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
@@ -184,9 +180,7 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read state");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read state");
             ret = s30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -216,9 +210,7 @@ void scd30_get_value(sensor_t* scd30)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read value");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
             uint16_t buf[6];
             ret = s30_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)
@@ -302,9 +294,7 @@ static int32_t s30_write_config(sensor_config_t* config)
     if (config->enable_pressure_comp != read_config.enable_pressure_comp ||
         (config->enable_pressure_comp && (config->pressure != read_config.pressure))) // Check pressure enable and value
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Pressure");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing pressure");
         if (config->enable_pressure_comp) // Pressure compensation enabled
         {
             if ((ret = s30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
@@ -317,34 +307,26 @@ static int32_t s30_write_config(sensor_config_t* config)
 
     if (read_config.meas_period != config->meas_period) // Check mesaurement period
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Measurement period");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing measurement period");
         if ((ret = s30_write_value(CMD_MEAS_INTERVAL, config->meas_period)) != 0) return ret; // Set measurement interval
     }
 
     if (config->enable_abc != read_config.enable_abc) // Check abc enabled
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Enable/Disable ABC");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC enable");
         if ((ret = s30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
     }
 
     if ((read_config.temperature_offset - config->temperature_offset) > 0.01f) // Check temperature offset
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Temperature offset");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing temperature offset");
         if ((ret = s30_write_value(CMD_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret; // Set temperature offset
     }
 
     if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
         (config->enable_altitude_comp && (config->altitude != read_config.altitude))) // Check altitude enable and value
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Altitude");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing altitude");
         if (config->enable_altitude_comp) // Altitude compensation enabled
         {
             if ((ret = s30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret; // Write altitude

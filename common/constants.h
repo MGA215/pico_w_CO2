@@ -14,29 +14,18 @@
 #include "structs.h"
 #include "sensor_config.h"
 
-// DEBUG severity: set to 0 to disable all lower severity levels
 #ifndef DEBUG
-    #define DEBUG 1
-    #if DEBUG
-    #ifndef DEBUG_WARN
-        #define DEBUG_WARN 1
-        #if DEBUG_WARN
-        #ifndef DEBUG_INFO
-            #define DEBUG_INFO 1
-            #if DEBUG_INFO
-            #ifndef DEBUG_DEBUG
-                #define DEBUG_DEBUG 1
-                #if DEBUG_DEBUG
-                #ifndef DEBUG_TRACE
-                    #define DEBUG_TRACE 1
-                #endif
-                #endif
-            #endif
-            #endif
-        #endif
-        #endif
-    #endif
-    #endif
+    /**DEBUG LEVELS
+     * 0 ... DEBUG messages disabled
+     * 1 ... display FATAL errors
+     * 2 ... display ERROR and higher
+     * 3 ... display Warn and higher
+     * 4 ... display info and higher
+     * 5 ... display debug and higher
+     * 6 ... display trace and higher
+     */
+    #define DEBUG 6
+    #define ENABLE_COLORED_DEBUG 1
 #endif
 
 #define CONNECTED_SENSORS 8

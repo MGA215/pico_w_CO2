@@ -108,8 +108,7 @@
 #define REG_ABC_PRESSURE_H          0xDE
 #define REG_ABC_PRESSURE_L          0xDF
 
-#define msg(severity, x) printf("[%12llu] ["severity"] [SUNLIGHT] "x"\n", to_us_since_boot(get_absolute_time()) / 1000)
-#define msgbuf(severity, x) printf("[%12llu] ["severity"] [SUNLIGHT] %s\n", to_us_since_boot(get_absolute_time()) / 1000, x)
+#define DEBUG_SOURCE "SUNLIGHT"
 
 /**
  * @brief returns error code according to the error register value
@@ -210,18 +209,14 @@ void sunlight_get_value(sensor_t* sunlight)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas finished");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
             sl_power(sunlight, false); // Power off
             sunlight->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement start
         {
-            #if DEBUG_TRACE
-            msg("trace", "Meas start");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
             sl_power(sunlight, true); // Power on
             sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
@@ -231,9 +226,7 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_MODE: // Reading mode
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read mode");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read mode");
             uint8_t data;
             ret = sl_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
             if (ret != 0) // On invalid read
@@ -266,9 +259,7 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
-            #if DEBUG_TRACE
-            msg("trace", "Write measure command");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Trigger measurement");
             uint8_t buf[26] = {0}; 
             if (memcmp(sunlight->state_reg, buf, 26)) // If last state was zeros (not set)
             {
@@ -296,9 +287,7 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_VALUE: // Reading measurement data
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read value");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
             uint8_t buf[10] = {0};
             ret = sl_read(REG_ERR_H, buf, 10); // Read data
             if (ret != 0) // On invalid read
@@ -347,9 +336,7 @@ void sunlight_get_value(sensor_t* sunlight)
         }
         case MEAS_READ_STATUS: // Reading status registers
         {
-            #if DEBUG_TRACE
-            msg("trace", "Read status");
-            #endif
+            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read status");
             ret = sl_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 26); // Read status registers
             if (ret != 0) // On invalid read
             {
@@ -420,13 +407,6 @@ int sunlight_read_config(sensor_config_t* config)
     if ((ret = sl_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
     config->pressure = ntoh16(*((uint16_t*)&buf[0])) / 10;
 
-    // #if DEBUG
-    // if ((ret = sl_read(REG_ERR_H, buf, 2)) != 0) return ret;
-    // uint16_t val = ntoh16(*((uint16_t*)&buf[0]));
-    // snprintf(buf, 13, "Error: 0x%x", val);
-    // msgbuf("ERROR", buf);
-    // return sl_get_error(val);
-    // #endif
     return SUCCESS;
 }
 
@@ -443,9 +423,7 @@ static int sl_write_config(sensor_config_t* config)
         read_config.enable_pressure_comp != config->enable_pressure_comp ||
         read_config.invert_nRDY != config->invert_nRDY)
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing Meter Control");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing meter control");
         uint8_t data = 0; // meter control vector
         data |= config->enable_nRDY;
         data |= config->enable_abc << 1;
@@ -463,9 +441,7 @@ static int sl_write_config(sensor_config_t* config)
         read_config.abc_target_value != config->abc_target_value ||
         read_config.filter_coeff != config->filter_coeff)
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - Writing full configuration");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing full configuration");
         uint8_t command_buf[13] = {0};
         command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
         *((uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
@@ -481,9 +457,7 @@ static int sl_write_config(sensor_config_t* config)
 
     if (read_config.pressure != config->pressure && config->enable_pressure_comp) // Check pressure
     {
-        #if DEBUG_WARN
-        msg("Warn", "Config - writing pressure");
-        #endif
+        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing pressure");
         uint8_t command_buf[2] = {0};
         *((uint16_t*)&command_buf[0]) = ntoh16(config->pressure * 10); // Prepare command
 

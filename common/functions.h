@@ -58,4 +58,14 @@ extern uint32_t float2byte(float float_value);
  */
 extern void common_init_struct(sensor_t* sensor, uint8_t input_index);
 
+/**
+ * @brief Prints a debug message if corresponding DEBUG severity is enabled in constants.h
+ * 
+ * @param severity Severity of the message
+ * @param source Source of the message
+ * @param message Message
+ * @param ... Message additional arguments
+ */
+extern void print_ser_output(debug_severity_e severity, const uint8_t* source, const uint8_t* message, ...);
+
 #endif
