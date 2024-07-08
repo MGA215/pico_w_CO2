@@ -9,3 +9,4 @@ notes.txt
 config_map.h
 logs
 soap
+wifi/CMakeLists.txt

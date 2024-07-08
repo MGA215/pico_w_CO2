@@ -41,6 +41,12 @@
     #define CYN         ""
     #define WHT         ""
     #define RESET       ""
+    #define COLOR_FATAL ""
+    #define COLOR_ERROR ""
+    #define COLOR_WARN  ""
+    #define COLOR_INFO  ""
+    #define COLOR_DEBUG ""
+    #define COLOR_TRACE ""
 #endif
 
 /**

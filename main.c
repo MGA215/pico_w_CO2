@@ -65,7 +65,7 @@ int main()
     int32_t ret;
     if ((ret = init()) != 0) // init function
     {
-        print_ser_output(SEVERITY_FATAL, "MAIN-STDIO", "Initialization failure: %i; Aborting...", ret);
+        print_ser_output(SEVERITY_FATAL, "MAIN-INIT", "Initialization failure: %i; Aborting...", ret);
         return ret;
     } 
 
@@ -84,6 +84,8 @@ int init(void)
 {
     int32_t ret;
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
+
+    multicore_launch_core1(wifi_main);
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
 
     gfx_pack_init(); // initialize display
@@ -149,7 +151,7 @@ void update()
     {
         write_display(); // Writes data to be displayed to display frame buffer
         update_display(); // Updates display
-        #if !DEBUG
+        #if !DEBUG_TIME
         update_display_buffer = false;
         #endif
     }
@@ -325,7 +327,7 @@ void write_display(void)
             sensors[display_sensor].config->temp_en, sensors[display_sensor].temperature,
             sensors[display_sensor].config->pressure_en, sensors[display_sensor].pressure,
             sensors[display_sensor].config->RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
-    #if DEBUG
+    #if DEBUG_TIME
     uint8_t hwtime[21];
     snprintf(hwtime, 21, "Time: %llu ms", to_us_since_boot(get_absolute_time()) / 1000);
     position.x = 21 - strlen(hwtime);

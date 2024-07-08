@@ -10,6 +10,7 @@
  */
 
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
@@ -21,6 +22,7 @@
 #include "config_map.h"
 #include "common/serialize.h"
 #include "mux/mux.h"
+#include "wifi/wifi.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
