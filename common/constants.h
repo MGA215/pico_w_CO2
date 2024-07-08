@@ -78,4 +78,10 @@ static uint16_t display_interval = 33;
 // value representing the interval between sensor readings in ms
 static uint32_t sensor_read_interval_ms = 15000;
 
+// value representing the interval between SOAP messages in s
+static uint16_t soap_write_message_s = 15;
+
+// value representing the delay to add to the main value before the first SOAP message is written
+static uint16_t soap_write_message_initial_delay_s = 15;
+
 #endif

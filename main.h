@@ -21,6 +21,8 @@
 #include "config_map.h"
 #include "common/serialize.h"
 #include "mux/mux.h"
+#include "soap/soap.h"
+#include "soap/soap_channels.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
@@ -176,3 +178,20 @@ bool read_single_sensor(uint8_t sensor_index);
  * @param len Max length of the buffer
  */
 void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);
+
+/**
+ * @brief Assigns SOAP channels from configuration map
+ * 
+ */
+void assign_soap_channels(void);
+
+/**
+ * @brief Creates SOAP messages and saves them to their buffers
+ * 
+ */
+void create_soap_messages(void);
+
+
+
+
+

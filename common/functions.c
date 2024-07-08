@@ -14,6 +14,10 @@
 #include <string.h>
 #include <stdarg.h>
 #include "constants.h"
+#include <math.h>
+#include <stddef.h>
+#include "malloc.h"
+#include <stdlib.h>
 
 #if DEBUG && ENABLE_COLORED_DEBUG
     #define RED_BOLD    "\033[1;31;40m"
@@ -41,6 +45,12 @@
     #define CYN         ""
     #define WHT         ""
     #define RESET       ""
+    #define COLOR_FATAL ""
+    #define COLOR_ERROR ""
+    #define COLOR_WARN  ""
+    #define COLOR_INFO  ""
+    #define COLOR_DEBUG ""
+    #define COLOR_TRACE ""
 #endif
 
 /**
@@ -153,30 +163,15 @@ void print_ser_output(debug_severity_e severity, const uint8_t* source, const ui
 
         float time_sec = (float)(to_us_since_boot(get_absolute_time()) / 1000) / 1000.0f;
         printf("%s[%12.3f] %s [%s] %s\n"RESET"", severity_color, time_sec, severity_str, source, buf);
-        
-        // printf()
-        // switch (severity)
-        // {
-        //     case SEVERITY_TRACE:
-        //         printf("[%12.3f] [trace] [%s] %s\n", time_sec, source, buf);
-        //         break;
-        //     case SEVERITY_DEBUG:
-        //         printf("[%12.3f] [debug] [%s] %s\n", time_sec, source, buf);
-        //         break;
-        //     case SEVERITY_INFO:
-        //         printf("[%12.3f] [info]  [%s] %s\n", time_sec, source, buf);
-        //         break;
-        //     case SEVERITY_WARN:
-        //         printf(YEL "[%12.3f] [Warn]  [%s] %s"RESET"\n", time_sec, source, buf);
-        //         break;
-        //     case SEVERITY_ERROR:
-        //         printf(RED "[%12.3f] [ERROR] [%s] %s"RESET"\n", time_sec, source, buf);
-        //         break;
-        //     case SEVERITY_FATAL:
-        //         printf(RED_BOLD "[%12.3f] [FATAL] [%s] %s\n"RESET"", time_sec, source, buf);
-        //         break;
-        //     default:
-        //         break;
-        // }
     }
+}
+
+float round_precision(float value, uint8_t precision)
+{
+    int charsNeeded = 1 + snprintf(NULL, 0, "%.*f", precision, value);
+    char *buffer = malloc(charsNeeded);
+    snprintf(buffer, charsNeeded, "%.*f", precision, value);
+    float result = atof(buffer);
+    free(buffer);
+    return result;
 }

@@ -68,4 +68,13 @@ extern void common_init_struct(sensor_t* sensor, uint8_t input_index);
  */
 extern void print_ser_output(debug_severity_e severity, const uint8_t* source, const uint8_t* message, ...);
 
+/**
+ * @brief Rounds a float number to specified precision
+ * 
+ * @param value Value to round
+ * @param precision Number of decimal places
+ * @return float rounded value
+ */
+extern float round_precision(float value, uint8_t precision);
+
 #endif
