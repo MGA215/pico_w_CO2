@@ -24,7 +24,7 @@
      * 5 ... display debug and higher
      * 6 ... display trace and higher
      */
-    #define DEBUG 6
+    #define DEBUG 0
     #define ENABLE_COLORED_DEBUG 1
 #endif
 

@@ -392,8 +392,8 @@ void create_soap_messages(void)
         memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
     }
     print_ser_output(SEVERITY_INFO, "MAIN-SOAP", "Generated SOAP message 2");
-    // printf("%s\n", soap_buffer1);
-    // printf("%s\n", soap_buffer2);
+    printf("%s\n", soap_buffer1);
+    printf("%s\n", soap_buffer2);
 
 
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
