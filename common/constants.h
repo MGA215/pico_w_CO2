@@ -79,4 +79,10 @@ static uint16_t display_interval = 33;
 // value representing the interval between sensor readings in ms
 static uint32_t sensor_read_interval_ms = 15000;
 
+// value representing the interval between attempts to connect to wifi
+static uint32_t wifi_wait_next_connect_ms = 300000;
+
+// value representing the interval between messages sent
+static uint32_t wifi_send_data_ms = 15000;
+
 #endif

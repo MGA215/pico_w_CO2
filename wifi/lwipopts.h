@@ -74,5 +74,6 @@
 #define DHCP_DEBUG                  LWIP_DBG_OFF
 
 #define PICO_CYW43_ARCH_THREADSAFE_BACKGROUND 1
+#define PICO_CYW43_ARCH_DEBUG_ENABLED 0 // Disable internal debug
 
 #endif /* __LWIPOPTS_H__ */

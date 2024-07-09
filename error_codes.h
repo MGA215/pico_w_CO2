@@ -31,6 +31,12 @@
 #define ERROR_MUX_INVALID_INDEX 21 // Error - invalid MUX index
 #define ERROR_SENSOR_MUX_FAILED 22 // Error - MUX failed
 
+// WiFi errors
+#define ERROR_NETWORK_NOT_FOUND 31 // Error - WiFi network not visible
+
+// TCP errors
+#define ERROR_TCP_OPEN_FAILED 41 // Error - could not open TCP socket
+
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
 #define PICO_ERROR_GENERIC -2 // Error PICO - Generic error (might be sensor disconnected)
