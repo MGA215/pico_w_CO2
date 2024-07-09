@@ -15,7 +15,7 @@
 struct ds3231_rtc rtc;
 
 // string holding the datetime value
-uint8_t datetime_str[30] = {0}; // MUTEX
+uint8_t datetime_str[30] = {0};
 
 // array of sensors
 sensor_t sensors[8];
@@ -44,6 +44,9 @@ absolute_time_t process_update_time;
 // Time value to check if measurement should start
 absolute_time_t sensor_start_measurement_time;
 
+// Time value to check if SOAP message should be created
+absolute_time_t soap_create_message_time;
+
 // Vector of timers that have reached time; on reached time bit goes high
 uint8_t sensor_timer_vector; 
 
@@ -53,6 +56,18 @@ uint8_t sensor_measurement_vector;
 // Vector of active sensors
 uint8_t active_sensors = 0b01111111;
 
+// Number of total SOAP channels
+uint8_t soap_channels = 16;
+
+// SOAP sensor channels
+message_channel* channels1[16]; // First 16 channels
+uint8_t channels1_len; // Number of channels in first buffer
+message_channel* channels2[16]; // Second 16 channels
+uint8_t channels2_len; // Number of channels in second buffer
+
+// SOAP message buffer
+uint8_t soap_buffer1[MAX_SOAP_SIZE] = {0}; // MUTEX
+uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0}; // MUTEX
 
 /**
  * @brief Sets RTC's datetime, modify datetime inside
@@ -93,9 +108,14 @@ int init(void)
     mux_init(); // Initialize multiplexer
 
     init_sensors(); // initialize sensors
-        
+
+    assign_soap_channels(); // Assign SOAP channels
+    soap_init(sensors, channels1, channels1_len); // Initialize SOAP channels 1
+    soap_init(sensors, channels2, channels2_len); // Initialize SOAP channels 2
+
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
     sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set measurement interval
+    soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Set SOAP write message initial interval
 
     sensor_timer_vector = 0; // No sensor individual timer is running
     sensor_measurement_vector = 0; // No sensor is measuring
@@ -112,6 +132,7 @@ int loop(void)
     if (time_reached(sensor_start_measurement_time)) read_sensors_start(); // Start measurement
     if (time_reached(process_update_time)) update(); // Update display & buttons
     if (sensor_timer_vector) read_sensors(); // Read sensors if time of any sensor timer reached
+    if (time_reached(soap_create_message_time)) create_soap_messages(); // Create SOAP messages
     return SUCCESS;
 }
 
@@ -342,6 +363,44 @@ void update_display(void)
     return;
 }
 
+void assign_soap_channels(void)
+{
+    for (int i = 0; i < soap_channels; i++)
+    {
+        if (i >= 32) break;
+        else if (i >= 16) channels2[i - 16] = channel_map2[i - 16];
+        else channels1[i] = channel_map1[i];
+    }
+    for (int i = soap_channels; i < 32; i++)
+    {
+        if (i < 16) channels1[i] = NULL;
+        else channels2[i - 16] = NULL;
+    }
+    channels1_len = soap_channels > 16 ? 16 : soap_channels;
+    channels2_len = soap_channels < 16 ? 0 : (soap_channels > 32 ? 16 : (soap_channels % 16));
+}
+
+void create_soap_messages(void)
+{
+    memset(soap_buffer1, 0x00, MAX_SOAP_SIZE); // Clear old message
+    if (!soap_build("Tester_01", 24069001, datetime_str, channels1, channels1_len, soap_buffer1, MAX_SOAP_SIZE)) // Create SOAP message 1
+    {
+        memset(soap_buffer1, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
+    }
+    print_ser_output(SEVERITY_INFO, "MAIN-SOAP", "Generated SOAP message 1");
+    memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Clear old message
+    if (!soap_build("Tester_02", 24069002, datetime_str, channels2, channels2_len, soap_buffer2, MAX_SOAP_SIZE)) // Create SOAP message 2
+    {
+        memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
+    }
+    print_ser_output(SEVERITY_INFO, "MAIN-SOAP", "Generated SOAP message 2");
+    printf("%s\n", soap_buffer1);
+    printf("%s\n", soap_buffer2);
+
+
+    soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
+}
+
 void init_sensors(void)
 {
     int32_t ret;
@@ -352,7 +411,7 @@ void init_sensors(void)
         common_init_struct(&sensors[i], i); // Initialize sensor structures
         sensors[i].sensor_type = configuration_map[i] != NULL ? configuration_map[i]->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
     }
-
+    uint8_t sensor_indices[8] = {0};
 
     for (int i = 0; i < 8; i++)
     {
@@ -374,48 +433,56 @@ void init_sensors(void)
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-EE895", "Init sensor %i...", i);
                     ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
+                    sensors[i].sensor_number = sensor_indices[EE895]++; // Set sensor type index
                     break;
                 }
                 case CDM7162:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-CDM7162", "Init sensor %i...", i);
                     ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
+                    sensors[i].sensor_number = sensor_indices[CDM7162]++; // Set sensor type index
                     break;
                 }
                 case SUNRISE:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-SUNRISE", "Init sensor %i...", i);
                     ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
+                    sensors[i].sensor_number = sensor_indices[SUNRISE]++; // Set sensor type index
                     break;
                 }
                 case SUNLIGHT:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-SUNLIGHT", "Init sensor %i...", i);
                     ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
+                    sensors[i].sensor_number = sensor_indices[SUNLIGHT]++; // Set sensor type index
                     break;
                 }
                 case SCD30:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-SCD30", "Init sensor %i...", i);
                     ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
+                    sensors[i].sensor_number = sensor_indices[SCD30]++; // Set sensor type index
                     break;
                 }
                 case SCD41:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-SCD41", "Init sensor %i...", i);
                     ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
+                    sensors[i].sensor_number = sensor_indices[SCD41]++; // Set sensor type index
                     break;
                 }
                 case COZIR_LP3:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-CozIR-LP3", "Init sensor %i...", i);
                     ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
+                    sensors[i].sensor_number = sensor_indices[COZIR_LP3]++; // Set sensor type index
                     break;
                 }
                 case CM1107N:
                 {
                     print_ser_output(SEVERITY_DEBUG, "MAIN-CM1107N", "Init sensor %i...", i);
                     ret = cm1107n_init(&(sensors[i]), configuration_map[i]); // Initialize CM1107N sensor
+                    sensors[i].sensor_number = sensor_indices[CM1107N]++; // Set sensor type index
                     break;
                 }
                 
@@ -543,7 +610,6 @@ void read_sensors()
     {
         set_power(false);
     }
-
     update_display_buffer = true; // Update display
     return;
 }

@@ -114,5 +114,6 @@ typedef struct sensor
     uint8_t input_index; // Index of the input connector
     uint8_t power_index; // Index in the power vector
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
+    uint8_t sensor_number; // Index of the sensor of a type
 } sensor_t;
 #endif

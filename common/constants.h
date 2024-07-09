@@ -85,4 +85,10 @@ static uint32_t wifi_wait_next_connect_ms = 300000;
 // value representing the interval between messages sent
 static uint32_t wifi_send_data_ms = 15000;
 
+// value representing the interval between SOAP messages in s
+static uint16_t soap_write_message_s = 15;
+
+// value representing the delay to add to the main value before the first SOAP message is written
+static uint16_t soap_write_message_initial_delay_s = 15;
+
 #endif
