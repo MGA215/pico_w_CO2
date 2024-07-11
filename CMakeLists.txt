@@ -71,7 +71,7 @@ add_subdirectory(scd41)
 add_subdirectory(cozir-lp3)
 add_subdirectory(cm1107n)
 add_subdirectory(mux)
-#add_subdirectory(soap)
+add_subdirectory(soap)
 add_subdirectory(wifi)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
@@ -91,7 +91,7 @@ target_link_libraries(pico_w_CO2
         pico-cozir-lp3
         pico-cm1107n
         pico-mux
-        #pico-soap
+        pico-soap
         pico_multicore
         pico-wifi
         )

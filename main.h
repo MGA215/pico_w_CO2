@@ -9,6 +9,9 @@
  * 
  */
 
+#ifndef __MAIN_H__
+#define __MAIN_H__
+
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/uart.h"
@@ -25,6 +28,7 @@
 #include "wifi/wifi.h"
 #include "soap/soap.h"
 #include "soap/soap_channels.h"
+#include "pico/mutex.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
@@ -197,3 +201,4 @@ void create_soap_messages(void);
 
 
 
+#endif

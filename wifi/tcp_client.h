@@ -13,9 +13,24 @@
 #define __TCP_CLIENT_H__
 
 #include "pico/stdlib.h"
+#include "pico/mutex.h"
 
+/**
+ * @brief Initializes the TCP structures and sets IP address
+ * 
+ */
 void tcp_client_init(void);
 
-void run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp);
+/**
+ * @brief Runs the TCP client, opens a socket, sends data and closes the socket
+ * 
+ * @param data Data to send
+ * @param data_len Length of the data to send
+ * @param close_tcp If TCP socket should be closed after send
+ * @param data_mutex mutex for the data
+ * @return true if the client should be run immediately again
+ * @return false if connection was closed or communication ended
+ */
+bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* data_mutex);
 
 #endif

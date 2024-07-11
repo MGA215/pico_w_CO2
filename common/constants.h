@@ -72,6 +72,8 @@
 #define MUX0_ADDR 0x70
 #define MUX1_ADDR 0x71
 
+#define MUTEX_TIMEOUT_MS 1000
+
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;

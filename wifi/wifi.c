@@ -1,33 +1,25 @@
+
+#ifndef __WIFI_C__
+#define __WIFI_C__
+
 #include "wifi.h"
 #include "credentials.h"
-
-/**
- * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include <stdio.h>
 
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
 #include "hardware/vreg.h"
 #include "hardware/clocks.h"
+#include "http.h"
+
 
 static bool wifi = false;
 static absolute_time_t send_data_time;
 static bool enable_tcp_closing;
 
-static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
-    // if (result) {
-    //     printf("ssid: %-32s rssi: %4d chan: %3d mac: %02x:%02x:%02x:%02x:%02x:%02x sec: %u\n",
-    //         result->ssid, result->rssi, result->channel,
-    //         result->bssid[0], result->bssid[1], result->bssid[2], result->bssid[3], result->bssid[4], result->bssid[5],
-    //         result->auth_mode);
-    // }
-    if (result && !memcmp(result->ssid, WIFI_SSID, result->ssid_len)) wifi = true;
-    return 0;
-}
+static soap_data_t* soap_message1;
+static soap_data_t* soap_message2;
+
 
 /**
  * @brief Attempts to connect to WiFi
@@ -46,7 +38,10 @@ void wifi_loop(void);
 
 
 
-
+static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
+    if (result && !memcmp(result->ssid, WIFI_SSID, result->ssid_len)) wifi = true;
+    return 0;
+}
 
 int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
 {
@@ -118,14 +113,18 @@ int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t 
     return SUCCESS;
 }
 
-void wifi_main(void) {
-
+void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2) 
+{
+    soap_message1 = soap_1;
+    soap_message2 = soap_2;
     if (cyw43_arch_init()) {
         print_ser_output(SEVERITY_FATAL, "WiFi", "Failed to initialize WiFi on core 1");
         return;
     }
     print_ser_output(SEVERITY_INFO, "WiFi", "Initialized WiFi on core 1");
     cyw43_arch_enable_sta_mode(); // enable station mode
+
+    tcp_client_init(); // Initialize TCP client
 
     while (true) // Connection attempt
     {
@@ -137,7 +136,7 @@ void wifi_main(void) {
             continue;
         }
         enable_tcp_closing = wifi_send_data_ms > 60000; // Enable TCP socket closing if sending interval > 1 min
-        
+
         if (wifi_connect(100000, WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))// Try connecting to the network
         {
             print_ser_output(SEVERITY_ERROR, "WiFi", "Failed to connect to the network, next try in %d seconds", wifi_wait_next_connect_ms);
@@ -175,8 +174,15 @@ void wifi_loop(void)
 
 void wifi_send_data(void)
 {
-    // init
-    // open TCP
-    // free
+    // tcp run client
     sleep_ms(100);
+    uint8_t* message = create_http_header(TCP_SERVER_IP, false, SERVER_PATH, TCP_PORT, TCP_SERVER_IP, "http://tempuri.org/InsertMSxSample", soap_message1->data, soap_message1->data_len, &soap_message1->data_mutex);
+    while (run_tcp_client(message, strlen(message), false, &soap_message1->data_mutex)) 
+    {
+        tight_loop_contents();
+    }
+    free(message);
 }
+
+
+#endif
