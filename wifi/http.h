@@ -24,6 +24,6 @@
  * @param data_len Length of the data to send
  * @return uint8_t* buffer containing the message
  */
-uint8_t* create_http_header(uint8_t* ip_url_addr, bool is_url, uint8_t* path, uint16_t port, uint8_t* soap_http_addr, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex);
+uint8_t* create_http_header(uint8_t* ip_url_addr, bool is_url, uint8_t* path, uint16_t port, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex);
 
 #endif

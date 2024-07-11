@@ -1,3 +1,13 @@
+/**
+ * @file wifi.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief WiFi handling implementation
+ * @version 0.1
+ * @date 2024-07-11
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 
 #ifndef __WIFI_C__
 #define __WIFI_C__
@@ -32,12 +42,20 @@ static soap_data_t* soap_message2;
  */
 int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode);
 
+/**
+ * @brief Sends data to the server
+ * 
+ */
 void wifi_send_data(void);
 
+/**
+ * @brief Loop
+ * 
+ */
 void wifi_loop(void);
 
 
-
+ // Callback function for the wifi scan
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     if (result && !memcmp(result->ssid, WIFI_SSID, result->ssid_len)) wifi = true;
     return 0;
@@ -45,8 +63,8 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
 
 int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
 {
-    absolute_time_t scan_time = nil_time;
-    absolute_time_t wifi_timeout = make_timeout_time_ms(timeout_ms);
+    absolute_time_t scan_time = nil_time; // Scan time
+    absolute_time_t wifi_timeout = make_timeout_time_ms(timeout_ms); // Wifi timeout time
     bool scan_in_progress = false;
     print_ser_output(SEVERITY_INFO, "WiFi", "Starting WiFi scan");
 
@@ -70,7 +88,7 @@ int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t 
             else if (wifi)
             {
                 print_ser_output(SEVERITY_DEBUG, "WiFi", "Specified WiFi network found, connecting...");
-                switch(auth_mode)
+                switch(auth_mode) // Ensure auth mode
                 {
                     case CYW43_AUTH_OPEN:
                     case CYW43_AUTH_WPA2_AES_PSK:
@@ -83,7 +101,7 @@ int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t 
                 if ((ret = cyw43_arch_wifi_connect_timeout_ms(ssid, password, auth_mode, 30000)) != 0) // Connect to wifi
                 {
                     print_ser_output(SEVERITY_ERROR, "WiFi", "Failed to connect to WiFi: %i", ret);
-                    wifi = false;
+                    wifi = false; // Wifi disconnected
                 }
                 else
                 {
@@ -93,31 +111,17 @@ int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t 
 
             }
         }
-        // the following #ifdef is only here so this same example can be used in multiple modes;
-        // you do not need it in your code
-#if PICO_CYW43_ARCH_POLL
-        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
-        // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
-        cyw43_arch_poll();
-        // you can poll as often as you like, however if you have nothing else to do you can
-        // choose to sleep until either a specified time, or cyw43_arch_poll() has work to do:
-        cyw43_arch_wait_for_work_until(scan_time);
-#else
-        // if you are not using pico_cyw43_arch_poll, then WiFI driver and lwIP work
-        // is done via interrupt in the background. This sleep is just an example of some (blocking)
-        // work you might be doing.
-        if (time_reached(wifi_timeout)) return PICO_ERROR_CONNECT_FAILED;
+        if (time_reached(wifi_timeout)) return PICO_ERROR_CONNECT_FAILED; // Check for wifi timeout
         sleep_ms(1000);
-#endif
     }
     return SUCCESS;
 }
 
 void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2) 
 {
-    soap_message1 = soap_1;
-    soap_message2 = soap_2;
-    if (cyw43_arch_init()) {
+    soap_message1 = soap_1; // Shared SOAP message 1 buffer
+    soap_message2 = soap_2; // Shared SOAP message 2 buffer
+    if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
         print_ser_output(SEVERITY_FATAL, "WiFi", "Failed to initialize WiFi on core 1");
         return;
     }
@@ -128,7 +132,7 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
 
     while (true) // Connection attempt
     {
-        absolute_time_t wifi_wait_next_connect_time = nil_time;
+        absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
         
         if (!time_reached(wifi_wait_next_connect_time)) // If time to connect not reached
         {
@@ -152,7 +156,7 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
         }
     }
     
-    cyw43_arch_deinit();
+    cyw43_arch_deinit(); // Deinit CYW43 driver
     return;
 }
 
@@ -164,7 +168,7 @@ void wifi_loop(void)
         wifi = false; // WiFi failed
         return; 
     }
-    if (time_reached(send_data_time))
+    if (time_reached(send_data_time)) // If should send data
     {
         print_ser_output(SEVERITY_INFO, "WiFi", "Send data start");
         wifi_send_data();
@@ -174,14 +178,14 @@ void wifi_loop(void)
 
 void wifi_send_data(void)
 {
-    // tcp run client
     sleep_ms(100);
-    uint8_t* message = create_http_header(TCP_SERVER_IP, false, SERVER_PATH, TCP_PORT, TCP_SERVER_IP, "http://tempuri.org/InsertMSxSample", soap_message1->data, soap_message1->data_len, &soap_message1->data_mutex);
-    while (run_tcp_client(message, strlen(message), false, &soap_message1->data_mutex)) 
+    uint8_t* message = create_http_header(TCP_CLIENT_SERVER_IP, false, TCP_CLIENT_SERVER_PATH, TCP_CLIENT_SERVER_PORT, 
+        "http://tempuri.org/InsertMSxSample", soap_message1->data, soap_message1->data_len, &soap_message1->data_mutex); // Add safely HTTP header to SOAP message
+    while (run_tcp_client(message, strlen(message), false, &soap_message1->data_mutex)) // Run TCP client FSM
     {
         tight_loop_contents();
     }
-    free(message);
+    free(message); // Dekete message
 }
 
 

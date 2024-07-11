@@ -16,6 +16,7 @@
 #include "constants.h"
 #include "../error_codes.h"
 #include "functions.h"
+#include "../sensor_config.h"
 
 /**
  * @brief Serializes configuration

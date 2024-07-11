@@ -69,8 +69,8 @@ uint8_t channels2_len; // Number of channels in second buffer
 uint8_t soap_buffer1[MAX_SOAP_SIZE] = {0}; // MUTEX
 uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0}; // MUTEX
 
-static soap_data_t soap_message1 = {.data_len = 0, .data_mutex = {0}};
-static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}};
+static soap_data_t soap_message1 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message1 buffer & mutex
+static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message2 buffer & mutex
 
 
 /**
@@ -102,7 +102,7 @@ int main()
 
 void core1_main(void)
 {
-    wifi_main(&soap_message1, &soap_message2);
+    wifi_main(&soap_message1, &soap_message2); // Initialize WiFi with soap buffer pointers for shared resource
 }
 
 int init(void)
@@ -115,7 +115,7 @@ int init(void)
     if (!mutex_is_initialized(&soap_message2.data_mutex))
         mutex_init(&soap_message2.data_mutex);
 
-    multicore_launch_core1(core1_main);
+    multicore_launch_core1(core1_main); // Launch second core
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
 
     gfx_pack_init(); // initialize display
@@ -188,10 +188,10 @@ void update()
         write_display(); // Writes data to be displayed to display frame buffer
         update_display(); // Updates display
         #if !DEBUG_TIME
-        update_display_buffer = false;
+        update_display_buffer = false; // Wait with next display update
         #endif
     }
-    process_update_time = make_timeout_time_us(display_interval * 1000);
+    process_update_time = make_timeout_time_us(display_interval * 1000); // Wait for next update
     return;
 }
 
@@ -202,7 +202,7 @@ void update_RTC()
     if (memcmp(loc_datetime_str, datetime_str, 30) != 0)  // If new datetime string
     {
         memcpy(datetime_str, loc_datetime_str, 30); // Update datetime string
-        update_display_buffer = true;
+        update_display_buffer = true; // Refresh display
     }
 
 }
@@ -365,7 +365,7 @@ void write_display(void)
             sensors[display_sensor].config->RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
     #if DEBUG_TIME
     uint8_t hwtime[21];
-    snprintf(hwtime, 21, "Time: %llu ms", to_us_since_boot(get_absolute_time()) / 1000);
+    snprintf(hwtime, 21, "Time: %llu ms", to_us_since_boot(get_absolute_time()) / 1000); // Prepare time since boot string
     position.x = 21 - strlen(hwtime);
     position.y = 5;
     gfx_pack_write_text(&position, hwtime);
@@ -380,19 +380,19 @@ void update_display(void)
 
 void assign_soap_channels(void)
 {
-    for (int i = 0; i < soap_channels; i++)
+    for (int i = 0; i < soap_channels; i++) // Assign channels from channel map
     {
-        if (i >= 32) break;
-        else if (i >= 16) channels2[i - 16] = channel_map2[i - 16];
-        else channels1[i] = channel_map1[i];
+        if (i >= 32) break; // On channel overflow 32
+        else if (i >= 16) channels2[i - 16] = channel_map2[i - 16]; // On channel overflow 16
+        else channels1[i] = channel_map1[i]; // Assign channel
     }
-    for (int i = soap_channels; i < 32; i++)
+    for (int i = soap_channels; i < 32; i++) // for channels from number of channels to 32
     {
-        if (i < 16) channels1[i] = NULL;
+        if (i < 16) channels1[i] = NULL; // Fill unused channels with NULL
         else channels2[i - 16] = NULL;
     }
-    channels1_len = soap_channels > 16 ? 16 : soap_channels;
-    channels2_len = soap_channels < 16 ? 0 : (soap_channels > 32 ? 16 : (soap_channels % 16));
+    channels1_len = soap_channels > 16 ? 16 : soap_channels; // Number of channels in 1st buffer
+    channels2_len = soap_channels < 16 ? 0 : (soap_channels > 32 ? 16 : (soap_channels % 16)); // Number of channels in 2nd buffer
 }
 
 void create_soap_messages(void)
@@ -409,8 +409,6 @@ void create_soap_messages(void)
         memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
     }
     print_ser_output(SEVERITY_INFO, "MAIN-SOAP", "Generated SOAP message 2");
-    // printf("%s\n", soap_buffer1);
-    // printf("%s\n", soap_buffer2);
 
     mutex_enter_timeout_ms(&soap_message1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
     strncpy(soap_message1.data, soap_buffer1, MAX_SOAP_SIZE);
@@ -442,16 +440,16 @@ void init_sensors(void)
         if (active_sensors & (0b1 << i))
         {
             reset_i2c();
-            if ((ret = mux_enable_sensor(i)) != 0) 
+            if ((ret = mux_enable_sensor(i)) != 0) // Mux to sensor
             {
-                print_ser_output(SEVERITY_ERROR, "MAIN-MUX", "Failed to mux sensor %i: e%i", i, ret);
-                gpio_put(MUX_RST, 0);
+                print_ser_output(SEVERITY_ERROR, "MAIN-MUX", "Failed to mux sensor %i: e%i", i, ret); // On invalid MUX
+                gpio_put(MUX_RST, 0); // Reset MUX
                 sleep_us(1);
                 gpio_put(MUX_RST, 1);
                 sleep_us(10);
                 continue;
             }
-            switch (configuration_map[i]->sensor_type)
+            switch (configuration_map[i]->sensor_type) // For sensor type
             {
                 case EE895:
                 {
@@ -512,7 +510,7 @@ void init_sensors(void)
                 
                 default:
                 {
-                    print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Unknown sensor %i, init abort", i);
+                    print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Unknown sensor %i, init abort", i); // No type match - unknown sensor
                     sensors[i].state = ERROR_UNKNOWN_SENSOR;
                     break;
                 }
@@ -520,7 +518,7 @@ void init_sensors(void)
             if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
             if (!ret) print_ser_output(SEVERITY_INFO, "MAIN-SENSOR", "Init sensor %i success", i);
             if (ret) print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Init sensor %i failed: %i", i, ret);
-            sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS;
+            sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Change sensor state
         }
     }
 
@@ -529,20 +527,19 @@ void init_sensors(void)
 
 void reset_i2c(void)
 {
-    i2c_deinit(I2C_SENSOR);
+    i2c_deinit(I2C_SENSOR); // Deinit I2C for sensors
 
-    gpio_set_function(I2C_SCL, GPIO_FUNC_SIO);
-    gpio_set_dir(I2C_SCL, GPIO_OUT);
+    gpio_set_function(I2C_SCL, GPIO_FUNC_SIO); // Change SCL from I2C pin to SIO
+    gpio_set_dir(I2C_SCL, GPIO_OUT); // Set to output direction
     sleep_us(10);
-    gpio_put(I2C_SCL, 0);
+    gpio_put(I2C_SCL, 0); // Pull down
     sleep_us(100);
-    gpio_put(I2C_SCL, 1);
+    gpio_put(I2C_SCL, 1); // Pull up
     sleep_us(10);
-    gpio_pull_up(I2C_SCL);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C); // Reset SCL to I2C pin
     sleep_us(100);
 
-    i2c_init(I2C_SENSOR, I2C_BAUDRATE);
+    i2c_init(I2C_SENSOR, I2C_BAUDRATE); // Initialize I2C
 }
 
 void init_sensor_i2c(void)
@@ -560,7 +557,7 @@ void init_sensor_i2c(void)
 
 void set_power_mode(void)
 {
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++) // For each sensor
     {
         if (sensors[i].config == NULL) continue;
         sensors[i].config->power_global_control = global_power; // Set sensor power mode to global power control
@@ -604,14 +601,14 @@ void sensor_timer_vector_update(void)
     {
         if (time_reached(sensors[i].wake_time)) // If sensor timer reached
         {
-            sensor_timer_vector |= (0b1 << i);
+            sensor_timer_vector |= (0b1 << i); // Set bit for timer reached
         }
     }
 }
 
 void read_sensors()
 {
-    int32_t ret = -99;
+    int32_t ret = -99; // Some random error value
     bool i2c_reset = true;
 
     for (uint8_t i = 0; i < 8; i++) // Iterate sensor

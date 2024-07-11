@@ -13,6 +13,8 @@
 #define __STRUCTS_H__
 
 #include "pico/stdlib.h"
+#include "constants.h"
+#include "pico/mutex.h"
 
 typedef enum sensor_type
 {
@@ -116,4 +118,12 @@ typedef struct sensor
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
     uint8_t sensor_number; // Index of the sensor of a type
 } sensor_t;
+
+typedef struct soap_data
+{
+    uint8_t data[MAX_SOAP_SIZE];
+    uint16_t data_len;
+    mutex_t data_mutex;
+} soap_data_t;
+
 #endif

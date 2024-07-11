@@ -11,9 +11,6 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
-#include "structs.h"
-#include "sensor_config.h"
-
 #ifndef DEBUG
     /**DEBUG LEVELS
      * 0 ... DEBUG messages disabled
@@ -74,6 +71,8 @@
 
 #define MUTEX_TIMEOUT_MS 1000
 
+#define MAX_SOAP_SIZE 4096
+
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;
@@ -81,16 +80,16 @@ static uint16_t display_interval = 33;
 // value representing the interval between sensor readings in ms
 static uint32_t sensor_read_interval_ms = 15000;
 
-// value representing the interval between attempts to connect to wifi
+// value representing the interval between attempts to connect to wifi in ms
 static uint32_t wifi_wait_next_connect_ms = 300000;
 
-// value representing the interval between messages sent
+// value representing the interval between messages sent in ms
 static uint32_t wifi_send_data_ms = 15000;
 
 // value representing the interval between SOAP messages in s
 static uint16_t soap_write_message_s = 15;
 
-// value representing the delay to add to the main value before the first SOAP message is written
+// value representing the delay to add to the main value before the first SOAP message is written in s
 static uint16_t soap_write_message_initial_delay_s = 15;
 
 #endif

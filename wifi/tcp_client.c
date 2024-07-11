@@ -1,3 +1,17 @@
+/**
+ * @file tcp_client.c
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief Implementation of the TCP client
+ * @version 0.1
+ * @date 2024-07-11
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
+#ifndef __TCP_CLIENT_C__
+#define __TCP_CLIENT_C__
+
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
@@ -7,14 +21,12 @@
 #include "tcp_client.h"
 #include "http.h"
 
-#ifndef __TCP_CLIENT_C__
-#define __TCP_CLIENT_C__
-
 #define BUF_SIZE 4096 + 1024
 #define POLL_TIME_S 5
 
 #define DUMP_BYTES(A,B)
 
+/// @brief TCP client structure
 typedef struct TCP_CLIENT_T_ {
     struct tcp_pcb *tcp_pcb;
     ip_addr_t remote_addr;
@@ -26,87 +38,163 @@ typedef struct TCP_CLIENT_T_ {
     bool connected;
 } TCP_CLIENT_T;
 
+/// @brief TCP client FSM
 typedef enum tcp_client_fsm {
     CONNECTION_CLOSED = 0,
     CONNECTING = 1,
     CONNECTED = 2
 } tcp_client_fsm_e;
 
+// Client state
 static tcp_client_fsm_e client_state;
+
+// TCP client
 static TCP_CLIENT_T state;
-static absolute_time_t tcp_connect_time;
-static uint32_t tcp_connect_timeout_ms = 10000;
+
+// Has data been sent
 static bool data_sent;
+
+// Length of sent data
 static uint16_t data_sent_len;
+
+// If TCP should close on the end of communication
 static bool should_tcp_close;
+
+// If an error has occured - to prevent infinite loop
 static bool error_flag;
 
 
+/**
+ * @brief Opens a TCP socket
+ * 
+ * @param arg TCP client structure
+ * @return true if socket successfully opened
+ * @return false otherwise
+ */
 static bool tcp_client_open(void* arg);
 
+/**
+ * @brief Closes the TCP socket
+ * 
+ * @param arg TCP client structure
+ * @return err_t Error the socked was closed with
+ */
 static err_t tcp_client_close(void* arg);
 
+/**
+ * @brief Callback for fatal error on TCP socket
+ * 
+ * @param arg TCP client structure
+ * @param err Return error
+ */
 static void tcp_client_err(void* arg, err_t err);
 
+/**
+ * @brief Prints any TCP status and closes the socket
+ * 
+ * @param arg TCP client structure
+ * @param status TCP socket status
+ * @return err_t Closing error
+ */
 static err_t tcp_client_result(void* arg, int status);
 
+/**
+ * @brief Callback function when TCP socket opens and connects
+ * 
+ * @param arg TCP client structure
+ * @param tpcb pointer to the PCB structure
+ * @param err Error of the connection
+ * @return err_t Return error
+ */
 static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err);
 
+/**
+ * @brief Callback for polling the application
+ * 
+ * @param arg TCP client structure
+ * @param tpcb pointer to the PCB structure
+ * @return err_t Return error
+ */
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb);
 
+/**
+ * @brief Callback when all data has been sent by the client to the server
+ * 
+ * @param arg TCP client structure
+ * @param tpcb pointer to the PCB structure
+ * @param len Length of the sent data
+ * @return err_t Return error
+ */
 static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len);
 
+/**
+ * @brief Sends data to the server
+ * 
+ * @param arg TCP client structure
+ * @param data pointer to the data to send
+ * @param data_len Length of the data to send
+ * @return err_t Return error
+ */
 static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len);
 
+/**
+ * @brief Callback when client receives any data
+ * 
+ * @param arg TCP client structure
+ * @param tpcb pointer to the PCB structure
+ * @param p packet buffer
+ * @param err Error when receiving
+ * @return err_t Return error
+ */
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err);
 
 
 bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* data_mutex)
 {
-    should_tcp_close = close_tcp;
-    if (!&state)
+    should_tcp_close = close_tcp; // If TCP should be closed after the end of communication
+    if (!&state) // No state exists
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "Failed to create TCP state");
+        print_ser_output(SEVERITY_ERROR, "TCP client", "TCP state not initialized");
         return false;
     }
-    switch (client_state)
+    switch (client_state) // On connection state
     {
-        case CONNECTION_CLOSED:
+        case CONNECTION_CLOSED: // Connection closed
         {
-            data_sent = false;
-            error_flag = false;
+            data_sent = false; // No data has been sent
+            error_flag = false; // No error present
             if (!tcp_client_open(&state)) // try to open the connection
             {
                 tcp_client_result(&state, -1); // Print error and try to close connection
                 return false;
             }
-            client_state = CONNECTING;
+            client_state = CONNECTING; // Switch state to connectiong
             return true;
         }
-        case CONNECTING:
-            return true;
-        case CONNECTED:
+        case CONNECTING: // On connecting state
+            return true; // Wait for connected state
+        case CONNECTED: // On connected state
         {
             err_t err;
         
             if ((err = tcp_client_send(&state, data, data_len)) != ERR_OK) // Send data
             {
-                tcp_client_result(&state, err);
+                tcp_client_result(&state, err); // Print error code and close socket
                 return false;
             }
             while (!data_sent) {
                 tight_loop_contents(); // Wait for data sent
                 if (error_flag) // If error flag raised stop loop
                 {
-                    tcp_client_result(&state, 2);
+                    tcp_client_result(&state, 2); // Print error code 2 and close socket
                     break;
                 }
             }
-            if (close_tcp)
+            if (close_tcp) // If TCP should close
             {
-                tcp_client_result(&state, 0);
+                tcp_client_result(&state, 0); // Close connection
             }
-            data_sent = false;
+            data_sent = false; // No data has been sent
             
             return false;
         }
@@ -117,33 +205,33 @@ bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* d
 void tcp_client_init(void)
 {
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
-    ip4addr_aton(TCP_SERVER_IP, &state.remote_addr); // Assign IP addr
+    ip4addr_aton(TCP_CLIENT_SERVER_IP, &state.remote_addr); // Assign IP addr
     client_state = CONNECTION_CLOSED; // Set connection state to closed
 }
 
 static bool tcp_client_open(void* arg)
 {
-    TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    print_ser_output(SEVERITY_DEBUG, "TCP client", "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), TCP_PORT);
-    state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr));
+    TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg; // Client state structure
+    print_ser_output(SEVERITY_DEBUG, "TCP client", "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), TCP_CLIENT_SERVER_PORT);
+    state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr)); // Create PCB with IP address
     if (!state->tcp_pcb)
     {
         print_ser_output(SEVERITY_ERROR, "TCP client", "Failed to create PCB");
         return false;
     }
 
-    tcp_arg(state->tcp_pcb, state);
-    tcp_poll(state->tcp_pcb, tcp_client_poll, POLL_TIME_S * 2);
-    tcp_recv(state->tcp_pcb, tcp_client_recv);
-    tcp_sent(state->tcp_pcb, tcp_client_sent);
-    tcp_err(state->tcp_pcb, tcp_client_err);
+    tcp_arg(state->tcp_pcb, state); // Assign callback arg to TCP client structure
+    tcp_poll(state->tcp_pcb, tcp_client_poll, POLL_TIME_S * 2); // Assign polling callback
+    tcp_recv(state->tcp_pcb, tcp_client_recv); // Assign receive callback
+    tcp_sent(state->tcp_pcb, tcp_client_sent); // Assign send callback
+    tcp_err(state->tcp_pcb, tcp_client_err); // Assign error callback
 
     state->buffer_len = 0;
 
     cyw43_arch_lwip_begin();
-    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, TCP_PORT, tcp_client_connected);
+    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, TCP_CLIENT_SERVER_PORT, tcp_client_connected); // Connect to the TCP socket
     cyw43_arch_lwip_end();
-    if (err)
+    if (err) // If connection errored
     {
         tcp_client_result(arg, err);
         return false;
@@ -196,6 +284,7 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
     print_ser_output(SEVERITY_DEBUG, "TCP client", "Message sending finished, sent %u bytes", len);
     data_sent = true;
     if (should_tcp_close) tcp_client_result(arg, ERR_OK);
+    data_sent_len = len;
     return ERR_OK;
 }
 

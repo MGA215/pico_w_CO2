@@ -16,20 +16,18 @@
 #include "tcp_client.h"
 #include "../common/functions.h"
 #include "../common/constants.h"
+#include "../common/structs.h"
 #include "../soap/soap.h"
 #include "pico/mutex.h"
 #include "../soap/soap.h"
 
 
-typedef struct soap_data
-{
-    uint8_t data[MAX_SOAP_SIZE];
-    uint16_t data_len;
-    mutex_t data_mutex;
-} soap_data_t;
-
-
-
+/**
+ * @brief Wifi & network entry point
+ * 
+ * @param soap_1 
+ * @param soap_2 
+ */
 void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2);
 
 #endif
