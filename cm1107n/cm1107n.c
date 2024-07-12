@@ -10,7 +10,9 @@
  */
 
 #include "cm1107n.h"
-#include <stdio.h>
+#include "math.h"
+#include "hardware/i2c.h"
+#include "string.h"
 
 #define CM1107N_ADDR    0x31
 

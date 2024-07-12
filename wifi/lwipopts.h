@@ -1,3 +1,14 @@
+/**
+ * @file lwipopts.h
+ * @author Martin Garncarz (246815@vutbr.cz)
+ * @brief lwIP options
+ * @version 0.1
+ * @date 2024-07-12
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef __LWIPOPTS_H__
 #define __LWIPOPTS_H__
 

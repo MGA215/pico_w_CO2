@@ -12,12 +12,7 @@
 #ifndef __CDM7162_H__
 #define __CDM7162_H__
 
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "error_codes.h"
-#include "common/functions.h"
-#include "math.h"
-#include "common/constants.h"
+#include "../common_include.h"
 
 
 /**

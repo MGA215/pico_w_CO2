@@ -10,7 +10,9 @@
  */
 
 #include "ee895.h"
-#include <stdio.h>
+#include "math.h"
+#include "hardware/i2c.h"
+#include "string.h"
 
 #define EE895_ADDR              0x5F
 #define EE895_MAX_REG_READ      8

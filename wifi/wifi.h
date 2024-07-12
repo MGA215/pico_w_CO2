@@ -12,14 +12,7 @@
 #ifndef __WIFI_H__
 #define __WIFI_H__
 
-#include "lwipopts.h"
-#include "tcp_client.h"
-#include "../common/functions.h"
-#include "../common/constants.h"
 #include "../common/structs.h"
-#include "../soap/soap.h"
-#include "pico/mutex.h"
-#include "../soap/soap.h"
 
 
 /**
@@ -28,6 +21,6 @@
  * @param soap_1 
  * @param soap_2 
  */
-void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2);
+extern void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2);
 
 #endif

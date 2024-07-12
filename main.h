@@ -14,25 +14,23 @@
 
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
-#include "hardware/uart.h"
+#include "pico/mutex.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "error_codes.h"
-#include <stdio.h>
-#include <string.h>
+#include "pico/stdio.h"
+#include "pico/printf.h"
+#include "string.h"
+#include "wifi/wifi.h"
 #include "common/constants.h"
+#include "common/serialize.h"
 #include "sensor_config.h"
 #include "config_map.h"
-#include "common/serialize.h"
-#include "mux/mux.h"
-#include "wifi/wifi.h"
 #include "soap/soap.h"
 #include "soap/soap_channels.h"
-#include "pico/mutex.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
-
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
 #include "sunrise/sunrise.h"
@@ -41,6 +39,7 @@
 #include "scd41/scd41.h"
 #include "cozir-lp3/cozir-lp3.h"
 #include "cm1107n/cm1107n.h"
+#include "mux/mux.h"
 
 /**
  * @brief Initializes pins, buses, modules; runs only once

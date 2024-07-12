@@ -10,7 +10,9 @@
  */
 
 #include "cozir-lp3.h"
-#include <stdio.h>
+#include "math.h"
+#include "hardware/i2c.h"
+#include "string.h"
 
 #define COZIR_LP3_ADDR              0x41
 

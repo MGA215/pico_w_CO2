@@ -10,6 +10,7 @@
  */
 
 #include "mux.h"
+#include "hardware/i2c.h"
 
 int32_t mux_enable_sensor(uint8_t sensor_index)
 {

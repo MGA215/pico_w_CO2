@@ -10,7 +10,9 @@
  */
 
 #include "sunlight.h"
-#include <stdio.h>
+#include "hardware/i2c.h"
+#include "string.h"
+#include "math.h"
 
 #define SUNLIGHT_ADDR               0x68
 

@@ -76,6 +76,7 @@ add_subdirectory(wifi)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
+target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/common_include.h)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 

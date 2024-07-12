@@ -12,13 +12,7 @@
 #ifndef __SCD30_H__
 #define __SCD30_H__
 
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "../error_codes.h"
-#include "../common/functions.h"
-#include "string.h"
-#include <math.h>
-#include "../common/constants.h"
+#include "../common_include.h"
 
 /**
  * @brief Retrieves measured values from the SCD30 sensor

@@ -849,7 +849,7 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         }
         if (temp)
         {
-            snprintf(buf, 16, "T: %4.2f |C", temp_value); // C char does not support ° symbol
+            snprintf(buf, 16, "T: %4.2f %cC", temp_value, 0xB0); // C char does not support ° symbol
             gfx_pack_write_text(&position, buf); // Write temperature
             row++;
             position.x = 0;

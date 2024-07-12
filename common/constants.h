@@ -11,6 +11,8 @@
 #ifndef __CONSTANTS_H__
 #define __CONSTANTS_H__
 
+#include "pico/stdlib.h"
+
 #ifndef DEBUG
     /**DEBUG LEVELS
      * 0 ... DEBUG messages disabled

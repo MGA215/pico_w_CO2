@@ -12,14 +12,13 @@
 #ifndef __TCP_CLIENT_C__
 #define __TCP_CLIENT_C__
 
+#include "credentials.h"
+#include "tcp_client.h"
+#include "../common_include.h"
+
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
-#include "../common/functions.h"
-#include "../common/constants.h"
-#include "credentials.h"
-#include "tcp_client.h"
-#include "http.h"
 
 #define BUF_SIZE 4096 + 1024
 #define POLL_TIME_S 5
@@ -244,17 +243,16 @@ static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
     print_ser_output(SEVERITY_DEBUG, "TCP client", "client poll");
     return ERR_OK;
-    return tcp_client_result(arg, -4);
 }
 
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*) arg;
-    if (!p) return tcp_client_result(arg, ERR_CLSD);
+    if (!p) return tcp_client_result(arg, ERR_CLSD); // Check if server closed connection
     
     cyw43_arch_lwip_check();
     if (p->tot_len > 0) {
-        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_INFO, "TCP client", "recved %d err %d", p->tot_len, err);
+        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_INFO, "TCP client", "recved %d err %d", p->tot_len, err); // Check num bytes received & error
         for (struct pbuf *q = p; q != NULL; q = q->next) {
             DUMP_BYTES(q->payload, q->len);
         }
@@ -262,7 +260,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
         const uint16_t buffer_left = BUF_SIZE - state->buffer_len;
         state->buffer_len += pbuf_copy_partial(p, state->buffer + state->buffer_len,
                                                p->tot_len > buffer_left ? buffer_left : p->tot_len, 0);
-        tcp_recved(tpcb, p->tot_len);
+        tcp_recved(tpcb, p->tot_len); // Buffer received
         print_ser_output(SEVERITY_TRACE, "TCP client", "Received:");
         #if DEBUG >= 6
             printf("%s\n", state->buffer);
@@ -270,7 +268,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
 
     }
     busy_wait_ms(10);
-    if (p->len == p->tot_len || p->ref <= 1) 
+    if (p->len == p->tot_len || p->ref <= 1) // Free if references < 1 and in last part of the pbuf
     {
         pbuf_free(p);
         print_ser_output(SEVERITY_TRACE, "TCP client", "Freed pbuf");
@@ -282,9 +280,9 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     print_ser_output(SEVERITY_DEBUG, "TCP client", "Message sending finished, sent %u bytes", len);
-    data_sent = true;
-    if (should_tcp_close) tcp_client_result(arg, ERR_OK);
-    data_sent_len = len;
+    data_sent = true; // Data sent
+    if (should_tcp_close) tcp_client_result(arg, ERR_OK); // If TCP socket should close
+    data_sent_len = len; // Copy data sent length
     return ERR_OK;
 }
 
@@ -320,13 +318,13 @@ static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len)
 static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    if (err != ERR_OK)
+    if (err != ERR_OK) // Check for errors
     {
         print_ser_output(SEVERITY_ERROR, "TCP client", "TCP connection failed");
-        return tcp_client_result(arg, err);
+        return tcp_client_result(arg, err); // Close connection
     }
-    client_state = CONNECTED;
-    state->connected = true;
+    client_state = CONNECTED; // state connected
+    state->connected = true; 
     print_ser_output(SEVERITY_INFO, "TCP client", "TCP connection established");
     return ERR_OK;
 }
@@ -334,50 +332,51 @@ static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
 static err_t tcp_client_result(void* arg, int status)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    if (status == ERR_CLSD)
+    if (status == ERR_CLSD) // Error server closed
     {
         print_ser_output(SEVERITY_WARN, "TCP client", "Server closed connection");
     }
-    else if (status != ERR_OK)
+    else if (status != ERR_OK) // Other error
     {
         print_ser_output(SEVERITY_ERROR, "TCP client", "ERROR: %i", status);
     }
-    return tcp_client_close(arg);
+    return tcp_client_close(arg); // Close socket
 }
 
 static void tcp_client_err(void* arg, err_t err)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    state->connected = false;
-    error_flag = true;
-    if (err != ERR_ABRT)
+    state->connected = false; // Disconnected
+    client_state = CONNECTION_CLOSED;
+    error_flag = true; // Error has occured
+    if (err != ERR_ABRT) // Connection not aborted, still fatal error
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "TCP error: %i", err);
-        tcp_client_result(arg, err);
+        print_ser_output(SEVERITY_FATAL, "TCP client", "TCP error: %i", err);
+        tcp_client_result(arg, err); // Close connection
     }
-    else print_ser_output(SEVERITY_ERROR, "TCP client", "Connection aborted");
+    else print_ser_output(SEVERITY_FATAL, "TCP client", "Connection aborted");
 }
 
 static err_t tcp_client_close(void* arg)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     err_t err = ERR_OK;
-    state->connected = false;
+    state->connected = false; // Disconnected
     if (state->tcp_pcb != NULL)
     {
-        tcp_arg(state->tcp_pcb, NULL);
+        tcp_arg(state->tcp_pcb, NULL); // Set function pointers to NULL
         tcp_poll(state->tcp_pcb, NULL, 0);
         tcp_sent(state->tcp_pcb, NULL);
         tcp_recv(state->tcp_pcb, NULL);
         tcp_err(state->tcp_pcb, NULL);
-        err = tcp_close(state->tcp_pcb);
-        if (err != ERR_OK)
+        err = tcp_close(state->tcp_pcb); // Close socket
+        if (err != ERR_OK) // Check for errors
         {
             print_ser_output(SEVERITY_ERROR, "TCP client", "TCP connection close failed: %i, aborting connection", err);
-            tcp_abort(state->tcp_pcb);
+            tcp_abort(state->tcp_pcb); // Abort connection
             err = ERR_ABRT;
         }
-        state->tcp_pcb = NULL;
+        state->tcp_pcb = NULL; // Destroy PCB
     }
     client_state = CONNECTION_CLOSED;
     return err;

@@ -12,12 +12,7 @@
 #ifndef __GFX_PACK_H__
 #define __GFX_PACK_H__
 
-#include "hardware/i2c.h"
-#include "pico/stdlib.h"
-#include "hardware/spi.h"
-#include "hardware/pwm.h"
-#include "math.h"
-#include "common/constants.h"
+#include "../common_include.h"
 
 typedef struct {
     uint8_t x;

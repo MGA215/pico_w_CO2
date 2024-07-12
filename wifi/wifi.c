@@ -14,13 +14,14 @@
 
 #include "wifi.h"
 #include "credentials.h"
-#include <stdio.h>
-
-#include "pico/stdlib.h"
-#include "pico/cyw43_arch.h"
-#include "hardware/vreg.h"
-#include "hardware/clocks.h"
 #include "http.h"
+#include "tcp_client.h"
+
+#include "../common_include.h"
+
+#include "pico/cyw43_arch.h"
+#include "lwipopts.h"
+
 
 
 static bool wifi = false;
@@ -40,19 +41,19 @@ static soap_data_t* soap_message2;
  * @param auth_mode WiFi auth mode
  * @return int Return code
  */
-int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode);
+static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode);
 
 /**
  * @brief Sends data to the server
  * 
  */
-void wifi_send_data(void);
+static inline void wifi_send_data(void);
 
 /**
  * @brief Loop
  * 
  */
-void wifi_loop(void);
+static void wifi_loop(void);
 
 
  // Callback function for the wifi scan
@@ -61,7 +62,7 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
     return 0;
 }
 
-int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
+static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
 {
     absolute_time_t scan_time = nil_time; // Scan time
     absolute_time_t wifi_timeout = make_timeout_time_ms(timeout_ms); // Wifi timeout time
@@ -160,7 +161,7 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
     return;
 }
 
-void wifi_loop(void)
+static void wifi_loop(void)
 {
     if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) != CYW43_LINK_JOIN) // Check wifi connection status
     {
@@ -176,7 +177,7 @@ void wifi_loop(void)
     }
 }
 
-void wifi_send_data(void)
+static inline void wifi_send_data(void)
 {
     sleep_ms(100);
     uint8_t* message = create_http_header(TCP_CLIENT_SERVER_IP, false, TCP_CLIENT_SERVER_PATH, TCP_CLIENT_SERVER_PORT, 

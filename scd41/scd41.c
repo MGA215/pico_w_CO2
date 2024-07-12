@@ -10,7 +10,9 @@
  */
 
 #include "scd41.h"
-#include <stdio.h>
+#include "math.h"
+#include "hardware/i2c.h"
+#include "string.h"
 
 #define CMD_START_PER_MEAS                  0x21B1
 #define CMD_READ_MEAS                       0xEC05

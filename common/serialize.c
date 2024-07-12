@@ -1,4 +1,7 @@
 #include "serialize.h"
+#include "../common_include.h"
+#include "../sensor_config.h"
+#include "string.h"
 
 /**
  * @brief Checks for out of range values for given sensors

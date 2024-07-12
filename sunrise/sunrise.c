@@ -10,7 +10,9 @@
  */
 
 #include "sunrise.h"
-#include "stdio.h"
+#include "hardware/i2c.h"
+#include "string.h"
+#include "math.h"
 
 #define SUNRISE_ADDR                0x68
 

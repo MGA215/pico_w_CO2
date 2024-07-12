@@ -13,9 +13,6 @@
 #define __FUNCTIONS_H__
 
 #include "structs.h"
-#include "math.h"
-#include "error_codes.h"
-#include <string.h>
 #include "pico/stdlib.h"
 
 /**

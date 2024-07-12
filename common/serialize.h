@@ -13,10 +13,7 @@
 #define __SERIALIZE_H__
 
 #include "structs.h"
-#include "constants.h"
-#include "../error_codes.h"
-#include "functions.h"
-#include "../sensor_config.h"
+#include "pico/stdlib.h"
 
 /**
  * @brief Serializes configuration

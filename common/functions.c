@@ -9,15 +9,16 @@
  * 
  */
 
-#include "functions.h"
-#include <stdio.h>
+#include "../common_include.h"
+
+#include "pico/stdio.h"
+#include "pico/printf.h"
+#include "malloc.h"
+
+#include "stdlib.h"
+#include "math.h"
 #include <string.h>
 #include <stdarg.h>
-#include "constants.h"
-#include <math.h>
-#include <stddef.h>
-#include "malloc.h"
-#include <stdlib.h>
 
 #if DEBUG && ENABLE_COLORED_DEBUG
     #define RED_BOLD    "\033[1;31;40m"

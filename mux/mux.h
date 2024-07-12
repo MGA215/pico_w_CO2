@@ -12,10 +12,7 @@
 #ifndef __MUX_H__
 #define __MUX_H__
 
-#include "pico/stdlib.h"
-#include "error_codes.h"
-#include "common/constants.h"
-#include "hardware/i2c.h"
+#include "../common_include.h"
 
 /**
  * @brief Enables sensor in the multiplexer

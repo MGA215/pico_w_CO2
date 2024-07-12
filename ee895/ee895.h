@@ -12,13 +12,7 @@
 #ifndef __EE895_H__
 #define __EE895_H__
 
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "string.h"
-#include "error_codes.h"
-#include "math.h"
-#include "common/functions.h"
-#include "../common/constants.h"
+#include "../common_include.h"
 
 /**
  * @brief Reads number of registers from the EE895 with timing; must manually turn power on/off

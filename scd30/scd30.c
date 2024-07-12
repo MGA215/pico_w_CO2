@@ -10,7 +10,9 @@
  */
 
 #include "scd30.h"
-#include <stdio.h>
+#include "hardware/i2c.h"
+#include "math.h"
+#include "string.h"
 
 #define SCD30_ADDR              0x61
 

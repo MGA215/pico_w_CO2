@@ -12,7 +12,9 @@
 #include "gfx_pack.h"
 #include "monospace_font.c"
 #include "string.h"
-#include <stdio.h>
+#include "hardware/spi.h"
+#include "hardware/pwm.h"
+#include "math.h"
 
 #define GFX_PACK_DISPLAY_WIDTH  128
 #define GFX_PACK_DISPLAY_HEIGHT 64
@@ -389,8 +391,8 @@ static inline uint8_t* get_char_map(char c)
         case '^': return (uint8_t*)font_carrot;
         case '~': return (uint8_t*)font_tilde;
         case '`': return (uint8_t*)font_tick;
-        //case '|': return (uint8_t*)font_pipe;
-        case '|': return (uint8_t*)font_degree; // C char does not support codes higher than 127, ° is 248
+        case '|': return (uint8_t*)font_pipe;
+        case 0xB0: return (uint8_t*)font_degree; // C char does not support codes higher than 127, ° is 176
         case '$': return (uint8_t*)font_dollar;
         case '@': return (uint8_t*)font_at;
         case ' ': return (uint8_t*)font_space;

@@ -13,12 +13,12 @@
 #ifndef __HTTP_C__
 #define __HTTP_C__
 
-#include <string.h>
-#include <stdio.h>
-#include <malloc.h>
-#include "pico/stdlib.h"
 #include "http.h"
-#include "../common/constants.h"
+#include "../common_include.h"
+#include <string.h>
+#include "pico/stdio.h"
+#include "pico/printf.h"
+#include <malloc.h>
 
 static uint16_t header_size = 512;
 

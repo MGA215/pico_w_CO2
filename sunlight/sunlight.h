@@ -12,14 +12,7 @@
 #ifndef __SUNLIGHT_H__
 #define __SUNLIGHT_H__
 
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "string.h"
-#include "../error_codes.h"
-#include "../common/functions.h"
-#include "math.h"
-#include "../common/constants.h"
-
+#include "../common_include.h"
 
 /**
  * @brief Reads measured values from the sensor
