@@ -14,12 +14,16 @@
 
 #include "pico/stdlib.h"
 #include "pico/mutex.h"
+#include "lwip/err.h"
+
+
 
 /**
  * @brief Initializes the TCP structures and sets IP address
  * 
+ * @return err_t Error code
  */
-void tcp_client_init(void);
+err_t tcp_client_init(void);
 
 /**
  * @brief Runs the TCP client, opens a socket, sends data and closes the socket

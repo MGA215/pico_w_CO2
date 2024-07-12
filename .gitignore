@@ -10,3 +10,4 @@ config_map.h
 logs
 soap
 credentials.*
+websec*

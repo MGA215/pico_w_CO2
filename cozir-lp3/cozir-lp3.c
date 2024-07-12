@@ -127,6 +127,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
             cozir_lp3->state = SUCCESS;
+            cozir_lp3->timeout_iterator = 0; // Initialize iterator
             return;
         }
         case MEAS_STARTED:
@@ -148,6 +149,21 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
                 cozir_lp3->temperature = NAN;
                 cozir_lp3->meas_state = MEAS_FINISHED;
                 cozir_lp3->state = ret;
+                return;
+            }
+            if (cozir_lp3->timeout_iterator > 20)
+            {
+                cozir_lp3->co2 = NAN;
+                cozir_lp3->humidity = NAN;
+                cozir_lp3->temperature = NAN;
+                cozir_lp3->state = COZIR_LP3_ERROR_DATA_READY_TIMEOUT;
+                cozir_lp3->state = MEAS_FINISHED;
+                return;
+            }
+            if (ntoh16(*((uint16_t*)&tempBuffer[0])) == 0xFFFF)
+            {
+                cozir_lp3->timeout_iterator++;
+                cozir_lp3->wake_time = make_timeout_time_ms(100);
                 return;
             }
             cozir_lp3->co2 = (float)ntoh16(*((uint16_t*)&tempBuffer[0]));

@@ -22,6 +22,10 @@ ${CMAKE_CURRENT_LIST_DIR}/tcp_client.c
 ${CMAKE_CURRENT_LIST_DIR}/tcp_client.h
 ${CMAKE_CURRENT_LIST_DIR}/http.c
 ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
+${CMAKE_CURRENT_LIST_DIR}/websec.c
+${CMAKE_CURRENT_LIST_DIR}/websec.h
+${CMAKE_CURRENT_LIST_DIR}/base64.c
+${CMAKE_CURRENT_LIST_DIR}/base64.h
 )
 
 

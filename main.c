@@ -80,6 +80,7 @@ static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}}; // Common
 void set_datetime(void);
 
 
+
 int main()
 {
     int32_t ret;
@@ -96,6 +97,10 @@ int main()
             print_ser_output(SEVERITY_FATAL, "MAIN-LOOP", "Loop failure: %i; Aborting...", ret);
             return ret;
         }
+    }
+    while (true)
+    {
+        tight_loop_contents();
     }
     return SUCCESS;
 }
@@ -793,10 +798,11 @@ bool read_single_sensor(uint8_t sensor_index)
         if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS) // Reading not successful
         {
             print_ser_output(SEVERITY_ERROR, "MAIN-SENSOR", "Reading sensor %i failed: %i", sensor_index, sensors[sensor_index].state);
-            sleep_us(100);
+            sleep_ms(10);
             reset_i2c(); // Reset I2C
+            sleep_ms(10);
             mux_reset(); // Reset MUX
-            sleep_us(100);
+            sleep_ms(10);
             return false; // Reading failed, repeat measurement
         }
         if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && !(sensor_measurement_vector & (0b1 << sensor_index)))

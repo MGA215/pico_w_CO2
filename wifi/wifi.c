@@ -31,6 +31,8 @@ static bool enable_tcp_closing;
 static soap_data_t* soap_message1;
 static soap_data_t* soap_message2;
 
+extern bool ip_found;
+
 
 /**
  * @brief Attempts to connect to WiFi
@@ -120,6 +122,7 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
 
 void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2) 
 {
+
     soap_message1 = soap_1; // Shared SOAP message 1 buffer
     soap_message2 = soap_2; // Shared SOAP message 2 buffer
     if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
@@ -128,8 +131,6 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
     }
     print_ser_output(SEVERITY_INFO, "WiFi", "Initialized WiFi on core 1");
     cyw43_arch_enable_sta_mode(); // enable station mode
-
-    tcp_client_init(); // Initialize TCP client
 
     while (true) // Connection attempt
     {
@@ -140,7 +141,7 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
             sleep_ms(100);
             continue;
         }
-        enable_tcp_closing = wifi_send_data_ms > 60000; // Enable TCP socket closing if sending interval > 1 min
+        enable_tcp_closing = soap_write_message_s > 60; // Enable TCP socket closing if sending interval > 1 min
 
         if (wifi_connect(100000, WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))// Try connecting to the network
         {
@@ -148,13 +149,21 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
             wifi_wait_next_connect_time = make_timeout_time_ms(wifi_wait_next_connect_ms); // Try again in wifi_wait_next_connect_ms
             continue;
         }
+        tcp_client_init(); // Initialize TCP client
 
-        send_data_time = make_timeout_time_ms(wifi_send_data_ms + 20000); // Send data after wifi_send_data_time_ms + initial offset
+        send_data_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Send data after wifi_send_data_time_ms + initial offset
+        absolute_time_t wait_dns = make_timeout_time_ms(wifi_wait_for_dns);
         
-        while (wifi)
+        while (!ip_found && !time_reached(wait_dns)) // Check if host IP acquired
+        {
+            tight_loop_contents();
+        }
+
+        while (wifi && ip_found)
         {
             wifi_loop(); // Main WiFi loop
         }
+        sleep_ms(10);
     }
     
     cyw43_arch_deinit(); // Deinit CYW43 driver
@@ -173,14 +182,15 @@ static void wifi_loop(void)
     {
         print_ser_output(SEVERITY_INFO, "WiFi", "Send data start");
         wifi_send_data();
-        send_data_time = make_timeout_time_ms(wifi_send_data_ms); // Next message in wifi_send_data_ms
+        send_data_time = make_timeout_time_ms(soap_write_message_s * 1000); // Next message in soap_write_message_s
     }
 }
 
 static inline void wifi_send_data(void)
 {
     sleep_ms(100);
-    uint8_t* message = create_http_header(TCP_CLIENT_SERVER_IP, false, TCP_CLIENT_SERVER_PATH, TCP_CLIENT_SERVER_PORT, 
+    uint8_t* message = create_http_header(IS_COMET_CLOUD ? TCP_CLIENT_SERVER_IP_CLOUD : TCP_CLIENT_SERVER_IP_DB, IS_COMET_CLOUD, 
+        IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PATH : TCP_CLIENT_SERVER_DB_PATH, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, 
         "http://tempuri.org/InsertMSxSample", soap_message1->data, soap_message1->data_len, &soap_message1->data_mutex); // Add safely HTTP header to SOAP message
     while (run_tcp_client(message, strlen(message), false, &soap_message1->data_mutex)) // Run TCP client FSM
     {

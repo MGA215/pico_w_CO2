@@ -105,6 +105,7 @@
 
 // CozIR-LP3 Errors
 #define COZIR_LP3_ERROR_NREG_REG 611 // Error CozIR-LP3 - specified number of registers is invalid
+#define COZIR_LP3_ERROR_DATA_READY_TIMEOUT 615 // Error CozIR-LP3 - Data not ready
 
 // CUBIC CM1107N
 #define CM1107N_ERROR_CRC 713 // Error CM1107N - Invalid CRC

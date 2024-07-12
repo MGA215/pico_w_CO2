@@ -17,6 +17,7 @@
 #include "../common_include.h"
 
 #include "lwip/pbuf.h"
+#include "lwip/dns.h"
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
 
@@ -147,6 +148,16 @@ static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len);
  */
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err);
 
+/**
+ * @brief Callback when DNS found specified host
+ * 
+ * @param name host name
+ * @param ipaddr host IP
+ * @param callback_arg NULL
+ */
+void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callback_arg);
+
+bool ip_found = false;
 
 bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* data_mutex)
 {
@@ -175,12 +186,14 @@ bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* d
         case CONNECTED: // On connected state
         {
             err_t err;
-        
+            cyw43_arch_lwip_begin();
             if ((err = tcp_client_send(&state, data, data_len)) != ERR_OK) // Send data
             {
+                cyw43_arch_lwip_end();
                 tcp_client_result(&state, err); // Print error code and close socket
                 return false;
             }
+            cyw43_arch_lwip_end();
             while (!data_sent) {
                 tight_loop_contents(); // Wait for data sent
                 if (error_flag) // If error flag raised stop loop
@@ -201,17 +214,48 @@ bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* d
     return false;
 }
 
-void tcp_client_init(void)
+err_t tcp_client_init(void)
 {
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
-    ip4addr_aton(TCP_CLIENT_SERVER_IP, &state.remote_addr); // Assign IP addr
+    if (IS_COMET_CLOUD) // data to cloud
+    {
+        ip_found = false;
+        ip_addr_t ip_dns;
+        ip4addr_aton(DNS_IP, &ip_dns); // Convert DNS IP string to IP
+        dns_init();
+        dns_setserver(0, &ip_dns); // Set DNS server
+        cyw43_arch_lwip_begin();
+        err_t err = dns_gethostbyname(TCP_CLIENT_SERVER_IP_CLOUD, &state.remote_addr, tcp_client_ip_found, NULL); // Get cloud IP
+        if (err && err != ERR_INPROGRESS)
+        {
+            print_ser_output(SEVERITY_ERROR, "TCP DNS", "Failed to retrieve IP: %i", err);
+            cyw43_arch_lwip_end();
+            return err;
+        }
+        cyw43_arch_lwip_end();
+    }
+    else // data to DB
+    {
+        ip4addr_aton(TCP_CLIENT_SERVER_IP_DB, &state.remote_addr); // Assign DB IP addr
+        ip_found = true;
+    }
     client_state = CONNECTION_CLOSED; // Set connection state to closed
+    return ERR_OK;
+}
+
+void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
+{
+    state.remote_addr = *ipaddr; // Assign IP address
+    ip_found = true; // IP was found
+    print_ser_output(SEVERITY_INFO, "TCP DNS", "IP address found");
+    return;
 }
 
 static bool tcp_client_open(void* arg)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg; // Client state structure
-    print_ser_output(SEVERITY_DEBUG, "TCP client", "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), TCP_CLIENT_SERVER_PORT);
+    print_ser_output(SEVERITY_DEBUG, "TCP client", "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), 
+        IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT);
     state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr)); // Create PCB with IP address
     if (!state->tcp_pcb)
     {
@@ -228,7 +272,7 @@ static bool tcp_client_open(void* arg)
     state->buffer_len = 0;
 
     cyw43_arch_lwip_begin();
-    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, TCP_CLIENT_SERVER_PORT, tcp_client_connected); // Connect to the TCP socket
+    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, tcp_client_connected); // Connect to the TCP socket
     cyw43_arch_lwip_end();
     if (err) // If connection errored
     {
@@ -252,11 +296,13 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
     
     cyw43_arch_lwip_check();
     if (p->tot_len > 0) {
-        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_INFO, "TCP client", "recved %d err %d", p->tot_len, err); // Check num bytes received & error
+        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, "TCP client", "recved %d err %d", p->tot_len, err); // Check num bytes received & error
         for (struct pbuf *q = p; q != NULL; q = q->next) {
             DUMP_BYTES(q->payload, q->len);
         }
         // Receive the buffer
+        memset(state->buffer, 0x00, BUF_SIZE);
+        state->buffer_len = 0;
         const uint16_t buffer_left = BUF_SIZE - state->buffer_len;
         state->buffer_len += pbuf_copy_partial(p, state->buffer + state->buffer_len,
                                                p->tot_len > buffer_left ? buffer_left : p->tot_len, 0);
