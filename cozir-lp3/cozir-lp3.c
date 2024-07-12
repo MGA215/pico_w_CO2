@@ -93,8 +93,8 @@ static int32_t lp3_write(uint8_t addr, uint8_t* data, uint8_t len)
 {
     if (len < 1 || len > 4) return COZIR_LP3_ERROR_NREG_REG; // Check number of written bytes is 1 .. 4
     int32_t ret;
-    uint8_t command_buffer[len + 1]; // data length + command
-    memset(command_buffer, 0x00, len + 1); // Clear command buffer
+    uint8_t command_buffer[len + 2]; // data length + command
+    memset(command_buffer, 0x00, len + 2); // Clear command buffer
     command_buffer[0] = addr; // Add address to buffer
     for (int i = 0; i < len + 1; i++)
     {
