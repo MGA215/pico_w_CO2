@@ -16,4 +16,6 @@ target_sources(pico-common
   ${CMAKE_CURRENT_LIST_DIR}/structs.h
   ${CMAKE_CURRENT_LIST_DIR}/serialize.c
   ${CMAKE_CURRENT_LIST_DIR}/serialize.h
+  ${CMAKE_CURRENT_LIST_DIR}/debug.c
+  ${CMAKE_CURRENT_LIST_DIR}/debug.h
 )

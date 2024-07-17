@@ -60,7 +60,10 @@ static void wifi_loop(void);
 
  // Callback function for the wifi scan
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
-    if (result && !memcmp(result->ssid, WIFI_SSID, result->ssid_len)) wifi = true;
+    if (result && !strcmp(result->ssid, WIFI_SSID)) 
+    {
+        wifi = true;
+    }
     return 0;
 }
 
@@ -69,7 +72,7 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
     absolute_time_t scan_time = nil_time; // Scan time
     absolute_time_t wifi_timeout = make_timeout_time_ms(timeout_ms); // Wifi timeout time
     bool scan_in_progress = false;
-    print_ser_output(SEVERITY_INFO, "WiFi", "Starting WiFi scan");
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Starting WiFi scan");
 
     while(true) {
         if (absolute_time_diff_us(get_absolute_time(), scan_time) < 0) { // time to scan
@@ -77,20 +80,20 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
                 cyw43_wifi_scan_options_t scan_options = {0};
                 int err = cyw43_wifi_scan(&cyw43_state, &scan_options, NULL, scan_result); // Start scanning
                 if (err == 0) { // Scan initiated
-                    print_ser_output(SEVERITY_DEBUG, "WiFi", "Performing WiFi scan");
+                    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Performing WiFi scan");
                     scan_in_progress = true;
                 } else { // Scan failed to initialize
-                    print_ser_output(SEVERITY_ERROR, "WiFi", "Failed to start scan: %d\n", err);
+                    print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to start scan: %d\n", err);
                     scan_time = make_timeout_time_ms(10000); // wait 10s and scan again
                 }
             } else if (!cyw43_wifi_scan_active(&cyw43_state) && !wifi) { // Scan inactive and wifi not found
                 scan_time = make_timeout_time_ms(10000); // wait 10s and scan again
                 scan_in_progress = false; 
-                print_ser_output(SEVERITY_WARN, "WiFi", "WiFi network not found");
+                print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_NO_SOURCE, "WiFi network not found");
             }
             else if (wifi)
             {
-                print_ser_output(SEVERITY_DEBUG, "WiFi", "Specified WiFi network found, connecting...");
+                print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Specified WiFi network found, connecting...");
                 switch(auth_mode) // Ensure auth mode
                 {
                     case CYW43_AUTH_OPEN:
@@ -103,12 +106,12 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
                 int32_t ret;
                 if ((ret = cyw43_arch_wifi_connect_timeout_ms(ssid, password, auth_mode, 30000)) != 0) // Connect to wifi
                 {
-                    print_ser_output(SEVERITY_ERROR, "WiFi", "Failed to connect to WiFi: %i", ret);
+                    print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to connect to WiFi: %i", ret);
                     wifi = false; // Wifi disconnected
                 }
                 else
                 {
-                    print_ser_output(SEVERITY_INFO, "WiFi", "Connected to WiFi");
+                    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Connected to WiFi");
                     return SUCCESS;
                 }
 
@@ -126,15 +129,16 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
     soap_message1 = soap_1; // Shared SOAP message 1 buffer
     soap_message2 = soap_2; // Shared SOAP message 2 buffer
     if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
-        print_ser_output(SEVERITY_FATAL, "WiFi", "Failed to initialize WiFi on core 1");
+        print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to initialize WiFi on core 1");
         return;
     }
-    print_ser_output(SEVERITY_INFO, "WiFi", "Initialized WiFi on core 1");
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Initialized WiFi on core 1");
     cyw43_arch_enable_sta_mode(); // enable station mode
+
+    absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
 
     while (true) // Connection attempt
     {
-        absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
         
         if (!time_reached(wifi_wait_next_connect_time)) // If time to connect not reached
         {
@@ -145,10 +149,11 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
 
         if (wifi_connect(100000, WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))// Try connecting to the network
         {
-            print_ser_output(SEVERITY_ERROR, "WiFi", "Failed to connect to the network, next try in %d seconds", wifi_wait_next_connect_ms);
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to connect to the network, next try in %d seconds", wifi_wait_next_connect_ms);
             wifi_wait_next_connect_time = make_timeout_time_ms(wifi_wait_next_connect_ms); // Try again in wifi_wait_next_connect_ms
             continue;
         }
+        wifi_wait_next_connect_time = nil_time;
         tcp_client_init(); // Initialize TCP client
 
         send_data_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Send data after wifi_send_data_time_ms + initial offset
@@ -172,17 +177,17 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
 
 static void wifi_loop(void)
 {
-    if (cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA) != CYW43_LINK_JOIN) // Check wifi connection status
+    if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) != CYW43_LINK_UP) // Check wifi connection status
     {
-        print_ser_output(SEVERITY_ERROR, "WiFi", "Connection down");
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Connection down");
         wifi = false; // WiFi failed
         return; 
     }
     if (time_reached(send_data_time)) // If should send data
     {
-        print_ser_output(SEVERITY_INFO, "WiFi", "Send data start");
-        wifi_send_data();
+        print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Send data start");
         send_data_time = make_timeout_time_ms(soap_write_message_s * 1000); // Next message in soap_write_message_s
+        wifi_send_data();
     }
 }
 

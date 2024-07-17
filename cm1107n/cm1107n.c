@@ -22,8 +22,6 @@
 #define CMD_SW_VERSION  0x1E // Response length 10 bytes
 #define CMD_SER_NUM     0x1F // Response length 10 bytes
 
-#define DEBUG_SOURCE "CM1107N"
-
 /**
  * @brief returns error code according to the error register value
  * 
@@ -159,14 +157,14 @@ void cm1107n_get_value(sensor_t* cm1107n)
     {
         case MEAS_FINISHED:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas finished");
             cm_power(cm1107n, false); // Power off
             cm1107n->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas started");
             cm_power(cm1107n, true); // Power on
             cm1107n->wake_time = make_timeout_time_ms(1000); // Timeout in 1 s - power stabilization
             cm1107n->state = SUCCESS;
@@ -176,7 +174,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Trigger measurement");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Trigger measurement");
             ret = cm_write_command(CMD_READ_DATA); // Sent measurement trigger
             if (ret != 0) // On invalid write
             {
@@ -191,7 +189,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
         }
         case MEAS_READ_VALUE:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Read value");
             ret = cm_read(CMD_READ_DATA, tempBuffer, 3); // Read measurement
             if (ret != 0) // On invalid read
             {
@@ -212,7 +210,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                         cm1107n->co2 = NAN; // Set read value to NAN
                         return;
                     }
-                    print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Sensor preheating");
+                    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CM1107N, "Sensor preheating");
                     cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next state trigger another measurement
                     cm1107n->wake_time = make_timeout_time_ms(1);
                     return;
@@ -283,7 +281,7 @@ int32_t cm_write_config(sensor_config_t* config)
         read_config.abc_period != config->abc_period ||
         read_config.abc_target_value != config->abc_target_value)) // If configuration incorrect
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC calibration data");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CM1107N, "Config - Writing ABC calibration data");
         buf[0] = 100; // Wrong code accelerate value ??
         buf[1] = config->enable_abc ? 2 : 0; // ABC enabled
         buf[2] = config->abc_period; // ABC period

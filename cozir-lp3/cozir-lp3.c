@@ -37,8 +37,6 @@
 #define REG_ALTITUDE_PRESSURE       0x76
 #define REG_TH_CONTROL              0x8C
 
-#define DEBUG_SOURCE "CozIR-LP3"
-
 
 /**
  * @brief Reads data from the CozIR-LP3 sensor
@@ -123,7 +121,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
     {
         case MEAS_FINISHED:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas finished");
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
             cozir_lp3->state = SUCCESS;
@@ -132,7 +130,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_STARTED:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
             lp3_power(cozir_lp3, true);
             cozir_lp3->wake_time = make_timeout_time_ms(2000);
             cozir_lp3->meas_state = MEAS_READ_VALUE;
@@ -140,7 +138,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         }
         case MEAS_READ_VALUE:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read value");
             ret = lp3_read(REG_CO2, tempBuffer, 2);
             if (ret != 0)
             {
@@ -241,14 +239,14 @@ static int32_t lp3_write_config(sensor_config_t* config)
     
     if (config->filter_coeff != read_config.filter_coeff)
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing filter coefficient");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing filter coefficient");
         buf[0] = (uint8_t)config->filter_coeff;
         if ((ret = lp3_write(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
     }
 
     if (read_config.enable_pressure_comp != config->enable_pressure_comp || read_config.pressure != config->pressure)
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing pressure");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing pressure");
         if (config->enable_pressure_comp && read_config.pressure != config->pressure)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->pressure);
@@ -263,14 +261,14 @@ static int32_t lp3_write_config(sensor_config_t* config)
 
     if (read_config.enable_PWM_pin != config->enable_PWM_pin)
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing PWM pin");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing PWM pin");
         buf[0] = config->enable_PWM_pin ? 0b1 << 7 : 0;
         if ((ret = lp3_write(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
     }
 
     if (read_config.enable_abc != config->enable_abc)
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC enable");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC enable");
         buf[0] = config->enable_abc ? 0b10 : 0b00;
         if ((ret = lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     }
@@ -278,26 +276,26 @@ static int32_t lp3_write_config(sensor_config_t* config)
     {
         if (read_config.abc_init_period != config->abc_init_period)
         {
-            print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC initial period");
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC initial period");
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_init_period);
             if ((ret = lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.abc_period != config->abc_period)
         {
-            print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC standard period");
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC standard period");
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_period);
             if ((ret = lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
         }
         if (read_config.abc_target_value != config->abc_target_value)
         {
-            print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing ABC target value");
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC target value");
             *((uint16_t*)&buf[0]) = ntoh16(config->abc_target_value);
             if ((ret = lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
         }
     }
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high)
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing alarm treshold");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing alarm treshold");
         if (config->alarm_en)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->alarm_treshold_co2_high);

@@ -15,6 +15,7 @@
 #include "common/constants.h"
 #include "common/functions.h"
 #include "common/structs.h"
+#include "common/debug.h"
 
 #include "error_codes.h"
 

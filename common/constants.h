@@ -13,21 +13,6 @@
 
 #include "pico/stdlib.h"
 
-#ifndef DEBUG
-    /**DEBUG LEVELS
-     * 0 ... DEBUG messages disabled
-     * 1 ... display FATAL errors
-     * 2 ... display ERROR and higher
-     * 3 ... display Warn and higher
-     * 4 ... display info and higher
-     * 5 ... display debug and higher
-     * 6 ... display trace and higher
-     */
-    #define DEBUG 4
-    #define DEBUG_TIME 0
-    #define ENABLE_COLORED_DEBUG 1
-#endif
-
 #define CONNECTED_SENSORS 8
 
 #define I2C_BAUDRATE 40000
@@ -80,7 +65,7 @@
 static uint16_t display_interval = 33;
 
 // value representing the interval between sensor readings in ms
-static uint32_t sensor_read_interval_ms = 15000;
+static uint32_t sensor_read_interval_ms = 6000;
 
 // value representing the interval between attempts to connect to wifi in ms
 static uint32_t wifi_wait_next_connect_ms = 300000;
@@ -89,9 +74,9 @@ static uint32_t wifi_wait_next_connect_ms = 300000;
 static uint32_t wifi_wait_for_dns = 30000;
 
 // value representing the interval between SOAP messages in s
-static uint16_t soap_write_message_s = 15;
+static uint16_t soap_write_message_s = 6;
 
 // value representing the delay to add to the main value before the first SOAP message is written in s
-static uint16_t soap_write_message_initial_delay_s = 15;
+static uint16_t soap_write_message_initial_delay_s = 6;
 
 #endif

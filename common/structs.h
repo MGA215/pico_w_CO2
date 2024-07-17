@@ -29,16 +29,6 @@ typedef enum sensor_type
     CM1107N = 7
 } sensor_type_e;
 
-typedef enum debug_severity
-{
-    SEVERITY_TRACE = 6,
-    SEVERITY_DEBUG = 5,
-    SEVERITY_INFO = 4,
-    SEVERITY_WARN = 3,
-    SEVERITY_ERROR = 2,
-    SEVERITY_FATAL = 1
-} debug_severity_e;
-
 typedef enum meas_state_fsm
 {
     MEAS_FINISHED = 0,

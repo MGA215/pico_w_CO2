@@ -164,7 +164,7 @@ bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* d
     should_tcp_close = close_tcp; // If TCP should be closed after the end of communication
     if (!&state) // No state exists
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "TCP state not initialized");
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP state not initialized");
         return false;
     }
     switch (client_state) // On connection state
@@ -228,7 +228,7 @@ err_t tcp_client_init(void)
         err_t err = dns_gethostbyname(TCP_CLIENT_SERVER_IP_CLOUD, &state.remote_addr, tcp_client_ip_found, NULL); // Get cloud IP
         if (err && err != ERR_INPROGRESS)
         {
-            print_ser_output(SEVERITY_ERROR, "TCP DNS", "Failed to retrieve IP: %i", err);
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_DNS, "Failed to retrieve IP: %i", err);
             cyw43_arch_lwip_end();
             return err;
         }
@@ -247,19 +247,19 @@ void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callba
 {
     state.remote_addr = *ipaddr; // Assign IP address
     ip_found = true; // IP was found
-    print_ser_output(SEVERITY_INFO, "TCP DNS", "IP address found");
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_DNS, "IP address found");
     return;
 }
 
 static bool tcp_client_open(void* arg)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg; // Client state structure
-    print_ser_output(SEVERITY_DEBUG, "TCP client", "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), 
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), 
         IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT);
     state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr)); // Create PCB with IP address
     if (!state->tcp_pcb)
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "Failed to create PCB");
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to create PCB");
         return false;
     }
 
@@ -285,7 +285,7 @@ static bool tcp_client_open(void* arg)
 
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
-    print_ser_output(SEVERITY_DEBUG, "TCP client", "client poll");
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "client poll");
     return ERR_OK;
 }
 
@@ -296,7 +296,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
     
     cyw43_arch_lwip_check();
     if (p->tot_len > 0) {
-        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, "TCP client", "recved %d err %d", p->tot_len, err); // Check num bytes received & error
+        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "recved %d err %d", p->tot_len, err); // Check num bytes received & error
         for (struct pbuf *q = p; q != NULL; q = q->next) {
             DUMP_BYTES(q->payload, q->len);
         }
@@ -307,17 +307,16 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
         state->buffer_len += pbuf_copy_partial(p, state->buffer + state->buffer_len,
                                                p->tot_len > buffer_left ? buffer_left : p->tot_len, 0);
         tcp_recved(tpcb, p->tot_len); // Buffer received
-        print_ser_output(SEVERITY_TRACE, "TCP client", "Received:");
-        #if DEBUG >= 6
+        print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Received:");
+        if (debug >= 6)
             printf("%s\n", state->buffer);
-        #endif
 
     }
     busy_wait_ms(10);
     if (p->len == p->tot_len || p->ref <= 1) // Free if references < 1 and in last part of the pbuf
     {
         pbuf_free(p);
-        print_ser_output(SEVERITY_TRACE, "TCP client", "Freed pbuf");
+        print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Freed pbuf");
     }
     return ERR_OK;    
 }
@@ -325,7 +324,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
 static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    print_ser_output(SEVERITY_DEBUG, "TCP client", "Message sending finished, sent %u bytes", len);
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sending finished, sent %u bytes", len);
     data_sent = true; // Data sent
     if (should_tcp_close) tcp_client_result(arg, ERR_OK); // If TCP socket should close
     data_sent_len = len; // Copy data sent length
@@ -335,29 +334,28 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
 static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
-    print_ser_output(SEVERITY_TRACE, "TCP client", "Message\n");
-    #if DEBUG >= 6
-    printf("%s\n", data);
-    #endif
+    print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message:\n");
+    if (debug >= 6)
+        printf("%s\n", data);
     sleep_ms(10);
     if (data_len >= BUF_SIZE) // Check buffer size
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "Trying to send too much data");
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Trying to send too much data");
         return ERR_ARG;
     }
     err_t err = tcp_write(state->tcp_pcb, data, data_len, 0); // Prepare data to send
     if (err != ERR_OK)
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "Failed to write data to be sent: %i", err);
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to write data to be sent: %i", err);
         return err;
     }
     err = tcp_output(state->tcp_pcb); // Send data
     if (err != ERR_OK)
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "Failed to send data: %i", err);
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
         return err;
     }
-    print_ser_output(SEVERITY_INFO, "TCP client", "Message sent");
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sent");
     return ERR_OK;
 }
 
@@ -366,12 +364,12 @@ static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     if (err != ERR_OK) // Check for errors
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "TCP connection failed");
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP connection failed");
         return tcp_client_result(arg, err); // Close connection
     }
     client_state = CONNECTED; // state connected
     state->connected = true; 
-    print_ser_output(SEVERITY_INFO, "TCP client", "TCP connection established");
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP connection established");
     return ERR_OK;
 }
 
@@ -380,11 +378,11 @@ static err_t tcp_client_result(void* arg, int status)
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     if (status == ERR_CLSD) // Error server closed
     {
-        print_ser_output(SEVERITY_WARN, "TCP client", "Server closed connection");
+        print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Server closed connection");
     }
     else if (status != ERR_OK) // Other error
     {
-        print_ser_output(SEVERITY_ERROR, "TCP client", "ERROR: %i", status);
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "ERROR: %i", status);
     }
     return tcp_client_close(arg); // Close socket
 }
@@ -397,10 +395,10 @@ static void tcp_client_err(void* arg, err_t err)
     error_flag = true; // Error has occured
     if (err != ERR_ABRT) // Connection not aborted, still fatal error
     {
-        print_ser_output(SEVERITY_FATAL, "TCP client", "TCP error: %i", err);
+        print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP error: %i", err);
         tcp_client_result(arg, err); // Close connection
     }
-    else print_ser_output(SEVERITY_FATAL, "TCP client", "Connection aborted");
+    else print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Connection aborted");
 }
 
 static err_t tcp_client_close(void* arg)
@@ -418,7 +416,7 @@ static err_t tcp_client_close(void* arg)
         err = tcp_close(state->tcp_pcb); // Close socket
         if (err != ERR_OK) // Check for errors
         {
-            print_ser_output(SEVERITY_ERROR, "TCP client", "TCP connection close failed: %i, aborting connection", err);
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP connection close failed: %i, aborting connection", err);
             tcp_abort(state->tcp_pcb); // Abort connection
             err = ERR_ABRT;
         }

@@ -62,8 +62,6 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
-#define DEBUG_SOURCE "EE895"
-
 /**
  * @brief Computes Modbus CRC for specified buffer
  * 
@@ -224,14 +222,14 @@ void ee895_get_value(sensor_t* ee895)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas finished");
             ee_power(ee895, false); // Power off
             ee895->wake_time = at_the_end_of_time; // Disable timer
             return;
         }
         case MEAS_STARTED: // Measurement started
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
             ee_power(ee895, true); // Power off
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
             if (ee895->config->single_meas_mode) 
@@ -245,7 +243,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read status for trigger");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Read status for trigger");
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
             {
@@ -259,7 +257,7 @@ void ee895_get_value(sensor_t* ee895)
             if (tempBuffer[1] & 0x02) // On trigger ready
             {
                 ret = ee_write(REG_MEAS_TRIGGER, 1); // Send trigger
-                print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Sending trigger");
+                print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Sending trigger");
                 if (ret != 0) // On invalid write
                 {
                     ee895->co2 = NAN; // Set values to NaN
@@ -288,7 +286,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read status");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Read status");
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Reading status register
             if (ret != 0) // On invalid read
             {
@@ -318,7 +316,7 @@ void ee895_get_value(sensor_t* ee895)
         }
         case MEAS_READ_VALUE: // Reading values
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Read value");
             ret = ee_read(REG_T_C_FLOAT, 2, tempBuffer); // Read temperature
             if (ret != 0) // On invalid read
             {
@@ -442,21 +440,21 @@ static int32_t ee_write_config(sensor_config_t* config)
     if ((ret = ee895_read_config(&read_config)) != 0) return ret; // Read config
 
     if (read_config.meas_period != config->meas_period * 10) { // If measurement period changed
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing measurement period");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing measurement period");
         if ((ret = ee895_write_reg(REG_MEAS_INTERVAL, config->meas_period * 10)) != 0) return ret;
     }
     if (read_config.filter_coeff != config->filter_coeff) { // If filter coeff changed
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing filter coefficient");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing filter coefficient");
         if ((ret = ee895_write_reg(REG_MEAS_FILTER, config->filter_coeff)) != 0) return ret;
     }
     if (read_config.co2_offset != config->co2_offset) // If offset changed
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing CO2 offset");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing CO2 offset");
         if ((ret = ee895_write_reg(REG_MEAS_OFFSET, (uint16_t)config->co2_offset)) != 0) return ret;
     }
     if (read_config.single_meas_mode != config->single_meas_mode) // If measurement mode changed
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing measurement mode");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing measurement mode");
         if ((ret = ee895_write_reg(REG_MEAS_MODE, config->single_meas_mode)) != 0) return ret;
     }
     return SUCCESS;

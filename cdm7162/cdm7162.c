@@ -34,9 +34,6 @@
 #define CO2_MIN_RANGE       0
 #define CO2_MAX_RANGE       10000
 
-#define DEBUG_SOURCE "CDM7162"
-
-
 /**
  * @brief Reads data from cdm7162 sensor
  * 
@@ -87,6 +84,7 @@ static int32_t cdm_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
     
     busy_wait_ms(2);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read number of bytes from the address
+    sleep_ms(100);
     return SUCCESS;
 }
 
@@ -98,6 +96,7 @@ static int32_t cdm_write(uint8_t addr, uint8_t value)
     busy_wait_ms(2);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, &buf[0], 1, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Confirm saved value
     if (buf[0] != value) return CDM7162_ERROR_WRITE_RESP; // Incorrect value returned
+    sleep_ms(100);
     return SUCCESS;
 }
 
@@ -116,14 +115,14 @@ void cdm7162_get_value(sensor_t* cdm7162)
     {
         case MEAS_FINISHED: // Measurement finished
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas finished");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas finished");
             cdm_power(cdm7162, false); // Power off
             cdm7162->wake_time = at_the_end_of_time; // Disable sensor timer
             return;
         }
         case MEAS_STARTED: // Measurement started
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Meas started");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas started");
             cdm_power(cdm7162, true); // Power on
             cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
             cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
@@ -133,7 +132,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_STATUS: // Reading status
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read status");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Read status");
             ret = cdm_read(REG_STATUS, &buf[0], 1); // Read status
             if (ret != 0) // On invalid read
             {
@@ -159,7 +158,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
         }
         case MEAS_READ_VALUE: // Reading measured value
         {
-            print_ser_output(SEVERITY_TRACE, DEBUG_SOURCE, "Read value");
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Read value");
             ret = cdm_read(REG_CO2_L, buf, 2); // Read measured CO2
             if (ret != 0) // On invalid read
             {
@@ -260,7 +259,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
     busy_wait_ms(10);
     if (buf != 0x06) // If not in measurement mode
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing OP mode");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing OP mode");
         if ((ret = cdm_write(REG_OP_MODE, 0x06)) != 0) // Set measurement mode
             return ret; 
         busy_wait_ms(100);
@@ -281,7 +280,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
         read_config.enable_abc == config->enable_abc &&
         read_config.enable_alternate_abc == config->enable_alternate_abc))
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing function flags");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing function flags");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -302,7 +301,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
     if (read_config.pressure != config->pressure) // Check pressure
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing pressure");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing pressure");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -313,7 +312,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
     }
     if (read_config.altitude != config->altitude) // Check altitude
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing altitude");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing altitude");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -325,7 +324,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high) // Check high alarm
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing alarm high treshold");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing alarm high treshold");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -336,7 +335,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
     }
     if (read_config.alarm_treshold_co2_low != config->alarm_treshold_co2_low) // Check low alarm
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing alarm low treshold");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing alarm low treshold");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -348,7 +347,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
     if (read_config.abc_target_value != config->abc_target_value) // Check target LTA
     {
-        print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing LTA target value");
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing LTA target value");
         if (!power_down)
         {
             if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
@@ -374,7 +373,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
         }
         if (val < 64)
         {
-            print_ser_output(SEVERITY_WARN, DEBUG_SOURCE, "Config - Writing LTA period");
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Config - Writing LTA period");
             if (!power_down)
             {
                 if ((ret = cdm_write(REG_OP_MODE, 0x00)) != 0) return ret;
