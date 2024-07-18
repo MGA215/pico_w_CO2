@@ -31,15 +31,7 @@
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
-#include "ee895/ee895.h"
-#include "cdm7162/cdm7162.h"
-#include "sunrise/sunrise.h"
-#include "sunlight/sunlight.h"
-#include "scd30/scd30.h"
-#include "scd41/scd41.h"
-#include "cozir-lp3/cozir-lp3.h"
-#include "cm1107n/cm1107n.h"
-#include "mux/mux.h"
+#include "sensors/sensors.h"
 
 /**
  * @brief Initializes pins, buses, modules; runs only once

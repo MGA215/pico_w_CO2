@@ -642,7 +642,6 @@ void sensor_timer_vector_update(void)
 void read_sensors()
 {
     int32_t ret = -99; // Some random error value
-    bool i2c_reset = true;
 
     for (uint8_t i = 0; i < 8; i++) // Iterate sensor
     {

@@ -73,6 +73,7 @@ add_subdirectory(cm1107n)
 add_subdirectory(mux)
 add_subdirectory(soap)
 add_subdirectory(wifi)
+add_subdirectory(sensors)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
@@ -95,6 +96,7 @@ target_link_libraries(pico_w_CO2
         pico-soap
         pico_multicore
         pico-wifi
+        pico-sensors
         )
 
 pico_add_extra_outputs(pico_w_CO2)
