@@ -11,6 +11,7 @@
 
 #include "main.h"
 #include "common/debug.h"
+#include "malloc.h"
 
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
@@ -73,6 +74,8 @@ uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0}; // MUTEX
 static soap_data_t soap_message1 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message1 buffer & mutex
 static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message2 buffer & mutex
 
+absolute_time_t memory_timer;
+
 
 /**
  * @brief Sets RTC's datetime, modify datetime inside
@@ -80,7 +83,7 @@ static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}}; // Common
  */
 void set_datetime(void);
 
-
+void getFreeHeap(void);
 
 int main()
 {
@@ -141,6 +144,8 @@ int init(void)
     sensor_timer_vector = 0; // No sensor individual timer is running
     sensor_measurement_vector = 0; // No sensor is measuring
 
+    memory_timer = make_timeout_time_ms(1000);
+
     update_display_buffer = true; // Redraw display
     sleep_ms(1000); // Init wait
     return SUCCESS;
@@ -154,6 +159,7 @@ int loop(void)
     if (time_reached(process_update_time)) update(); // Update display & buttons
     if (sensor_timer_vector) read_sensors(); // Read sensors if time of any sensor timer reached
     if (time_reached(soap_create_message_time)) create_soap_messages(); // Create SOAP messages
+    if (time_reached(memory_timer)) getFreeHeap();
     return SUCCESS;
 }
 
@@ -403,6 +409,11 @@ void assign_soap_channels(void)
 
 void create_soap_messages(void)
 {
+    if (sensor_measurement_vector)
+    {
+        soap_create_message_time = make_timeout_time_ms(100);
+        return;
+    }
     memset(soap_buffer1, 0x00, MAX_SOAP_SIZE); // Clear old message
     if (!soap_build("Tester_01", 24069001, datetime_str, channels1, channels1_len, soap_buffer1, MAX_SOAP_SIZE)) // Create SOAP message 1
     {
@@ -427,6 +438,7 @@ void create_soap_messages(void)
     mutex_exit(&soap_message2.data_mutex);
 
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
+    return;
 }
 
 void init_sensors(void)
@@ -445,10 +457,11 @@ void init_sensors(void)
     {
         if (active_sensors & (0b1 << i))
         {
-            reset_i2c();
+            //reset_i2c();
             if ((ret = mux_enable_sensor(i)) != 0) // Mux to sensor
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", i, ret); // On invalid MUX
+                reset_i2c();
                 gpio_put(MUX_RST, 0); // Reset MUX
                 sleep_us(1);
                 gpio_put(MUX_RST, 1);
@@ -521,9 +534,9 @@ void init_sensors(void)
                     break;
                 }
             }
-            if (sensors[i].state == ERROR_UNKNOWN_SENSOR) continue;
+            if (sensors[i].state == ERROR_UNKNOWN_SENSOR) {reset_i2c(); continue;}
             if (!ret) print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", i);
-            if (ret) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i failed: %i", i, ret);
+            if (ret) {print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i failed: %i", i, ret); reset_i2c();}
             sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Change sensor state
         }
     }
@@ -537,15 +550,29 @@ void reset_i2c(void)
 
     gpio_set_function(I2C_SCL, GPIO_FUNC_SIO); // Change SCL from I2C pin to SIO
     gpio_set_dir(I2C_SCL, GPIO_OUT); // Set to output direction
-    sleep_us(10);
-    gpio_put(I2C_SCL, 0); // Pull down
+    gpio_set_function(I2C_SDA, GPIO_FUNC_SIO); // Change SDA from I2C pin to SIO
+    gpio_set_dir(I2C_SDA, GPIO_IN); // Set to input direction
     sleep_us(100);
-    gpio_put(I2C_SCL, 1); // Pull up
-    sleep_us(10);
+    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Resetting I2C...");
+    int i = 0;
+    for (i = 0; i < 10; i++)
+    {
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sending I2C reset pulse %d...", i);
+        gpio_put(I2C_SCL, 0); // Pull down
+        sleep_ms(1);
+        gpio_put(I2C_SCL, 1); // Pull up
+        sleep_ms(50);
+        if (gpio_get(I2C_SDA)) break; // SDA set high
+    }
+    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reset result: %s", gpio_get(I2C_SDA) ? "SUCCESS" : "FAILURE");
+    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C); // Reset SDA to I2C pin
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C); // Reset SCL to I2C pin
+    gpio_pull_up(I2C_SDA); // Pull I2C pins up
+    gpio_pull_up(I2C_SCL);
     sleep_us(100);
 
     i2c_init(I2C_SENSOR, I2C_BAUDRATE); // Initialize I2C
+    sleep_us(100);
 }
 
 void init_sensor_i2c(void)
@@ -625,6 +652,7 @@ void read_sensors()
             for (uint8_t j = 0; j < 2; j++)
             {
                 if (read_single_sensor(i)) break; // If reading successful break
+                sleep_ms(10);
             }
         }
         if (sensors[i].meas_state == MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << i); // If measurement completed clear sensor measurement bit
@@ -646,7 +674,7 @@ bool read_single_sensor(uint8_t sensor_index)
     int32_t ret;
     bool repeat_on_error = true;
     
-    reset_i2c();
+    //reset_i2c();
     if ((ret = mux_enable_sensor(sensor_index)) != 0) // Mux to sensor
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", sensor_index, ret);
@@ -660,9 +688,8 @@ bool read_single_sensor(uint8_t sensor_index)
         sensors[sensor_index].state != ERROR_SENSOR_NOT_INITIALIZED && 
         sensors[sensor_index].state != ERROR_NO_MEAS)
     {
-        reset_i2c(); // Reset I2C
+        //reset_i2c(); // Reset I2C
         common_init_struct(&sensors[sensor_index], sensor_index); // Init sensor struct
-        sensors[sensor_index].meas_state = MEAS_STARTED;
         switch (configuration_map[sensor_index]->sensor_type) // Init on sensor type
         {
             case EE895:
@@ -724,6 +751,7 @@ bool read_single_sensor(uint8_t sensor_index)
         if (!ret) // Init successful
         {
             print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", sensor_index);
+            sensors[sensor_index].meas_state = MEAS_STARTED;
             sensors[sensor_index].state = ERROR_NO_MEAS;
         }
         else // Init not successful
@@ -732,6 +760,7 @@ bool read_single_sensor(uint8_t sensor_index)
             reset_i2c(); // Reset I2C
             mux_reset(); // Reset MUX
             sleep_ms(10);
+            common_init_struct(&sensors[sensor_index], sensor_index);
             sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED;
             return false;
         }
@@ -739,7 +768,7 @@ bool read_single_sensor(uint8_t sensor_index)
     if (sensors[sensor_index].state == SUCCESS || 
         sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
     {
-        switch (configuration_map[sensor_index]->sensor_type) // Get value based on sensor type
+        switch (sensors[sensor_index].sensor_type) // Get value based on sensor type
         {
             case EE895:
             {
@@ -885,3 +914,15 @@ void write_display_sensor(uint8_t* sensor_name, int state,
     }
 }
 
+uint32_t getTotalHeap(void) {
+   extern char __StackLimit, __bss_end__;
+   
+   return &__StackLimit  - &__bss_end__;
+}
+
+void getFreeHeap(void) {
+    struct mallinfo m = mallinfo();
+    print_ser_output(SEVERITY_WARN, SOURCE_MAIN_LOOP, SOURCE_RAM, "Available memory: %d bytes", getTotalHeap() - m.uordblks);
+    memory_timer = make_timeout_time_ms(1000);
+    return;
+}

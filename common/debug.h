@@ -25,7 +25,7 @@
  * 5 ... display debug and higher
  * 6 ... display trace and higher
  */
-static uint8_t debug = 4;
+static uint8_t debug = 3;
 
 typedef enum debug_severity
 {
@@ -48,6 +48,7 @@ typedef enum debug_source
     SOURCE_DISPLAY = 6,
     SOURCE_RTC = 7,
     SOURCE_GFX = 8,
+    SOURCE_RAM = 9,
     SOURCE_EE895 = 10,
     SOURCE_CDM7162 = 11,
     SOURCE_SUNRISE = 12,
@@ -61,6 +62,11 @@ typedef enum debug_source
     SOURCE_TCP_SERVER = 102,
     SOURCE_TCP_DNS = 103
 } debug_source_e;
+
+#define DEBUG_CORE_0 true
+#define DEBUG_CORE_1 true
+#define DEBUG_WIFI true
+#define DEBUG_TCP_CLIENT false
 
 /**
  * @brief Prints a debug message if corresponding DEBUG severity is enabled in constants.h

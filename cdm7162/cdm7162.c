@@ -84,7 +84,6 @@ static int32_t cdm_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
     
     busy_wait_ms(2);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read number of bytes from the address
-    sleep_ms(100);
     return SUCCESS;
 }
 

@@ -230,7 +230,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
-            ee_power(ee895, true); // Power off
+            ee_power(ee895, true); // Power on
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
             if (ee895->config->single_meas_mode) 
             {
@@ -340,7 +340,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             ee895->temperature = val; // Assign value
 
-            ret = ee_read(REG_CO2_RAW_FLOAT, 2, tempBuffer); // Read co2
+            ret = ee_read(REG_CO2_AVG_FLOAT, 2, tempBuffer); // Read co2
             if (ret != 0) // On invalid read
             {
                 ee895->co2 = NAN; // Set values to NaN

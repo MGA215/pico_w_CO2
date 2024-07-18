@@ -201,7 +201,7 @@ static inline void wifi_send_data(void)
     {
         tight_loop_contents();
     }
-    free(message); // Dekete message
+    free(message); // Delete message
 }
 
 

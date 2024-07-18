@@ -240,7 +240,7 @@ void scd41_get_value(sensor_t* scd41)
             else
             {
                 scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
-                scd41->wake_time = make_timeout_time_ms(5000); // Wait 5 seconds
+                scd41->wake_time = make_timeout_time_ms(4000); // Wait 5 seconds
             }
             return;
         }
@@ -258,7 +258,7 @@ void scd41_get_value(sensor_t* scd41)
                 return;
             }
             scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
-            scd41->wake_time = make_timeout_time_ms(5000); // Wait 5 seconds
+            scd41->wake_time = make_timeout_time_ms(4000); // Wait 5 seconds
             return;
         }
         case MEAS_READ_STATUS: // Reading status
