@@ -94,25 +94,12 @@ void update_RTC();
  * 
  */
 void update();
-//bool update(repeating_timer_t* rt);
-
-/**
- * @brief Initializes sensors
- * 
- */
-void init_sensors(void);
 
 /**
  * @brief Prepares data to be displayed, writes data to the diaplay framebuffer
  * 
  */
 void write_display(void);
-
-/**
- * @brief  Reads data from sensors
- * 
- */
-void read_sensors();
 
 /**
  * @brief Displays information from sensor
@@ -133,39 +120,6 @@ void write_display_sensor(uint8_t* sensor_name, int state,
         bool temp, float temp_value, 
         bool pressure, float pressure_value,
         bool humidity, float humidity_value);
-
-/**
- * @brief Updates vector of timers if timer reached timeout
- * 
- */
-void sensor_timer_vector_update(void);
-
-/**
- * @brief FUnction to start reading sensor measurements
- * 
- */
-void read_sensors_start();
-
-/**
- * @brief Set the power mode for each sensor
- * 
- */
-void set_power_mode(void);
-
-/**
- * @brief Resets the I2C bus
- * 
- */
-void reset_i2c(void);
-
-/**
- * @brief 
- * 
- * @param sensor_index 
- * @return true if sensor was successfully read or fatal error has been encountered
- * @return false if sensor reading failed and should be tried again
- */
-bool read_single_sensor(uint8_t sensor_index);
 
 /**
  * @brief Creates a sensor name string according to the sensor type

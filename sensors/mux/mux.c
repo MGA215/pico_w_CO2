@@ -39,6 +39,7 @@ void mux_init(void)
     gpio_set_drive_strength(MUX_RST, GPIO_DRIVE_STRENGTH_12MA);
     gpio_set_dir(MUX_RST, GPIO_OUT);
     gpio_put(MUX_RST, 1);
+    sleep_ms(10);
     return;
 }
 

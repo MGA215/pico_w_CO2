@@ -61,23 +61,15 @@ set(PICO_DEOPTIMIZED_DEBUG 1 CACHE BOOL "Deoptimized debug")
 
 add_subdirectory(pico-ds3231/lib)
 add_subdirectory(gfx_pack)
-add_subdirectory(ee895)
-add_subdirectory(cdm7162)
-add_subdirectory(common)
-add_subdirectory(sunrise)
-add_subdirectory(sunlight)
-add_subdirectory(scd30)
-add_subdirectory(scd41)
-add_subdirectory(cozir-lp3)
-add_subdirectory(cm1107n)
-add_subdirectory(mux)
 add_subdirectory(soap)
 add_subdirectory(wifi)
 add_subdirectory(sensors)
+add_subdirectory(common)
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/common_include.h)
+target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 

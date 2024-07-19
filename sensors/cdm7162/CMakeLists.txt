@@ -14,6 +14,6 @@ target_sources(pico-cdm7162
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/cdm7162.c
   ${CMAKE_CURRENT_LIST_DIR}/cdm7162.h
-  ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
-  ${CMAKE_CURRENT_LIST_DIR}/../common/functions.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../error_codes.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../common/functions.h
 )

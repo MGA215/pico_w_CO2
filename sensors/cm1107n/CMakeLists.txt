@@ -14,6 +14,6 @@ target_sources(pico-cm1107n
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/cm1107n.c
   ${CMAKE_CURRENT_LIST_DIR}/cm1107n.h
-  ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
-  ${CMAKE_CURRENT_LIST_DIR}/../common/functions.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../error_codes.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../common/functions.h
 )

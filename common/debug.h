@@ -25,7 +25,7 @@
  * 5 ... display debug and higher
  * 6 ... display trace and higher
  */
-static uint8_t debug = 3;
+static uint8_t debug = 4;
 
 typedef enum debug_severity
 {

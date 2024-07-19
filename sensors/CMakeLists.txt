@@ -6,7 +6,6 @@ target_include_directories(pico-sensors
 
 add_subdirectory(ee895)
 add_subdirectory(cdm7162)
-add_subdirectory(common)
 add_subdirectory(sunrise)
 add_subdirectory(sunlight)
 add_subdirectory(scd30)

@@ -19,9 +19,6 @@ struct ds3231_rtc rtc;
 // string holding the datetime value
 uint8_t datetime_str[30] = {0};
 
-// array of sensors
-sensor_t sensors[8];
-
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
 
@@ -48,15 +45,6 @@ absolute_time_t sensor_start_measurement_time;
 
 // Time value to check if SOAP message should be created
 absolute_time_t soap_create_message_time;
-
-// Vector of timers that have reached time; on reached time bit goes high
-uint8_t sensor_timer_vector; 
-
-// Vector of measurements, bit is high if measurement running
-uint8_t sensor_measurement_vector; 
-
-// Vector of active sensors
-uint8_t active_sensors = 0b11111111;
 
 // Number of total SOAP channels
 uint8_t soap_channels = 16;
@@ -102,10 +90,6 @@ int main()
             return ret;
         }
     }
-    while (true)
-    {
-        tight_loop_contents();
-    }
     return SUCCESS;
 }
 
@@ -124,14 +108,13 @@ int init(void)
     if (!mutex_is_initialized(&soap_message2.data_mutex))
         mutex_init(&soap_message2.data_mutex);
 
-    multicore_launch_core1(core1_main); // Launch second core
+    //multicore_launch_core1(core1_main); // Launch second core
+
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
 
     gfx_pack_init(); // initialize display
-    init_sensor_i2c(); // Initialize I2C for sensor communication
-    mux_init(); // Initialize multiplexer
 
-    init_sensors(); // initialize sensors
+    sensors_init_all(configuration_map, 8); // initialize sensors
 
     assign_soap_channels(); // Assign SOAP channels
     soap_init(sensors, channels1, channels1_len); // Initialize SOAP channels 1
@@ -140,9 +123,6 @@ int init(void)
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
     sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set measurement interval
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Set SOAP write message initial interval
-
-    sensor_timer_vector = 0; // No sensor individual timer is running
-    sensor_measurement_vector = 0; // No sensor is measuring
 
     memory_timer = make_timeout_time_ms(1000);
 
@@ -153,13 +133,15 @@ int init(void)
 
 int loop(void)
 {
-    sensor_timer_vector_update(); // Update timer vector
-    
-    if (time_reached(sensor_start_measurement_time)) read_sensors_start(); // Start measurement
+    if (time_reached(sensor_start_measurement_time)) // Should new measurement be started
+    {
+        if (sensors_start_measurement()) sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Start measurement
+        else sensor_start_measurement_time = make_timeout_time_ms(100);
+    }
     if (time_reached(process_update_time)) update(); // Update display & buttons
-    if (sensor_timer_vector) read_sensors(); // Read sensors if time of any sensor timer reached
+    if (!sensors_is_measurement_finished()) sensors_read_all(); // Read sensors if time of any sensor timer reached
     if (time_reached(soap_create_message_time)) create_soap_messages(); // Create SOAP messages
-    if (time_reached(memory_timer)) getFreeHeap();
+    if (time_reached(memory_timer)) getFreeHeap(); // Check free heap
     return SUCCESS;
 }
 
@@ -409,7 +391,7 @@ void assign_soap_channels(void)
 
 void create_soap_messages(void)
 {
-    if (sensor_measurement_vector)
+    if (sensors_is_measurement_finished())
     {
         soap_create_message_time = make_timeout_time_ms(100);
         return;
@@ -439,407 +421,6 @@ void create_soap_messages(void)
 
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
     return;
-}
-
-void init_sensors(void)
-{
-    int32_t ret;
-
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init structure %i", i);
-        common_init_struct(&sensors[i], i); // Initialize sensor structures
-        sensors[i].sensor_type = configuration_map[i] != NULL ? configuration_map[i]->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
-    }
-    uint8_t sensor_indices[8] = {0};
-
-    for (int i = 0; i < 8; i++)
-    {
-        if (active_sensors & (0b1 << i))
-        {
-            //reset_i2c();
-            if ((ret = mux_enable_sensor(i)) != 0) // Mux to sensor
-            {
-                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", i, ret); // On invalid MUX
-                reset_i2c();
-                gpio_put(MUX_RST, 0); // Reset MUX
-                sleep_us(1);
-                gpio_put(MUX_RST, 1);
-                sleep_us(10);
-                continue;
-            }
-            switch (configuration_map[i]->sensor_type) // For sensor type
-            {
-                case EE895:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "Init sensor %i...", i);
-                    ret = ee895_init(&(sensors[i]), configuration_map[i]); // Initialize EE895 sensor
-                    sensors[i].sensor_number = sensor_indices[EE895]++; // Set sensor type index
-                    break;
-                }
-                case CDM7162:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "Init sensor %i...", i);
-                    ret = cdm7162_init(&(sensors[i]), configuration_map[i]); // Initialize CDM7162 sensor
-                    sensors[i].sensor_number = sensor_indices[CDM7162]++; // Set sensor type index
-                    break;
-                }
-                case SUNRISE:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNRISE, "Init sensor %i...", i);
-                    ret = sunrise_init(&(sensors[i]), configuration_map[i]); // Initialize SUNRISE sensor
-                    sensors[i].sensor_number = sensor_indices[SUNRISE]++; // Set sensor type index
-                    break;
-                }
-                case SUNLIGHT:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Init sensor %i...", i);
-                    ret = sunlight_init(&(sensors[i]), configuration_map[i]); // Initialize SUNLIGHT sensor
-                    sensors[i].sensor_number = sensor_indices[SUNLIGHT]++; // Set sensor type index
-                    break;
-                }
-                case SCD30:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD30, "Init sensor %i...", i);
-                    ret = scd30_init(&(sensors[i]), configuration_map[i]); // Initialize SCD30 sensor
-                    sensors[i].sensor_number = sensor_indices[SCD30]++; // Set sensor type index
-                    break;
-                }
-                case SCD41:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD41, "Init sensor %i...", i);
-                    ret = scd41_init(&(sensors[i]), configuration_map[i]); // Initialize SCD41 sensor
-                    sensors[i].sensor_number = sensor_indices[SCD41]++; // Set sensor type index
-                    break;
-                }
-                case COZIR_LP3:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Init sensor %i...", i);
-                    ret = cozir_lp3_init(&(sensors[i]), configuration_map[i]); // Initialize CozIR-LP3 sensor
-                    sensors[i].sensor_number = sensor_indices[COZIR_LP3]++; // Set sensor type index
-                    break;
-                }
-                case CM1107N:
-                {
-                    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_CM1107N, "Init sensor %i...", i);
-                    ret = cm1107n_init(&(sensors[i]), configuration_map[i]); // Initialize CM1107N sensor
-                    sensors[i].sensor_number = sensor_indices[CM1107N]++; // Set sensor type index
-                    break;
-                }
-                
-                default:
-                {
-                    print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Unknown sensor %i, init abort", i); // No type match - unknown sensor
-                    sensors[i].state = ERROR_UNKNOWN_SENSOR;
-                    break;
-                }
-            }
-            if (sensors[i].state == ERROR_UNKNOWN_SENSOR) {reset_i2c(); continue;}
-            if (!ret) print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", i);
-            if (ret) {print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i failed: %i", i, ret); reset_i2c();}
-            sensors[i].state = ret != 0 ? ERROR_SENSOR_INIT_FAILED : ERROR_NO_MEAS; // Change sensor state
-        }
-    }
-
-    set_power_mode(); // Set power control mode
-}
-
-void reset_i2c(void)
-{
-    i2c_deinit(I2C_SENSOR); // Deinit I2C for sensors
-
-    gpio_set_function(I2C_SCL, GPIO_FUNC_SIO); // Change SCL from I2C pin to SIO
-    gpio_set_dir(I2C_SCL, GPIO_OUT); // Set to output direction
-    gpio_set_function(I2C_SDA, GPIO_FUNC_SIO); // Change SDA from I2C pin to SIO
-    gpio_set_dir(I2C_SDA, GPIO_IN); // Set to input direction
-    sleep_us(100);
-    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Resetting I2C...");
-    int i = 0;
-    for (i = 0; i < 10; i++)
-    {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sending I2C reset pulse %d...", i);
-        gpio_put(I2C_SCL, 0); // Pull down
-        sleep_ms(1);
-        gpio_put(I2C_SCL, 1); // Pull up
-        sleep_ms(50);
-        if (gpio_get(I2C_SDA)) break; // SDA set high
-    }
-    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reset result: %s", gpio_get(I2C_SDA) ? "SUCCESS" : "FAILURE");
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C); // Reset SDA to I2C pin
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C); // Reset SCL to I2C pin
-    gpio_pull_up(I2C_SDA); // Pull I2C pins up
-    gpio_pull_up(I2C_SCL);
-    sleep_us(100);
-
-    i2c_init(I2C_SENSOR, I2C_BAUDRATE); // Initialize I2C
-    sleep_us(100);
-}
-
-void init_sensor_i2c(void)
-{
-    gpio_init(I2C_SDA); // Initialize data pin
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-
-    gpio_init(I2C_SCL); // Initialize clock pin
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SCL);
-
-    i2c_baud = i2c_init(I2C_SENSOR, I2C_BAUDRATE); // Initialize I2C
-}
-
-void set_power_mode(void)
-{
-    for (int i = 0; i < 8; i++) // For each sensor
-    {
-        if (sensors[i].config == NULL) continue;
-        sensors[i].config->power_global_control = global_power; // Set sensor power mode to global power control
-    }
-}
-
-void set_power(bool on)
-{
-    if (global_power)
-    {
-        // Set power [on]
-    }
-}
-
-void read_sensors_start()
-{
-    if (!sensor_measurement_vector) // Measurement initialization if no sensor is measuring
-    {
-        print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Measurement start");
-        for (int i = 0; i < 8; i++)
-        {
-            if (sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue; // If not initialized sensor (aka disabled) continue
-            sensors[i].meas_state = MEAS_STARTED; // Start measurement
-        }
-        
-        sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set another mesurement start in sensor_read_interval_ms time
-        sensor_timer_vector |= ~(0b0); // Set timer vector so all sensors will start measurement
-        sensor_measurement_vector |= ~(0b0); // Set measurement vector to all sensors measuring
-
-        set_power(true);
-    }
-    else 
-    {
-        sensor_start_measurement_time = make_timeout_time_ms(100); // if cannot start measurement - check after 100 ms
-    }
-}
-
-void sensor_timer_vector_update(void)
-{
-    for (int i = 0; i < 8; i++)
-    {
-        if (time_reached(sensors[i].wake_time)) // If sensor timer reached
-        {
-            sensor_timer_vector |= (0b1 << i); // Set bit for timer reached
-        }
-    }
-}
-
-void read_sensors()
-{
-    int32_t ret = -99; // Some random error value
-
-    for (uint8_t i = 0; i < 8; i++) // Iterate sensor
-    {
-        if ((sensor_timer_vector & (0b1 << i)) && (active_sensors & (0b1 << i))) // If sensor should react to a timer reached
-        {
-            sensor_timer_vector &= ~(0b1 << i); // Clear timer reached bit
-            for (uint8_t j = 0; j < 2; j++)
-            {
-                if (read_single_sensor(i)) break; // If reading successful break
-                sleep_ms(10);
-            }
-        }
-        if (sensors[i].meas_state == MEAS_FINISHED) sensor_measurement_vector &= ~(0b1 << i); // If measurement completed clear sensor measurement bit
-    }
-
-    sensor_measurement_vector &= active_sensors; // All other measurements finished
-    sensor_timer_vector &= active_sensors; // All other timers are not reached
-
-    if (!sensor_measurement_vector) // If all measurements finished - turn off power globally if possible
-    {
-        set_power(false);
-    }
-    update_display_buffer = true; // Update display
-    return;
-}
-
-bool read_single_sensor(uint8_t sensor_index)
-{
-    int32_t ret;
-    bool repeat_on_error = true;
-    
-    //reset_i2c();
-    if ((ret = mux_enable_sensor(sensor_index)) != 0) // Mux to sensor
-    {
-        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", sensor_index, ret);
-        reset_i2c(); // Reset i2c
-        common_init_struct(&sensors[sensor_index], sensor_index); // Reset sensor
-        sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED; // Set sensor state to MUX failed
-        mux_reset(); // Reset MUX
-        return false; // Repeat measurement
-    }
-    if (sensors[sensor_index].state && // Sensor not initialized
-        sensors[sensor_index].state != ERROR_SENSOR_NOT_INITIALIZED && 
-        sensors[sensor_index].state != ERROR_NO_MEAS)
-    {
-        //reset_i2c(); // Reset I2C
-        common_init_struct(&sensors[sensor_index], sensor_index); // Init sensor struct
-        switch (configuration_map[sensor_index]->sensor_type) // Init on sensor type
-        {
-            case EE895:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "Init sensor %i...", sensor_index);
-                ret = ee895_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize EE895 sensor
-                break;
-            }
-            case CDM7162:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_CDM7162, "Init sensor %i...", sensor_index);
-                ret = cdm7162_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CDM7162 sensor
-                break;
-            }
-            case SUNRISE:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNRISE, "Init sensor %i...", sensor_index);
-                ret = sunrise_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SUNRISE sensor
-                break;
-            }
-            case SUNLIGHT:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Init sensor %i...", sensor_index);
-                ret = sunlight_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SUNLIGHT sensor
-                break;
-            }
-            case SCD30:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD30, "Init sensor %i...", sensor_index);
-                ret = scd30_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SCD30 sensor
-                break;
-            }
-            case SCD41:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD41, "Init sensor %i...", sensor_index);
-                ret = scd41_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize SCD41 sensor
-                break;
-            }
-            case COZIR_LP3:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Init sensor %i...", sensor_index);
-                ret = cozir_lp3_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CozIR-LP3 sensor
-                break;
-            }
-            case CM1107N:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_CM1107N, "Init sensor %i...", sensor_index);
-                ret = cm1107n_init(&(sensors[sensor_index]), configuration_map[sensor_index]); // Initialize CM1107N sensor
-                break;
-            }
-            
-            default:
-            {
-                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Unknown sensor %i, init abort", sensor_index);
-                sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR;
-                return true; // Unknown sensor - don't repeat measurement
-            }
-        }
-        if (!ret) // Init successful
-        {
-            print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", sensor_index);
-            sensors[sensor_index].meas_state = MEAS_STARTED;
-            sensors[sensor_index].state = ERROR_NO_MEAS;
-        }
-        else // Init not successful
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i failed: %i", sensor_index, ret);
-            reset_i2c(); // Reset I2C
-            mux_reset(); // Reset MUX
-            sleep_ms(10);
-            common_init_struct(&sensors[sensor_index], sensor_index);
-            sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED;
-            return false;
-        }
-    }
-    if (sensors[sensor_index].state == SUCCESS || 
-        sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
-    {
-        switch (sensors[sensor_index].sensor_type) // Get value based on sensor type
-        {
-            case EE895:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "Reading sensor %i...", sensor_index);
-                ee895_get_value(&(sensors[sensor_index])); // Read EE895 values
-                break;
-            }
-            case CDM7162:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_CDM7162, "Reading sensor %i...", sensor_index);
-                cdm7162_get_value(&(sensors[sensor_index])); // Read CDM7162 values
-                break;
-            }
-            case SUNRISE:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNRISE, "Reading sensor %i...", sensor_index);
-                sunrise_get_value(&(sensors[sensor_index])); // Read SUNRISE values
-                break;
-            }
-            case SUNLIGHT:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Reading sensor %i...", sensor_index);
-                sunlight_get_value(&(sensors[sensor_index])); // Read SUNLIGHT values
-                break;
-            }
-            case SCD30:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD30, "Reading sensor %i...", sensor_index);
-                scd30_get_value(&(sensors[sensor_index])); // Read SCD30 values
-                break;
-            }
-            case SCD41:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD41, "Reading sensor %i...", sensor_index);
-                scd41_get_value(&(sensors[sensor_index])); // Read SCD41 values
-                break;
-            }
-            case COZIR_LP3:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Reading sensor %i...", sensor_index);
-                cozir_lp3_get_value(&(sensors[sensor_index])); // Read CozIR-LP3 values
-                break;
-            }
-            case CM1107N:
-            {
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_CM1107N, "Reading sensor %i...", sensor_index);
-                cm1107n_get_value(&(sensors[sensor_index])); // Read CM1107N values
-                break;
-            }
-            default:
-            {
-                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading unknown sensor %i", sensor_index);
-                sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR; // Unknown sensor
-                return true; // Unknown sensor - don't repeat measurement
-            }
-        }
-        if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS) // Reading not successful
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading sensor %i failed: %i", sensor_index, sensors[sensor_index].state);
-            sleep_ms(10);
-            reset_i2c(); // Reset I2C
-            sleep_ms(10);
-            mux_reset(); // Reset MUX
-            sleep_ms(10);
-            return false; // Reading failed, repeat measurement
-        }
-        if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && !(sensor_measurement_vector & (0b1 << sensor_index)))
-        {
-            print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read sensor %i", sensor_index);
-        }
-    }
-    return true; // Sensor successfully read
 }
 
 void write_display_sensor(uint8_t* sensor_name, int state, 

@@ -80,7 +80,8 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
 
 void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t* power_index)
 {
-    *input_index = (internal_index + 4) % 8;
+    //*input_index = (internal_index + 4) % 8; // for 1to8 mux on board
+    *input_index = internal_index;
     *power_index = internal_index;
 }
 

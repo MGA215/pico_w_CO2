@@ -13,7 +13,6 @@
 #define __SENSOR_CONFIG_H__
 
 #include "common/structs.h"
-static bool global_power = true;
 
 static sensor_config_t sensor_config_00 = {
     .sensor_type = EE895,
@@ -26,6 +25,7 @@ static sensor_config_t sensor_config_00 = {
     .RH_en = false,
     .pressure_en = true,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_01 = {
@@ -47,6 +47,7 @@ static sensor_config_t sensor_config_01 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_02 = {
@@ -69,6 +70,7 @@ static sensor_config_t sensor_config_02 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_03 = {
@@ -91,6 +93,7 @@ static sensor_config_t sensor_config_03 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_04 = {
@@ -107,6 +110,7 @@ static sensor_config_t sensor_config_04 = {
     .RH_en = true,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_05 = {
@@ -125,6 +129,7 @@ static sensor_config_t sensor_config_05 = {
     .RH_en = true,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_06 = {
@@ -144,6 +149,7 @@ static sensor_config_t sensor_config_06 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_07 = {
@@ -155,7 +161,8 @@ static sensor_config_t sensor_config_07 = {
     .temp_en = false,
     .RH_en = false,
     .pressure_en = false,
-    .power_5V = true
+    .power_5V = true,
+    .power_global_control = true,
 };
 
 /*****************************************************/
@@ -171,6 +178,7 @@ static sensor_config_t sensor_config_10 = {
     .RH_en = false,
     .pressure_en = true,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_11 = {
@@ -192,6 +200,7 @@ static sensor_config_t sensor_config_11 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_12 = {
@@ -214,6 +223,7 @@ static sensor_config_t sensor_config_12 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_13 = {
@@ -236,6 +246,7 @@ static sensor_config_t sensor_config_13 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_14 = {
@@ -252,6 +263,7 @@ static sensor_config_t sensor_config_14 = {
     .RH_en = true,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_15 = {
@@ -270,6 +282,7 @@ static sensor_config_t sensor_config_15 = {
     .RH_en = true,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_16 = {
@@ -289,6 +302,7 @@ static sensor_config_t sensor_config_16 = {
     .RH_en = false,
     .pressure_en = false,
     .power_5V = false,
+    .power_global_control = true,
 };
 
 static sensor_config_t sensor_config_17 = {
@@ -300,6 +314,7 @@ static sensor_config_t sensor_config_17 = {
     .temp_en = false,
     .RH_en = false,
     .pressure_en = false,
-    .power_5V = true
+    .power_5V = true,
+    .power_global_control = true,
 };
 #endif

@@ -18,4 +18,6 @@ target_sources(pico-common
   ${CMAKE_CURRENT_LIST_DIR}/serialize.h
   ${CMAKE_CURRENT_LIST_DIR}/debug.c
   ${CMAKE_CURRENT_LIST_DIR}/debug.h
+  ${CMAKE_CURRENT_LIST_DIR}/i2c_extras.c
+  ${CMAKE_CURRENT_LIST_DIR}/i2c_extras.h
 )

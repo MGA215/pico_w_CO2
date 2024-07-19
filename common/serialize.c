@@ -89,7 +89,7 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
     config->sensor_type = (sensor_type_e)buf[0];
 
     config->power_5V = (bool)((buf[1] & (0b1 << 0)) >> 0);
-    config->power_global_control = global_power;
+    config->power_global_control = (bool)((buf[1] & (0b1 << 1)) >> 1);
 
     config->meas_period = *((uint16_t*)&buf[2]);
     config->filter_coeff = *((uint16_t*)&buf[4]);

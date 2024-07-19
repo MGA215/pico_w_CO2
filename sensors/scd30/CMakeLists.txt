@@ -14,6 +14,6 @@ target_sources(pico-scd30
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/scd30.c
   ${CMAKE_CURRENT_LIST_DIR}/scd30.h
-  ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
-  ${CMAKE_CURRENT_LIST_DIR}/../common/functions.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../error_codes.h
+  ${CMAKE_CURRENT_LIST_DIR}/../../common/functions.h
 )
