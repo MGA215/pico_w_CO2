@@ -203,7 +203,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 ret = cm_get_error(tempBuffer[2]); // Get error
                 if (ret == CM1107N_ERROR_PREHEATING)
                 {
-                    if (++(cm1107n->timeout_iterator) > 8) // 8 second preheating timeout
+                    if (++(cm1107n->timeout_iterator) > 4) // 4 second preheating timeout
                     {
                         cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
                         cm1107n->state = CM1107N_ERROR_PREHEATING; // Set state to preheating error

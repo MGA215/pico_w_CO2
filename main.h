@@ -16,11 +16,9 @@
 #include "pico/multicore.h"
 #include "pico/mutex.h"
 #include "hardware/gpio.h"
-#include "hardware/i2c.h"
 #include "error_codes.h"
-#include "pico/stdio.h"
-#include "pico/printf.h"
 #include "string.h"
+
 #include "wifi/wifi.h"
 #include "common/constants.h"
 #include "common/serialize.h"
@@ -39,12 +37,6 @@
  * @return int Value describing encountered error during initialization
  */
 int init(void);
-
-/**
- * @brief Initializes I2C for sensor communication
- * 
- */
-void init_sensor_i2c(void);
 
 /**
  * @brief Main program loop

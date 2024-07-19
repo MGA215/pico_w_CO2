@@ -66,7 +66,7 @@ typedef enum debug_source
 #define DEBUG_CORE_0 true
 #define DEBUG_CORE_1 true
 #define DEBUG_WIFI true
-#define DEBUG_TCP_CLIENT false
+#define DEBUG_TCP_CLIENT true
 
 /**
  * @brief Prints a debug message if corresponding DEBUG severity is enabled in constants.h

@@ -40,9 +40,6 @@ uint8_t display_sensor = 0;
 // Time value to check if display & button update should be performed
 absolute_time_t process_update_time;
 
-// Time value to check if measurement should start
-absolute_time_t sensor_start_measurement_time;
-
 // Time value to check if SOAP message should be created
 absolute_time_t soap_create_message_time;
 
@@ -108,7 +105,7 @@ int init(void)
     if (!mutex_is_initialized(&soap_message2.data_mutex))
         mutex_init(&soap_message2.data_mutex);
 
-    //multicore_launch_core1(core1_main); // Launch second core
+    multicore_launch_core1(core1_main); // Launch second core
 
     ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
 
@@ -121,7 +118,6 @@ int init(void)
     soap_init(sensors, channels2, channels2_len); // Initialize SOAP channels 2
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
-    sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Set measurement interval
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Set SOAP write message initial interval
 
     memory_timer = make_timeout_time_ms(1000);
@@ -133,13 +129,8 @@ int init(void)
 
 int loop(void)
 {
-    if (time_reached(sensor_start_measurement_time)) // Should new measurement be started
-    {
-        if (sensors_start_measurement()) sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms); // Start measurement
-        else sensor_start_measurement_time = make_timeout_time_ms(100);
-    }
+    sensors_read_sensors(); // Read sensor values
     if (time_reached(process_update_time)) update(); // Update display & buttons
-    if (!sensors_is_measurement_finished()) sensors_read_all(); // Read sensors if time of any sensor timer reached
     if (time_reached(soap_create_message_time)) create_soap_messages(); // Create SOAP messages
     if (time_reached(memory_timer)) getFreeHeap(); // Check free heap
     return SUCCESS;
