@@ -15,9 +15,6 @@
 #include "pico/stdlib.h"
 #include "../common/structs.h"
 
-// Sensors structure
-extern sensor_t sensors[8];
-
 // Measurement interval
 extern uint32_t sensor_measurement_interval_s;
 

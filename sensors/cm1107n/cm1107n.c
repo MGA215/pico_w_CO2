@@ -263,7 +263,7 @@ int32_t cm1107n_read_config(sensor_config_t* config)
     uint8_t buf[6];
     config->sensor_type = CM1107N;
     if ((ret = cm_read(CMD_ABC, buf, 6)) != 0) return ret; // Read ABC calibration data
-    config->enable_abc = buf[1] == 2; // Check ABC on
+    config->enable_abc = buf[1] != 2; // Check ABC on
     config->abc_period = buf[2]; // ABC period
     config->abc_target_value = ntoh16(*((uint16_t*)&buf[3])); // ABC target CO2
     return SUCCESS;
@@ -277,13 +277,13 @@ int32_t cm_write_config(sensor_config_t* config)
     if ((ret = cm1107n_read_config(&read_config)) != 0) return ret; // Read current sensor configuration
 
     if (read_config.enable_abc != config->enable_abc ||
-        config->enable_abc && (
+        // config->enable_abc && (
         read_config.abc_period != config->abc_period ||
-        read_config.abc_target_value != config->abc_target_value)) // If configuration incorrect
+        read_config.abc_target_value != config->abc_target_value)/*)*/ // If configuration incorrect
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CM1107N, "Config - Writing ABC calibration data");
         buf[0] = 100; // Wrong code accelerate value ??
-        buf[1] = config->enable_abc ? 2 : 0; // ABC enabled
+        buf[1] = config->enable_abc ? 0 : 2; // ABC enabled
         buf[2] = config->abc_period; // ABC period
         *((uint16_t*)&buf[3]) = ntoh16(config->abc_target_value); // ABC target CO2
         buf[5] = 100; // Reserved, default value

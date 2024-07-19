@@ -33,6 +33,9 @@ static soap_data_t* soap_message2;
 
 extern bool ip_found;
 
+// temporary
+sensor_config_mutex_t sensors_config_all[8]; // for TCP server to copy from/to
+
 
 /**
  * @brief Attempts to connect to WiFi

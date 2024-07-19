@@ -422,7 +422,7 @@ int32_t ee895_read_config(sensor_config_t* config)
     config->sensor_type = EE895;
 
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
-    config->meas_period = (uint16_t)ntoh16(*((uint16_t*)&buf[0])); // Save measurement interval
+    config->meas_period = (uint16_t)ntoh16(*((uint16_t*)&buf[0])) / 10; // Save measurement interval
     config->filter_coeff = (uint16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
     config->co2_offset = (int16_t)ntoh16(*((uint16_t*)&buf[4])); // Save offset
 
@@ -439,7 +439,7 @@ static int32_t ee_write_config(sensor_config_t* config)
     sensor_config_t read_config;
     if ((ret = ee895_read_config(&read_config)) != 0) return ret; // Read config
 
-    if (read_config.meas_period != config->meas_period * 10) { // If measurement period changed
+    if (read_config.meas_period != config->meas_period) { // If measurement period changed
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing measurement period");
         if ((ret = ee895_write_reg(REG_MEAS_INTERVAL, config->meas_period * 10)) != 0) return ret;
     }

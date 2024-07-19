@@ -4,6 +4,7 @@
 #include "../common/debug.h"
 #include "../common/i2c_extras.h"
 #include "../error_codes.h"
+#include "../shared.h"
 
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
@@ -15,10 +16,20 @@
 #include "cm1107n/cm1107n.h"
 #include "mux/mux.h"
 
+#include "string.h"
+#include "math.h"
+#include "pico/mutex.h"
+
 // Must be increased with each new sensor type
 #define SENSOR_TYPES 8
 
 sensor_t sensors[8];
+
+sensor_config_t* sensors_config[8];
+
+bool read_config_trigger = false;
+
+uint8_t read_config_number = 0;
 
 // Holds numbers of each sensor type, created for 8 sensor types
 static uint8_t sensor_indices[SENSOR_TYPES];
@@ -80,11 +91,49 @@ void sensors_read_all(void);
  */
 bool sensors_read(uint8_t sensor_index);
 
+/**
+ * @brief Reads all sensors configuration
+ * 
+ * @param configuration Output configuration
+ * @param configuration_count Number of configurations to read
+ */
+void sensors_read_config_all(sensor_config_t** configuration, uint8_t configuration_count);
+
+/**
+ * @brief Reads single sensor configuration
+ * 
+ * @param configuration Output configuration
+ * @param sensor_index Sensor index
+ */
+void sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index);
+
+/**
+ * @brief Compares two sensor configurations
+ * 
+ * @param left configuration to compare
+ * @param right configuration to compare
+ * @return true if configurations are the same
+ * @return false if configurations differ
+ */
+bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right);
+
+
+
 
 void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_length)
 {
+    // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
+    for (int i = 0; i < 8; i++) // Try initialize mutexes for sensor configurations
+    {
+        if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex))
+        {
+            mutex_init(&sensors_config_all[i].sensor_config_mutex);
+        }
+    }
+
     init_sensor_i2c(); // Initialize sensor I2C
     mux_init(); // Initialize MUX
+
     for (int i = 0; i < 8; i++)
     {
         sensor_indices[i] = 0; // Reset sensor indices
@@ -156,6 +205,22 @@ bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_
         }
 
         sensors[sensor_index].state = ERROR_NO_MEAS; // Sensor successfully initialized
+
+        sensor_config_t config;
+        sensors_read_config(&config, sensor_index); // Read sensor config
+        if (!sensors_compare_config(sensors[sensor_index].config, &config)) // Compare config with the one set
+        {
+            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i mismatch", sensor_index);
+            if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
+                memcpy(sensors[i].config, &config, sizeof(sensor_config_t)); // Update configuration
+        }
+        else 
+        {
+            print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i verified", sensor_index);
+            mutex_enter_timeout_ms(&sensors_config_all[sensor_index].sensor_config_mutex, 1000); // Safe copy configuration
+            memcpy(&sensors_config_all[sensor_index], &config, sizeof(sensor_config_t));
+            mutex_exit(&sensors_config_all[sensor_index].sensor_config_mutex);
+        }
         return true; // Initialization successful
     }
     return false; // Initialization attempt 2 failed
@@ -422,6 +487,181 @@ void sensors_read_sensors(void)
     }
 }
 
+void sensors_read_config_all(sensor_config_t** configuration, uint8_t configuration_count)
+{
+    for (int i = 0; i < MIN(configuration_count, 8); i++)
+    {
+        memset(configuration[i], 0x00, sizeof(sensor_config_t));
+        sensors_read_config(configuration[i], i);
+    }
+}
+
+void sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index)
+{
+    int32_t ret = 0;
+    if (sensors[sensor_index].state == ERROR_SENSOR_INIT_FAILED || sensors[sensor_index].state == ERROR_SENSOR_NOT_INITIALIZED) return;
+    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading configuration %i...", sensor_index);
+    switch(sensors[sensor_index].sensor_type)
+    {
+        case EE895:
+            ret = ee895_read_config(configuration);
+            break;
+        case CDM7162:
+            ret = cdm7162_read_config(configuration);
+            break;
+        case SUNRISE:
+            ret = sunrise_read_config(configuration);
+            break;
+        case SUNLIGHT:
+            ret = sunlight_read_config(configuration);
+            break;
+        case SCD30:
+            ret = scd30_read_config(configuration);
+            break;
+        case SCD41:
+            ret = scd41_read_config(configuration, sensors[sensor_index].config->single_meas_mode);
+            break;
+        case COZIR_LP3:
+            ret = cozir_lp3_read_config(configuration);
+            break;
+        case CM1107N:
+            ret = cm1107n_read_config(configuration);
+            break;
+        default:
+            ret = ERROR_UNKNOWN_SENSOR;
+            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Unknown sensor %i, read config abort...", sensor_index);
+            return;
+    }
+    if (ret)
+    {
+        memset(configuration, 0x00, sizeof(sensor_config_t));
+        configuration->sensor_type = UNKNOWN;
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Failed to read config %i: %i", sensor_index, ret);
+    }
+    else
+    {
+        print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read configuration %i", sensor_index);
+        configuration->co2_en = sensors[sensor_index].config->co2_en;
+        configuration->temp_en = sensors[sensor_index].config->temp_en;
+        configuration->RH_en = sensors[sensor_index].config->RH_en;
+        configuration->pressure_en = sensors[sensor_index].config->pressure_en;
+        configuration->power_5V = sensors[sensor_index].config->power_5V;
+        configuration->power_global_control = sensors[sensor_index].config->power_global_control;
+    }
+    return;
+}
+
+bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right)
+{
+    if (left->sensor_type != right->sensor_type) return false;
+    switch(left->sensor_type)
+    {
+        case EE895:
+        {
+            if (left->meas_period != right->meas_period ||
+                left->single_meas_mode != right->single_meas_mode ||
+                left->filter_coeff != right->filter_coeff ||
+                left->co2_offset != right->co2_offset) return false;
+            return true;
+        }
+        case CDM7162:
+        {
+            if (left->enable_PWM_pin != right->enable_PWM_pin ||
+                left->PWM_range_high != right->PWM_range_high ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_altitude_comp != right->enable_altitude_comp ||
+                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                left->enable_abc != right->enable_abc ||
+                left->enable_alternate_abc != right->enable_alternate_abc ||
+                left->abc_target_value != right->abc_target_value ||
+                left->abc_period != right->abc_period ||
+                left->alarm_treshold_co2_high != right->alarm_treshold_co2_high ||
+                left->alarm_treshold_co2_low != right->alarm_treshold_co2_low) return false;
+            return true;
+        }
+        case SUNRISE:
+        {
+            if (left->meas_period != right->meas_period ||
+                left->single_meas_mode != right->single_meas_mode ||
+                left->meas_samples != right->meas_samples ||
+                left->enable_static_IIR != right->enable_static_IIR ||
+                left->enable_dynamic_IIR != right->enable_dynamic_IIR ||
+                left->filter_coeff != right->filter_coeff ||
+                left->enable_nRDY != right->enable_nRDY ||
+                left->invert_nRDY != right->invert_nRDY ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_abc != right->enable_abc ||
+                left->abc_period != right->abc_period ||
+                left->abc_target_value != right->abc_target_value) return false;
+            return true;
+        }
+        case SUNLIGHT:
+        {
+            if (left->meas_period != right->meas_period ||
+                left->single_meas_mode != right->single_meas_mode ||
+                left->meas_samples != right->meas_samples ||
+                left->enable_static_IIR != right->enable_static_IIR ||
+                left->enable_dynamic_IIR != right->enable_dynamic_IIR ||
+                left->filter_coeff != right->filter_coeff ||
+                left->enable_nRDY != right->enable_nRDY ||
+                left->invert_nRDY != right->invert_nRDY ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_abc != right->enable_abc ||
+                left->abc_period != right->abc_period ||
+                left->abc_target_value != right->abc_target_value) return false;
+            return true;
+        }
+        case SCD30:
+        {
+            if (left->meas_period != right->meas_period ||
+                left->temperature_offset != right->temperature_offset ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_altitude_comp != right->enable_altitude_comp ||
+                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                left->enable_abc != right->enable_abc) return false;
+            return true;
+        }
+        case SCD41:
+        {
+            if (left->single_meas_mode != right->single_meas_mode ||
+                fabs(left->temperature_offset - right->temperature_offset) > 0.01f ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_altitude_comp != right->enable_altitude_comp ||
+                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                left->enable_abc != right->enable_abc ||
+                left->abc_init_period != right->abc_init_period ||
+                left->abc_period != right->abc_period) return false;
+            return true;
+        }
+        case COZIR_LP3:
+        {
+            if (left->filter_coeff != right->filter_coeff ||
+                left->enable_PWM_pin != right->enable_PWM_pin ||
+                left->enable_pressure_comp != right->enable_pressure_comp ||
+                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                left->enable_abc != right->enable_abc ||
+                left->abc_init_period != right->abc_init_period ||
+                left->abc_period != right->abc_period ||
+                left->abc_target_value != right->abc_target_value ||
+                left->alarm_en != right->alarm_en ||
+                left->alarm_treshold_co2_high != right->alarm_treshold_co2_high) return false;
+            return true;
+        }
+        case CM1107N:
+        {
+            if (left->enable_abc != right->enable_abc ||
+                left->abc_target_value != right->abc_target_value ||
+                left->abc_period != right->abc_period) return false;
+            return true;
+        }
+        default: return false;
+    }
+}
 
 
 

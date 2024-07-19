@@ -272,27 +272,27 @@ static int32_t lp3_write_config(sensor_config_t* config)
         buf[0] = config->enable_abc ? 0b10 : 0b00;
         if ((ret = lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     }
-    if (config->enable_abc)
+    // if (config->enable_abc)
+    // {
+    if (read_config.abc_init_period != config->abc_init_period)
     {
-        if (read_config.abc_init_period != config->abc_init_period)
-        {
-            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC initial period");
-            *((uint16_t*)&buf[0]) = ntoh16(config->abc_init_period);
-            if ((ret = lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
-        }
-        if (read_config.abc_period != config->abc_period)
-        {
-            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC standard period");
-            *((uint16_t*)&buf[0]) = ntoh16(config->abc_period);
-            if ((ret = lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
-        }
-        if (read_config.abc_target_value != config->abc_target_value)
-        {
-            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC target value");
-            *((uint16_t*)&buf[0]) = ntoh16(config->abc_target_value);
-            if ((ret = lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
-        }
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC initial period");
+        *((uint16_t*)&buf[0]) = ntoh16(config->abc_init_period);
+        if ((ret = lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
     }
+    if (read_config.abc_period != config->abc_period)
+    {
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC standard period");
+        *((uint16_t*)&buf[0]) = ntoh16(config->abc_period);
+        if ((ret = lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
+    }
+    if (read_config.abc_target_value != config->abc_target_value)
+    {
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC target value");
+        *((uint16_t*)&buf[0]) = ntoh16(config->abc_target_value);
+        if ((ret = lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
+    }
+    // }
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing alarm treshold");

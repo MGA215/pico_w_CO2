@@ -18,6 +18,7 @@
 #include "hardware/gpio.h"
 #include "error_codes.h"
 #include "string.h"
+#include "shared.h"
 
 #include "wifi/wifi.h"
 #include "common/constants.h"

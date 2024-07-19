@@ -116,4 +116,10 @@ typedef struct soap_data
     mutex_t data_mutex;
 } soap_data_t;
 
+typedef struct sensor_config_mutex
+{
+    sensor_config_t sensor_config;
+    mutex_t sensor_config_mutex;
+} sensor_config_mutex_t;
+
 #endif
