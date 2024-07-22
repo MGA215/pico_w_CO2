@@ -13,6 +13,7 @@ add_subdirectory(scd41)
 add_subdirectory(cozir-lp3)
 add_subdirectory(cm1107n)
 add_subdirectory(mux)
+add_subdirectory(power)
 
 target_link_libraries(pico-sensors
   INTERFACE
@@ -26,6 +27,7 @@ target_link_libraries(pico-sensors
   pico-cozir-lp3
   pico-cm1107n
   pico-mux
+  pico-power
 )
 
 target_sources(pico-sensors

@@ -21,9 +21,10 @@
 #define I2C_SCL 5
 #define I2C_TIMEOUT_US 12000
 
-#define DS3231_I2C_PORT i2c1
-#define DS3231_I2C_SDA_PIN 6
-#define DS3231_I2C_SCL_PIN 7
+#define I2C_DEVICE i2c1
+
+#define I2C_DEVICE_SDA 6
+#define I2C_DEVICE_SCL 7
 
 #define UART_SENSOR_TXD 8
 #define UART_SENSOR_RXD 9
@@ -53,8 +54,9 @@
 
 #define SERIALIZE_BUFFER_LEN 32
 
-#define MUX0_ADDR 0x70
-#define MUX1_ADDR 0x71
+#define MUX_ADDR 0x70
+#define POWER_EN_ADDR 0x39
+#define POWER_5V_ADDR 0x38
 
 #define MUTEX_TIMEOUT_MS 1000
 

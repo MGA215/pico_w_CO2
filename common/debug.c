@@ -19,6 +19,7 @@
 #define DEBUG_RAM false
 
 #define DEBUG_MUX true
+#define DEBUG_POWER true
 #define DEBUG_EE895 false
 #define DEBUG_CDM7162 false
 #define DEBUG_SUNRISE false
@@ -212,6 +213,12 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             #endif
                 snprintf(source_str, 13, "[CM1107N]   ");
                 break;
+            case SOURCE_POWER:
+            #if !(DEBUG_SENSORS && DEBUG_POWER && DEBUG_CORE_0)
+                return;
+            #endif
+                snprintf(source_str, 13, "[POWER]     ");
+                break;
             case SOURCE_WIFI:
             #if !(DEBUG_WIFI && DEBUG_CORE_1)
                 return;
@@ -345,6 +352,12 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 return;
             #endif
                 snprintf(subsource_str, 13, "[CM1107N]   ");
+                break;
+            case SOURCE_POWER:
+            #if !(DEBUG_SENSORS && DEBUG_POWER && DEBUG_CORE_0)
+                return;
+            #endif
+                snprintf(source_str, 13, "[POWER]     ");
                 break;
             case SOURCE_WIFI:
             #if !(DEBUG_WIFI && DEBUG_CORE_1)

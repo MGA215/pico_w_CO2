@@ -105,9 +105,9 @@ int init(void)
     if (!mutex_is_initialized(&soap_message2.data_mutex))
         mutex_init(&soap_message2.data_mutex);
 
-    multicore_launch_core1(core1_main); // Launch second core
+    //multicore_launch_core1(core1_main); // Launch second core
 
-    ds3231_init(DS3231_I2C_PORT, DS3231_I2C_SDA_PIN, DS3231_I2C_SCL_PIN, &rtc); // Initializing I2C for communication with RTC module
+    ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initializing I2C for communication with RTC module
 
     gfx_pack_init(); // initialize display
 

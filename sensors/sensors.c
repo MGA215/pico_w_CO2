@@ -15,6 +15,7 @@
 #include "cozir-lp3/cozir-lp3.h"
 #include "cm1107n/cm1107n.h"
 #include "mux/mux.h"
+#include "power/power.h"
 
 #include "string.h"
 #include "math.h"
@@ -67,6 +68,12 @@ void sensors_read_sensor_type(sensor_t* sensor);
  * @param on Whether the power should be turned on or off
  */
 void set_power(bool on);
+
+/**
+ * @brief Set the 5V power to sensors
+ * 
+ */
+void set_5v(void);
 
 /**
  * @brief Attempts to start a new measurement
@@ -132,17 +139,23 @@ bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right);
 void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_length)
 {
     // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
-    for (int i = 0; i < 8; i++) // Try initialize mutexes for sensor configurations
+    for (int i = 0; i < 8; i++) // Try initialize mutexes for sensor configurations, initialize default structures
     {
         if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex))
         {
             mutex_init(&sensors_config_all[i].sensor_config_mutex);
         }
+        common_init_struct(&sensors[i], i); // Default init structures
+        sensors[i].config = configuration_map[i]; // Set config from EEPROM
     }
 
     init_sensor_i2c(); // Initialize sensor I2C
     mux_init(); // Initialize MUX
-
+    power_reset_all();
+    sleep_ms(10);
+    set_power(true);
+    set_5v();
+    
     for (int i = 0; i < 8; i++)
     {
         sensor_indices[i] = 0; // Reset sensor indices
@@ -153,12 +166,12 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
         sensors_init(i, configuration_map[i], true); // Initialize sensor
     }
     sensor_start_measurement_time = make_timeout_time_us(sensor_measurement_interval_s * 1000000); // Set measurement start timer
+    // set_power(false);
 }
 
 bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init)
 {
     int32_t ret; 
-    sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED;
 
     for (int i = 0; i < 2; i++) // Try initialization twice
     {
@@ -170,7 +183,12 @@ bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_
         common_init_struct(&sensors[sensor_index], sensor_index); // Initialize sensor structure
         sensors[sensor_index].sensor_type = configuration != NULL ? configuration->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
         
-        if (configuration == NULL) return false; // Not initiable
+        if (configuration == NULL) 
+        {
+            sensors[sensor_index].state = ERROR_SENSOR_NOT_INITIALIZED; // Configuration not found - sensor not initialized
+            return false; // Not initiable
+        }
+        sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED; // Set default init error state
 
         if (sensors[sensor_index].sensor_type < 0 || sensors[sensor_index].sensor_type >= SENSOR_TYPES) // Check for valid sensor type
         {
@@ -308,7 +326,7 @@ void sensors_read_all(void)
 
     if (sensors_is_measurement_finished()) // If all measurements finished - turn off power globally if possible
     {
-        set_power(false);
+        // set_power(false);
     }
     return;
 }
@@ -464,16 +482,27 @@ void set_power(bool on)
     uint8_t power_vector = 0;
     for (int i = 0; i < 8; i++)
     {
-        if (sensors[sensors[i].power_index].config->power_global_control)
+        if (sensors[sensors[i].power_index].config == NULL) continue;
+        else if (sensors[sensors[i].power_index].config->power_global_control)
         {
             power_vector |= (0b1 << sensors[i].power_index);
         }
     }
-    // read vector
-    uint8_t read_vector;
-    if (on) read_vector |= power_vector;
-    else read_vector &= ~(power_vector);
-    // write vector
+    power_en_set_vector(power_vector, on);
+}
+
+
+void set_5v(void)
+{
+    uint8_t power_vector = 0;
+    for (int i = 0; i < 8; i++)
+    {
+        if (sensors[sensors[i].power_index].config->power_5V)
+        {
+            power_vector |= (0b1 << sensors[i].power_index);
+        }
+    }
+    power_5v_set_vector(power_vector);
 }
 
 void sensors_read_sensors(void)
@@ -486,7 +515,11 @@ void sensors_read_sensors(void)
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Cannot start new measurement.");
             sensor_start_measurement_time = make_timeout_time_ms(100);
         }
-        else sensor_start_measurement_time = make_timeout_time_us(sensor_measurement_interval_s * 1000000);
+        else 
+        {
+            sensor_start_measurement_time = make_timeout_time_us(sensor_measurement_interval_s * 1000000);
+            // set_power(true);
+        }
     }
     if (!sensors_is_measurement_finished()) // If measurement running
     {
