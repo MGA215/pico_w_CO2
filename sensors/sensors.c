@@ -42,7 +42,7 @@ static uint8_t active_sensors;
 absolute_time_t sensor_start_measurement_time;
 
 // Interval between sensor measurement starts in seconds
-uint32_t sensor_measurement_interval_s = 6;
+uint32_t sensor_measurement_interval_s = 15;
 
 
 /**
@@ -153,8 +153,8 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     mux_init(); // Initialize MUX
     power_reset_all();
     sleep_ms(10);
-    set_power(true);
     set_5v();
+    set_power(true);
     
     for (int i = 0; i < 8; i++)
     {
