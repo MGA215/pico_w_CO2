@@ -341,6 +341,7 @@ int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
         if (scd41->meas_state == MEAS_STARTED) scd41->wake_time = make_timeout_time_ms(5000);
     }
     else scd41->meas_state = MEAS_FINISHED;
+    sleep_ms(100);
     return ret;
 }
 
@@ -355,7 +356,7 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
 
     if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
-    config->enable_pressure_comp = (val != 1013);
+    config->enable_pressure_comp = (val != 1013 && val != 0);
 
     if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
     config->enable_abc = (bool)val;

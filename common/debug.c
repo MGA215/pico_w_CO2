@@ -13,20 +13,20 @@
 
 #define DEBUG_SENSORS true
 #define DEBUG_SOAP false
-#define DEBUG_RTC false
-#define DEBUG_DISPLAY false
-#define DEBUG_GFX false
+#define DEBUG_RTC true
+#define DEBUG_DISPLAY true
+#define DEBUG_GFX true
 #define DEBUG_RAM false
 
 #define DEBUG_MUX true
 #define DEBUG_EE895 false
 #define DEBUG_CDM7162 false
 #define DEBUG_SUNRISE false
-#define DEBUG_SUNLIGHT false
+#define DEBUG_SUNLIGHT true
 #define DEBUG_SCD30 false
 #define DEBUG_SCD41 false
 #define DEBUG_COZIR_LP3 false
-#define DEBUG_CM1107N true
+#define DEBUG_CM1107N false
 
 #define DEBUG_TCP_SERVER true
 #define DEBUG_TCP_DNS true

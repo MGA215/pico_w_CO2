@@ -248,7 +248,7 @@ void sunlight_get_value(sensor_t* sunlight)
             if (sunlight->config->single_meas_mode) // If in single measurement mode
             {
                 sunlight->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
-                sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
+                sunlight->wake_time = make_timeout_time_ms(20); // Timer 20 ms
             }
             else
             {
@@ -324,7 +324,7 @@ void sunlight_get_value(sensor_t* sunlight)
             sunlight->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f; // Set temperature value
             if (sunlight->config->single_meas_mode) // If single measurement mode
             {
-                sunlight->wake_time = make_timeout_time_ms(10); // Timer 10 ms
+                sunlight->wake_time = make_timeout_time_ms(20); // Timer 20 ms
                 sunlight->meas_state = MEAS_READ_STATUS; // Next step - read status
             }
             else // Not in single measurement mode

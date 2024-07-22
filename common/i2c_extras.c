@@ -12,7 +12,7 @@ void reset_i2c(void)
     gpio_set_function(I2C_SCL, GPIO_FUNC_SIO); // Change SCL from I2C pin to SIO
     gpio_set_dir(I2C_SCL, GPIO_OUT); // Set to output direction
     gpio_set_function(I2C_SDA, GPIO_FUNC_SIO); // Change SDA from I2C pin to SIO
-    gpio_set_dir(I2C_SDA, GPIO_IN); // Set to input direction
+    gpio_set_dir(I2C_SDA, GPIO_OUT); // Set to input direction
     sleep_us(100);
     print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Resetting I2C...");
     int i = 0;
@@ -22,8 +22,12 @@ void reset_i2c(void)
         gpio_put(I2C_SCL, 0); // Pull down
         sleep_ms(1);
         gpio_put(I2C_SCL, 1); // Pull up
+        sleep_ms(1);
+        gpio_put(I2C_SDA, 0); // Pull down
+        sleep_ms(1);
+        gpio_put(I2C_SDA, 1); // Pull up
         sleep_ms(50);
-        if (gpio_get(I2C_SDA)) break; // SDA set high
+        if (gpio_get(I2C_SDA) && gpio_get(I2C_SCL)) break; // SDA set high
     }
     print_ser_output(gpio_get(I2C_SDA) ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
         "I2C reset result: %s", gpio_get(I2C_SDA) ? "SUCCESS" : "FAILURE");

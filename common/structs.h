@@ -88,6 +88,9 @@ typedef struct sensor_config
     bool power_global_control; // Power controlled globally
     bool power_5V; // Sensor requires 5 V
     sensor_type_e sensor_type; // Type of sensor the configuration is written for
+
+    // 
+    bool verified; // Is configuration verified
 } sensor_config_t;
 
 typedef struct sensor
