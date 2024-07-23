@@ -5,6 +5,7 @@
 #include "../common/i2c_extras.h"
 #include "../error_codes.h"
 #include "../shared.h"
+#include "../sensor_config.h"
 
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
@@ -133,6 +134,25 @@ int32_t sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index
  */
 bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right);
 
+/**
+ * @brief Sets up multiplexer to access specified sensor
+ * 
+ * @param sensor_index Index of the sensor to access
+ * @return true if multiplexer set
+ * @return false if an error on multiplexer has occured
+ */
+bool sensors_mux_to_sensor(uint8_t sensor_index);
+
+/**
+ * @brief Sets up sensor structure
+ * 
+ * @param sensor_index Index of the sensor
+ * @param configuration Configuration to assign to the sensor
+ * @param is_first_init Whether this is the first initialization
+ * @return true if sensor structure set up with no errors
+ * @return false if an error has occured (invalid sensor type)
+ */
+bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init);
 
 
 
@@ -141,12 +161,11 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
     for (int i = 0; i < 8; i++) // Try initialize mutexes for sensor configurations, initialize default structures
     {
-        if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex))
+        if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex)) // Check mutex initialization
         {
-            mutex_init(&sensors_config_all[i].sensor_config_mutex);
+            mutex_init(&sensors_config_all[i].sensor_config_mutex); // Initialize mutex
         }
-        common_init_struct(&sensors[i], i); // Default init structures
-        sensors[i].config = configuration_map[i]; // Set config from EEPROM
+        sensors_setup_sensor(i, configuration_map[i], true);
     }
 
     init_sensor_i2c(); // Initialize sensor I2C
@@ -155,11 +174,8 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     sleep_ms(10);
     set_5v();
     set_power(true);
-    
-    for (int i = 0; i < 8; i++)
-    {
-        sensor_indices[i] = 0; // Reset sensor indices
-    }
+
+    memset(sensor_indices, 0x00, 8); // Reset sensor indices
     active_sensors = 0;
     for (int i = 0; i < MIN(8, config_map_length); i++)
     {
@@ -169,61 +185,75 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     // set_power(false);
 }
 
+bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init)
+{
+    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Setting up structure %i", sensor_index);
+
+    common_init_struct(&sensors[sensor_index], sensor_index); // Initialize sensor structure
+    sensor_config_t* config = configuration == NULL ? &sensor_config_default : configuration; // Assign configuration
+
+    sensors[sensor_index].sensor_type = configuration->sensor_type; // Copy sensor type to sensor structure
+    memcpy(&sensors[sensor_index].config, config, sizeof(sensor_config_t)); // Assign config
+    sensors[sensor_index].config.sensor_active = false; // Set sensor to inactive state
+
+    if (sensors[sensor_index].sensor_type < 0 || sensors[sensor_index].sensor_type >= SENSOR_TYPES) // Check for invalid sensor type
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
+                            "Unknown sensor %02x?, init abort", sensors[sensor_index].sensor_type);
+        sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR; // Unknown sensor
+        sensors[sensor_index].sensor_type = UNKNOWN;
+        return false; // Not initiable
+    }
+
+    if (is_first_init)  // First init, first iteration
+    {
+        sensors[sensor_index].sensor_number = sensor_indices[sensors[sensor_index].sensor_type]++; // Set sensor type index
+    }
+    sensors[sensor_index].config.sensor_active = true;
+    return true;
+}
+
+bool sensors_mux_to_sensor(uint8_t sensor_index)
+{
+    int32_t ret;
+    if ((ret = mux_enable_sensor(sensors[sensor_index].input_index)) != 0) // Mux to sensor
+    { // Mux failed
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", sensor_index, ret);
+        sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED;
+        reset_i2c(); // Reset I2C
+        mux_reset(); // Reset MUX
+        return false; // Retry initialization
+    }
+    return true;
+}
+
 bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init)
 {
-    int32_t ret; 
+    int32_t ret;
+    if (sensors[sensor_index].sensor_type == UNKNOWN || sensors[sensor_index].config.sensor_type == UNKNOWN) return false; // Check for unknown sensor
 
     for (int i = 0; i < 2; i++) // Try initialization twice
     {
         sleep_ms(10); // Wait some time
 
-        active_sensors &= ~(0b1 << sensor_index); // Set sensor to inactive
+        //if (!sensors_setup_sensor(sensor_index, configuration, i == 0 && is_first_init)) return false; // Sets up sensor structure & type
 
-        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init structure %i", sensor_index);
-        common_init_struct(&sensors[sensor_index], sensor_index); // Initialize sensor structure
-        sensors[sensor_index].sensor_type = configuration != NULL ? configuration->sensor_type : UNKNOWN; // Copy sensor type to sensor structure
-        
-        if (configuration == NULL) 
-        {
-            sensors[sensor_index].state = ERROR_SENSOR_NOT_INITIALIZED; // Configuration not found - sensor not initialized
-            return false; // Not initiable
-        }
-        sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED; // Set default init error state
-
-        if (sensors[sensor_index].sensor_type < 0 || sensors[sensor_index].sensor_type >= SENSOR_TYPES) // Check for valid sensor type
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-                "Unknown sensor %x?, init abort", sensors[sensor_index].sensor_type); // No type match - unknown sensor
-            sensors[sensor_index].state = ERROR_UNKNOWN_SENSOR;
-            return false; // Not initiable
-        }
-        if (is_first_init && i == 0)  // First init, first iteration
-        {
-            sensors[sensor_index].sensor_number = sensor_indices[sensors[sensor_index].sensor_type]; // Set sensor type index
-            sensor_indices[sensors[sensor_index].sensor_type]++; // Increment sensor type counter
-        }
-
-        if ((ret = mux_enable_sensor(sensors[sensor_index].input_index)) != 0) // Mux to sensor
-        {
-            active_sensors |= (0b1 << sensor_index); // Set sensor active
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", sensor_index, ret); // On invalid MUX
-            sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED;
-            reset_i2c(); // Reset I2C
-            mux_reset(); // Reset MUX
-            continue; // Retry initialization
-        }
+        if (!sensors_mux_to_sensor(sensor_index)) continue; // Mux to sensor
 
         print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Initializing sensor %i...", sensor_index);
-        ret = sensors_init_sensor_type(&sensors[sensor_index], configuration);
 
+        ret = sensors_init_sensor_type(&sensors[sensor_index], &sensors[sensor_index].config); // Initialize sensor
         if (sensors[sensor_index].state == ERROR_UNKNOWN_SENSOR) // Unknown sensor
         {
             reset_i2c(); // Reset I2C
+            mux_reset(); // Reset MUX
             return false; // Not initiable
         }
-        active_sensors |= (0b1 << sensor_index); // Set sensor active
+
+        sensors[sensor_index].config.sensor_active = true; // Activate sensor
+
         if (!ret) print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", sensor_index);
-        else 
+        else // Error during initialization
         {   
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i failed: %i", sensor_index, ret); 
             reset_i2c(); // Reset I2C
@@ -232,15 +262,14 @@ bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_
             continue; // Retry initialization
         }
 
-        sensors[sensor_index].state = ERROR_NO_MEAS; // Sensor successfully initialized
-        sleep_ms(10);
-
         // for (int j = 0; j < 3; j++) // Read & verify sensor configuration - 3 attempts
         // {
         //     if (sensors_verify_read_config(sensor_index)) break;
         //     sleep_ms(10);
         // }
 
+        sensors[sensor_index].state = ERROR_NO_MEAS; // Sensor successfully initialized
+        sleep_ms(10);
         return true; // Initialization successful
     }
     return false; // Initialization attempt 2 failed
@@ -252,12 +281,14 @@ int32_t sensors_init_sensor_type(sensor_t* sensor, sensor_config_t* configuratio
     if (sensor->sensor_type < 0 || sensor->sensor_type >= SENSOR_TYPES) // Check for valid sensor type
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-            "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
+                         "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
         sensor->state = ERROR_UNKNOWN_SENSOR;
         return ERROR_UNKNOWN_SENSOR;
     }
+
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
-        "Init sensor to type %x%x...", sensor->sensor_type, sensor->sensor_number);
+                     "Init sensor to type %x%x...", sensor->sensor_type, sensor->sensor_number);
+    
     switch (sensor->sensor_type) // For sensor type
     {
         case EE895:
@@ -303,7 +334,7 @@ int32_t sensors_init_sensor_type(sensor_t* sensor, sensor_config_t* configuratio
         default:
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-                "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
+                             "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
             sensor->state = ERROR_UNKNOWN_SENSOR;
             return ERROR_UNKNOWN_SENSOR;
         }
@@ -315,11 +346,17 @@ void sensors_read_all(void)
 {
     int32_t ret = -99; // random default return value
 
-    for (uint8_t i = 0; i < 8; i++) // Iterate sensor
+    for (uint8_t sensor_index = 0; sensor_index < 8; sensor_index++) // Iterate sensor
     {
-        if (time_reached(sensors[i].wake_time) && (active_sensors & (0b1 << i))) // If sensor should react to a timer reached
+        if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
         {
-            if (sensors_read(i)) break; // If reading successful break
+            if (sensors[sensor_index].err_counter >= 2) // Allow maximum of 2 read error iterations
+            {
+                sensors[sensor_index].wake_time = at_the_end_of_time; // Disable sensor timer
+                sensors[sensor_index].meas_state = MEAS_FINISHED; // Terminate measurement
+                break;
+            }
+            if (sensors_read(sensor_index)) break; // If reading successful break
             sleep_ms(10);
         }
     }
@@ -338,22 +375,14 @@ bool sensors_read(uint8_t sensor_index)
     {
         sleep_ms(10);
 
-        if ((ret = mux_enable_sensor(sensors[sensor_index].input_index)) != 0) // Mux to sensor
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MUX, "Failed to mux sensor %i: e%i", sensor_index, ret);
-            reset_i2c(); // Reset i2c
-            common_init_struct(&sensors[sensor_index], sensor_index); // Reset sensor
-            sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED; // Set sensor state to MUX failed
-            mux_reset(); // Reset MUX
-            continue; // Repeat measurement
-        }
+        if (!sensors_mux_to_sensor(sensor_index)) continue; // Mux to sensor
         
         if (sensors[sensor_index].state && // Sensor not initialized
-            sensors[sensor_index].state != ERROR_SENSOR_NOT_INITIALIZED && 
+            sensors[sensor_index].state != ERROR_UNKNOWN_SENSOR && 
             sensors[sensor_index].state != ERROR_NO_MEAS)
         {
-            if (!sensors_init(sensor_index, sensors[sensor_index].config, false)) continue; // Initialize sensor
-            sensors[sensor_index].meas_state = MEAS_STARTED;
+            if (!sensors_init(sensor_index, &sensors[sensor_index].config, false)) continue; // Initialize sensor
+            sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
         }
 
         // if (!sensors_config[sensor_index]->verified) { // Check whether config is verified
@@ -372,12 +401,15 @@ bool sensors_read(uint8_t sensor_index)
 
             if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS) // Reading not successful
             {
-                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading sensor %i failed: %i", sensor_index, sensors[sensor_index].state);
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading sensor %i failed: %i; errors: %i", 
+                                 sensor_index, sensors[sensor_index].state, sensors[sensor_index].err_counter);
+                sensors[sensor_index].err_counter++; // Increment error counter
                 reset_i2c(); // Reset I2C
                 mux_reset(); // Reset MUX
                 continue; // Reading failed, repeat measurement
             }
-            if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && is_at_the_end_of_time(sensors[sensor_index].wake_time))
+            if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && 
+                is_at_the_end_of_time(sensors[sensor_index].wake_time))
             {
                 print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read sensor %i", sensor_index);
             }
@@ -466,8 +498,9 @@ bool sensors_start_measurement(void)
         print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Measurement starting...");
         for (int i = 0; i < 8; i++)
         {
-            if (sensors[i].state != ERROR_SENSOR_NOT_INITIALIZED) 
+            if (sensors[i].state != ERROR_UNKNOWN_SENSOR) 
             {
+                sensors[i].err_counter = 0;
                 sensors[i].meas_state = MEAS_STARTED;
                 sensors[i].wake_time = get_absolute_time();
             }
@@ -482,8 +515,8 @@ void set_power(bool on)
     uint8_t power_vector = 0;
     for (int i = 0; i < 8; i++)
     {
-        if (sensors[sensors[i].power_index].config == NULL) continue;
-        else if (sensors[sensors[i].power_index].config->power_global_control)
+        if (!sensors[sensors[i].power_index].config.sensor_active) continue;
+        else if (sensors[sensors[i].power_index].config.power_global_control)
         {
             power_vector |= (0b1 << sensors[i].power_index);
         }
@@ -497,7 +530,7 @@ void set_5v(void)
     uint8_t power_vector = 0;
     for (int i = 0; i < 8; i++)
     {
-        if (sensors[sensors[i].power_index].config->power_5V)
+        if (sensors[sensors[i].power_index].config.power_5V)
         {
             power_vector |= (0b1 << sensors[i].power_index);
         }
@@ -532,12 +565,12 @@ bool sensors_verify_read_config(uint8_t sensor_index)
     int32_t ret;
     sensor_config_t config;
     ret = sensors_read_config(&config, sensor_index); // Read sensor config
-    if (!sensors_compare_config(sensors[sensor_index].config, &config) && !ret) // Compare config with the one set
+    if (!sensors_compare_config(&sensors[sensor_index].config, &config) && !ret) // Compare config with the one set
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i mismatch", sensor_index);
         if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
         {
-            memcpy(sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
+            memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
         }
         return false;
     }
@@ -565,6 +598,7 @@ void sensors_read_config_all(sensor_config_t** configuration, uint8_t configurat
 int32_t sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index)
 {
     int32_t ret = 0;
+    if (sensors[sensor_index].state == ERROR_UNKNOWN_SENSOR) return ERROR_UNKNOWN_SENSOR;
     if (sensors[sensor_index].state == ERROR_SENSOR_INIT_FAILED || sensors[sensor_index].state == ERROR_SENSOR_NOT_INITIALIZED) 
         return ERROR_SENSOR_NOT_INITIALIZED; // Check if sensor actually initialized
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading configuration %i...", sensor_index);
@@ -586,7 +620,7 @@ int32_t sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index
             ret = scd30_read_config(configuration);
             break;
         case SCD41:
-            ret = scd41_read_config(configuration, sensors[sensor_index].config->single_meas_mode);
+            ret = scd41_read_config(configuration, sensors[sensor_index].config.single_meas_mode);
             break;
         case COZIR_LP3:
             ret = cozir_lp3_read_config(configuration);
@@ -609,12 +643,12 @@ int32_t sensors_read_config(sensor_config_t* configuration, uint8_t sensor_index
     else
     {
         print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read configuration %i", sensor_index);
-        configuration->co2_en = sensors[sensor_index].config->co2_en; // Set some sw parameters
-        configuration->temp_en = sensors[sensor_index].config->temp_en;
-        configuration->RH_en = sensors[sensor_index].config->RH_en;
-        configuration->pressure_en = sensors[sensor_index].config->pressure_en;
-        configuration->power_5V = sensors[sensor_index].config->power_5V;
-        configuration->power_global_control = sensors[sensor_index].config->power_global_control;
+        configuration->co2_en = sensors[sensor_index].config.co2_en; // Set some sw parameters
+        configuration->temp_en = sensors[sensor_index].config.temp_en;
+        configuration->RH_en = sensors[sensor_index].config.RH_en;
+        configuration->pressure_en = sensors[sensor_index].config.pressure_en;
+        configuration->power_5V = sensors[sensor_index].config.power_5V;
+        configuration->power_global_control = sensors[sensor_index].config.power_global_control;
         configuration->verified = false;
     }
     return ret;

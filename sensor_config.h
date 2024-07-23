@@ -14,6 +14,17 @@
 
 #include "common/structs.h"
 
+static sensor_config_t sensor_config_default = {
+    .sensor_type = UNKNOWN,
+    .co2_en = false,
+    .temp_en = false, 
+    .RH_en = false,
+    .pressure_en = false,
+    .power_5V = false,
+    .power_global_control = false,
+    .sensor_active = false
+};
+
 static sensor_config_t sensor_config_00 = {
     .sensor_type = EE895,
     .meas_period = 15,

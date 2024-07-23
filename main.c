@@ -344,10 +344,10 @@ void write_display(void)
         gfx_pack_write_text(&position, sensor_name);
     }
     else write_display_sensor(sensor_name, sensors[display_sensor].state, 
-            sensors[display_sensor].config->co2_en, sensors[display_sensor].co2,
-            sensors[display_sensor].config->temp_en, sensors[display_sensor].temperature,
-            sensors[display_sensor].config->pressure_en, sensors[display_sensor].pressure,
-            sensors[display_sensor].config->RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
+            sensors[display_sensor].config.co2_en, sensors[display_sensor].co2,
+            sensors[display_sensor].config.temp_en, sensors[display_sensor].temperature,
+            sensors[display_sensor].config.pressure_en, sensors[display_sensor].pressure,
+            sensors[display_sensor].config.RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
     #if DEBUG_TIME
     uint8_t hwtime[21];
     snprintf(hwtime, 21, "Time: %llu ms", to_us_since_boot(get_absolute_time()) / 1000); // Prepare time since boot string

@@ -74,6 +74,7 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->state = ERROR_SENSOR_NOT_INITIALIZED;
     sensor->timeout_iterator = 0;
     sensor->wake_time = at_the_end_of_time;
+    sensor->config.sensor_active = false;
     get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
     memset(sensor->state_reg, 0x00, 26);
 }

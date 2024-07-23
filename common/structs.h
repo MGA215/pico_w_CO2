@@ -91,6 +91,7 @@ typedef struct sensor_config
 
     // 
     bool verified; // Is configuration verified
+    bool sensor_active; // Whether the sensor should be accessed or not
 } sensor_config_t;
 
 typedef struct sensor
@@ -104,12 +105,13 @@ typedef struct sensor
     uint8_t measurement_iterator;
     meas_state_e meas_state;
     absolute_time_t wake_time;
-    sensor_config_t* config;
+    sensor_config_t config;
     sensor_type_e sensor_type;
     uint8_t input_index; // Index of the input connector
     uint8_t power_index; // Index in the power vector
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
     uint8_t sensor_number; // Index of the sensor of a type
+    uint8_t err_counter; // Counts errors in current measurement
 } sensor_t;
 
 typedef struct soap_data

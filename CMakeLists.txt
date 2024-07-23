@@ -47,6 +47,8 @@ pico_set_program_version(pico_w_CO2 "0.4")
 pico_enable_stdio_uart(pico_w_CO2 1)
 pico_enable_stdio_usb(pico_w_CO2 1)
 
+set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os")
+
 # Add the standard library to the build
 target_link_libraries(pico_w_CO2
         pico_stdlib)
@@ -57,7 +59,7 @@ target_include_directories(pico_w_CO2 PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/wifi
 )
 
-set(PICO_DEOPTIMIZED_DEBUG 1 CACHE BOOL "Deoptimized debug")
+set(PICO_DEOPTIMIZED_DEBUG 0 CACHE BOOL "Deoptimized debug")
 
 add_subdirectory(pico-ds3231/lib)
 add_subdirectory(gfx_pack)
@@ -66,11 +68,15 @@ add_subdirectory(wifi)
 add_subdirectory(sensors)
 add_subdirectory(common)
 
+
+
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/common_include.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/shared.h)
+
+
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
@@ -92,5 +98,5 @@ target_link_libraries(pico_w_CO2
         pico-sensors
         )
 
+        
 pico_add_extra_outputs(pico_w_CO2)
-

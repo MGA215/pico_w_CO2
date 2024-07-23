@@ -180,7 +180,7 @@ void scd41_get_value(sensor_t* scd41)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    if (scd41->config->sensor_type != SCD41) // Check for correct sensor type
+    if (scd41->config.sensor_type != SCD41) // Check for correct sensor type
     {
         scd41->meas_state = MEAS_FINISHED;
         scd41->state = ERROR_UNKNOWN_SENSOR;
@@ -214,9 +214,9 @@ void scd41_get_value(sensor_t* scd41)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Read mode");
             uint16_t val = 0;
             if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
-            if (scd41->config->enable_pressure_comp) // Pressure compensation enabled
+            if (scd41->config.enable_pressure_comp) // Pressure compensation enabled
             {
-                ret = s41_write_value(CMD_SET_PRESSURE, scd41->config->pressure); // Write pressure
+                ret = s41_write_value(CMD_SET_PRESSURE, scd41->config.pressure); // Write pressure
             }
             else // Pressure compensation disabled
             {
@@ -232,7 +232,7 @@ void scd41_get_value(sensor_t* scd41)
                 return;
             }
         
-            if (scd41->config->single_meas_mode) // If in single meas mode
+            if (scd41->config.single_meas_mode) // If in single meas mode
             {
                 scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Set next state to send single meas command
                 scd41->measurement_iterator = 0;
@@ -276,7 +276,7 @@ void scd41_get_value(sensor_t* scd41)
             }
             if ((tempBuffer & 0x7FF) == 0x06) // On data ready - might cause troubles later (should be equal to 0, might be config not saved problem??)
             {
-                if (scd41->measurement_iterator++ == 0 && scd41->config->single_meas_mode)
+                if (scd41->measurement_iterator++ == 0 && scd41->config.single_meas_mode)
                 {
                     scd41->meas_state = MEAS_TRIGGER_SINGLE_MEAS;
                     return;
@@ -331,7 +331,7 @@ int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    scd41->config = config;
+    memcpy(&scd41->config, config, sizeof(sensor_config_t));
     s41_power(scd41, true); // Turn sensor power on
 
     ret = s41_write_config(config); // Write config to the sensor
@@ -454,7 +454,7 @@ static int32_t s41_write_config(sensor_config_t* config)
 
 static inline void s41_power(sensor_t* scd41, bool on)
 {
-    if (!scd41->config->power_global_control) // If power not controlled globally
+    if (!scd41->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

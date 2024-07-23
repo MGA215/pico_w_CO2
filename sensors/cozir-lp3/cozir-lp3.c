@@ -108,7 +108,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
 {
     int32_t ret;
     uint8_t tempBuffer[5];
-    if (cozir_lp3->config->sensor_type != COZIR_LP3) // Check for correct sensor type
+    if (cozir_lp3->config.sensor_type != COZIR_LP3) // Check for correct sensor type
     {
         cozir_lp3->meas_state = MEAS_FINISHED;
         cozir_lp3->state = ERROR_UNKNOWN_SENSOR;
@@ -133,8 +133,38 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
             lp3_power(cozir_lp3, true);
             cozir_lp3->wake_time = make_timeout_time_ms(2000);
-            cozir_lp3->meas_state = MEAS_READ_VALUE;
+            cozir_lp3->meas_state = MEAS_READ_STATUS;
             return;
+        }
+        case MEAS_READ_STATUS:
+        {
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read status");
+            ret = lp3_read(REG_SELF_TEST, tempBuffer, 1);
+            if (ret != 0)
+            {
+                cozir_lp3->co2 = NAN;
+                cozir_lp3->humidity = NAN;
+                cozir_lp3->temperature = NAN;
+                cozir_lp3->meas_state = MEAS_FINISHED;
+                cozir_lp3->state = ret;
+                return;
+            }
+            if (tempBuffer[0] == 85)
+            {
+                cozir_lp3->meas_state = MEAS_READ_VALUE;
+                cozir_lp3->wake_time = make_timeout_time_ms(10);
+                print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "No error detected");
+                return;
+            }
+            else {
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Detected error: %i", tempBuffer[0]);
+                cozir_lp3->state = COZIR_LP3_ERROR_SENSOR_GENERAL;
+                cozir_lp3->co2 = NAN;
+                cozir_lp3->humidity = NAN;
+                cozir_lp3->temperature = NAN;
+                cozir_lp3->meas_state = MEAS_FINISHED;
+                return;
+            }
         }
         case MEAS_READ_VALUE:
         {
@@ -182,7 +212,7 @@ int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != COZIR_LP3) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    cozir_lp3->config = config;
+    memcpy(&cozir_lp3->config, config, sizeof(sensor_config_t));
     lp3_power(cozir_lp3, true);
 
     ret = lp3_write_config(config);
@@ -312,7 +342,7 @@ static int32_t lp3_write_config(sensor_config_t* config)
 
 static inline void lp3_power(sensor_t* cozir_lp3, bool on)
 {
-    if (!cozir_lp3->config->power_global_control) // If power not controlled globally
+    if (!cozir_lp3->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

@@ -91,7 +91,7 @@
 #define SUNLIGHT_ERROR_LOW_INTERNAL_VOLTAGE 324 // Error SUNLIGHT - low internal regulated voltage
 #define SUNLIGHT_ERROR_MEASUREMENT_TIMEOUT 325 // Error SUNLIGHT - unable to complete measurement in time
 #define SUNLIGHT_ERROR_ABNORMAL_SIGNAL_LEVEL 326 // Error SUNLIGHT - invalid measurement sample detected
-#define SUNLIGHT_ERROR_SENSOR_GENERAL 327 // Error SUNLIGHT - general sensor error
+#define SUNLIGHT_ERROR_SENSOR_GENERAL 327 // Error SUNLIGHT - generic sensor error
 #define SUNLIGHT_ERROR_WRONG_STATE 328 // Error SUNLIGHT - invalid buffer for reading/writing current state in single meas mode
 #define SUNLIGHT_ERROR_WRONG_MODE 329 // Error SUNLIGHT - sensor is in a wrong mode
 
@@ -106,6 +106,7 @@
 // CozIR-LP3 Errors
 #define COZIR_LP3_ERROR_NREG_REG 611 // Error CozIR-LP3 - specified number of registers is invalid
 #define COZIR_LP3_ERROR_DATA_READY_TIMEOUT 615 // Error CozIR-LP3 - Data not ready
+#define COZIR_LP3_ERROR_SENSOR_GENERAL 627 // Error CozIR-LP3 - generic sensor error
 
 // CUBIC CM1107N
 #define CM1107N_ERROR_CRC 713 // Error CM1107N - Invalid CRC

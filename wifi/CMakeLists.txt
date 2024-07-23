@@ -1,17 +1,10 @@
 add_library(pico-wifi INTERFACE)
 
+set_property(TARGET pico-wifi PROPERTY CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -g")
+
 target_include_directories(pico-wifi
-  INTERFACE
+INTERFACE
 )
-
-# set(WIFI_SSID ssid)
-# set(WIFI_PASSWORD password)
-
-# target_compile_definitions(pico-wifi INTERFACE
-#         WIFI_SSID=\"${WIFI_SSID}\"
-#         WIFI_PASSWORD=\"${WIFI_PASSWORD}\"
-# )
-
 
 target_sources(pico-wifi
 INTERFACE
@@ -36,4 +29,4 @@ target_link_libraries(pico-wifi
   pico_lwip
   pico_cyw43_arch
   pico_cyw43_arch_lwip_threadsafe_background
-)
+  )

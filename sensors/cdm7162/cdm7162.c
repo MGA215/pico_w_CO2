@@ -12,6 +12,7 @@
 #include "cdm7162.h"
 #include "math.h"
 #include "hardware/i2c.h"
+#include "string.h"
 
 #define CDM7162_ADDR        0x68
 
@@ -103,7 +104,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
     uint8_t buf[2];
-    if (cdm7162->config->sensor_type != CDM7162) // Check for correct sensor type
+    if (cdm7162->config.sensor_type != CDM7162) // Check for correct sensor type
     {
         cdm7162->meas_state = MEAS_FINISHED;
         cdm7162->state = ERROR_UNKNOWN_SENSOR;
@@ -192,7 +193,8 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     int32_t ret;
     uint8_t buf;
     if (config->sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    cdm7162->config = config; // Save config
+    memcpy(&cdm7162->config, config, sizeof(sensor_config_t)); // Save config
+    //cdm7162->config = &config; // Save config
     cdm_power(cdm7162, true); // Power on
 
     ret = cdm_write_config(config); // Write configuration to the sensor
@@ -395,7 +397,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
 static inline void cdm_power(sensor_t* cdm7162, bool on)
 {
-    if (!cdm7162->config->power_global_control) // If power not controlled globally
+    if (!cdm7162->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

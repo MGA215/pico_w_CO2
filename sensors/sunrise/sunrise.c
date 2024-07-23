@@ -198,7 +198,7 @@ static int sr_write(uint8_t addr, uint8_t* buf, uint16_t len)
 void sunrise_get_value(sensor_t* sunrise)
 {
     int32_t ret;
-    if (sunrise->config->sensor_type != SUNRISE) // Check for correct sensor type
+    if (sunrise->config.sensor_type != SUNRISE) // Check for correct sensor type
     {
         sunrise->meas_state = MEAS_FINISHED;
         sunrise->state = ERROR_UNKNOWN_SENSOR;
@@ -238,7 +238,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->state = ret; // Output return state
                 return;
             }
-            if (!((sunrise->config->single_meas_mode && data == 0x01) || (!sunrise->config->single_meas_mode && data == 0x00))) // If wrong mode set
+            if (!((sunrise->config.single_meas_mode && data == 0x01) || (!sunrise->config.single_meas_mode && data == 0x00))) // If wrong mode set
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = INT16_MAX; // Set CO2 to unknown
@@ -246,7 +246,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->state = SUNRISE_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
             }
-            if (sunrise->config->single_meas_mode) // If in single measurement mode
+            if (sunrise->config.single_meas_mode) // If in single measurement mode
             {
                 sunrise->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
                 sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
@@ -299,7 +299,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->state = ret; // Output return state
                 return;
             }
-            if (sunrise->timeout_iterator++ > (sunrise->config->meas_samples)) // If data not present for 4* the measurement time needed
+            if (sunrise->timeout_iterator++ > (sunrise->config.meas_samples)) // If data not present for 4* the measurement time needed
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = INT16_MAX; // Set CO2 to unknown
@@ -323,7 +323,7 @@ void sunrise_get_value(sensor_t* sunrise)
             }
             sunrise->co2 = (int16_t)(ntoh16(*((uint16_t*)&buf[6]))); // Set CO2 value
             sunrise->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f; // Set temperature value
-            if (sunrise->config->single_meas_mode) // If single measurement mode
+            if (sunrise->config.single_meas_mode) // If single measurement mode
             {
                 sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
                 sunrise->meas_state = MEAS_READ_STATUS; // Next step - read status
@@ -359,7 +359,7 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    sunrise->config = config; // Save sensor config
+    memcpy(&sunrise->config, config, sizeof(sensor_config_t));
 
     sr_power(sunrise, true); // Power on
 
@@ -470,7 +470,7 @@ static int sr_write_config(sensor_config_t* config)
 
 static inline void sr_power(sensor_t* sunrise, bool on)
 {
-    if (!sunrise->config->power_global_control) // If power not controlled globally
+    if (!sunrise->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

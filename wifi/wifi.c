@@ -115,6 +115,11 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
                 else
                 {
                     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Connected to WiFi");
+                    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "IP addr: %s", ip4addr_ntoa(&cyw43_state.netif[0].ip_addr));
+                    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "GW addr: %s", ip4addr_ntoa(&cyw43_state.netif[0].gw));
+                    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Mask: %s", ip4addr_ntoa(&cyw43_state.netif[0].netmask));
+                    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Hostname: %s", cyw43_state.netif->hostname);
+
                     return SUCCESS;
                 }
 
@@ -134,9 +139,23 @@ void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2)
     if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
         print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to initialize WiFi on core 1");
         return;
-    }
+    }    
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Initialized WiFi on core 1");
     cyw43_arch_enable_sta_mode(); // enable station mode
+
+    cyw43_arch_lwip_begin();
+    dhcp_release_and_stop(cyw43_state.netif);
+    ip4_addr_t ip_addr;
+    ip4_addr_t gw_addr;
+    ip4_addr_t netmask;
+    ip4addr_aton(IP_ADDR, &ip_addr);
+    ip4addr_aton(GW_ADDR, &gw_addr);
+    ip4addr_aton(NETMASK, &netmask);
+
+    netif_set_addr(cyw43_state.netif, &ip_addr, &netmask, &gw_addr);
+    cyw43_arch_lwip_end();
+    netif_set_hostname(cyw43_state.netif, HOSTNAME);
+    cyw43_wifi_pm(&cyw43_state, CYW43_NO_POWERSAVE_MODE);
 
     absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
 

@@ -150,7 +150,7 @@ void scd30_get_value(sensor_t* scd30)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    if (scd30->config->sensor_type != SCD30) // Check for correct sensor type
+    if (scd30->config.sensor_type != SCD30) // Check for correct sensor type
     {
         scd30->meas_state = MEAS_FINISHED;
         scd30->state = ERROR_UNKNOWN_SENSOR;
@@ -245,7 +245,7 @@ int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    scd30->config = config; // Save configuration
+    memcpy(&scd30->config, config, sizeof(sensor_config_t));
     s30_power(scd30, true); // Power on
 
     ret = s30_write_config(config); // Write configuration to sensor
@@ -342,7 +342,7 @@ static int32_t s30_write_config(sensor_config_t* config)
 
 static inline void s30_power(sensor_t* scd30, bool on)
 {
-    if (!scd30->config->power_global_control) // If power not controlled globally
+    if (!scd30->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

@@ -209,7 +209,7 @@ void ee895_get_value(sensor_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
     int32_t ret;
-    if (ee895->config->sensor_type != EE895) // Check for correct sensor type
+    if (ee895->config.sensor_type != EE895) // Check for correct sensor type
     {
         ee895->meas_state = MEAS_FINISHED;
         ee895->state = ERROR_UNKNOWN_SENSOR;
@@ -232,7 +232,7 @@ void ee895_get_value(sensor_t* ee895)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
             ee_power(ee895, true); // Power on
             ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
-            if (ee895->config->single_meas_mode) 
+            if (ee895->config.single_meas_mode) 
             {
                 ee895->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // If single measurement mode - wait for trigger ready
             }
@@ -388,7 +388,7 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    ee895->config = config; // Save configuration
+    memcpy(&ee895->config, config, sizeof(sensor_config_t));
     ee_power(ee895, true); // Power on
 
     uint8_t fw_read_name[16];
@@ -462,7 +462,7 @@ static int32_t ee_write_config(sensor_config_t* config)
 
 static inline void ee_power(sensor_t* ee895, bool on)
 {
-    if (!ee895->config->power_global_control) // If power not controlled globally
+    if (!ee895->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

@@ -146,7 +146,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
 {
     int32_t ret;
     uint8_t tempBuffer[3];
-    if (cm1107n->config->sensor_type != CM1107N) // Check for correct sensor type
+    if (cm1107n->config.sensor_type != CM1107N) // Check for correct sensor type
     {
         cm1107n->meas_state = MEAS_FINISHED;
         cm1107n->state = ERROR_UNKNOWN_SENSOR;
@@ -244,7 +244,7 @@ int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != CM1107N) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    cm1107n->config = config; // Assign configuration
+    memcpy(&cm1107n->config, config, sizeof(sensor_config_t)); // Save config
     cm_power(cm1107n, true); // Power on
 
     ret = cm_write_config(config); // Write configuration to sensor
@@ -296,7 +296,7 @@ int32_t cm_write_config(sensor_config_t* config)
 
 void cm_power(sensor_t* cm1107n, bool on)
 {
-    if (!cm1107n->config->power_global_control) // If power not controlled globally
+    if (!cm1107n->config.power_global_control) // If power not controlled globally
     {
         // Read power vector
         // Check if bit turned [on]

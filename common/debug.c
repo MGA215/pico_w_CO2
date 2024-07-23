@@ -26,7 +26,7 @@
 #define DEBUG_SUNLIGHT true
 #define DEBUG_SCD30 false
 #define DEBUG_SCD41 false
-#define DEBUG_COZIR_LP3 false
+#define DEBUG_COZIR_LP3 true
 #define DEBUG_CM1107N false
 
 #define DEBUG_TCP_SERVER true
