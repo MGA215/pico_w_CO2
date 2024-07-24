@@ -1,5 +1,5 @@
 #include "power.h"
-#include "../../shared.h"
+#include "../../common/shared.h"
 #include "hardware/i2c.h"
 #include "../../common/debug.h"
 #include "../../error_codes.h"

@@ -13,6 +13,7 @@
 #include "common/debug.h"
 #include "malloc.h"
 
+
 // structure containing info about the RTC module
 struct ds3231_rtc rtc;
 
@@ -53,11 +54,8 @@ message_channel* channels2[16]; // Second 16 channels
 uint8_t channels2_len; // Number of channels in second buffer
 
 // SOAP message buffer
-uint8_t soap_buffer1[MAX_SOAP_SIZE] = {0}; // MUTEX
-uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0}; // MUTEX
-
-static soap_data_t soap_message1 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message1 buffer & mutex
-static soap_data_t soap_message2 = {.data_len = 0, .data_mutex = {0}}; // Common soap_message2 buffer & mutex
+uint8_t soap_buffer1[MAX_SOAP_SIZE] = {0};
+uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0};
 
 absolute_time_t memory_timer;
 
@@ -92,7 +90,7 @@ int main()
 
 void core1_main(void)
 {
-    wifi_main(&soap_message1, &soap_message2); // Initialize WiFi with soap buffer pointers for shared resource
+    wifi_main();
 }
 
 int init(void)
@@ -100,10 +98,10 @@ int init(void)
     int32_t ret;
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
 
-    if (!mutex_is_initialized(&soap_message1.data_mutex)) // Initializes mutexes for soap message buffer
-        mutex_init(&soap_message1.data_mutex);
-    if (!mutex_is_initialized(&soap_message2.data_mutex))
-        mutex_init(&soap_message2.data_mutex);
+    if (!mutex_is_initialized(&soap_data1.data_mutex)) // Initializes mutexes for soap message buffer
+        mutex_init(&soap_data1.data_mutex);
+    if (!mutex_is_initialized(&soap_data2.data_mutex))
+        mutex_init(&soap_data2.data_mutex);
 
     multicore_launch_core1(core1_main); // Launch second core
 
@@ -400,15 +398,15 @@ void create_soap_messages(void)
     }
     print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message 2");
 
-    mutex_enter_timeout_ms(&soap_message1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
-    strncpy(soap_message1.data, soap_buffer1, MAX_SOAP_SIZE);
-    soap_message1.data_len = strlen(soap_buffer1);
-    mutex_exit(&soap_message1.data_mutex);
+    mutex_enter_timeout_ms(&soap_data1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
+    strncpy(soap_data1.data, soap_buffer1, MAX_SOAP_SIZE);
+    soap_data1.data_len = strlen(soap_buffer1);
+    mutex_exit(&soap_data1.data_mutex);
 
-    mutex_enter_timeout_ms(&soap_message2.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
-    strncpy(soap_message2.data, soap_buffer2, MAX_SOAP_SIZE);
-    soap_message2.data_len = strlen(soap_buffer2);
-    mutex_exit(&soap_message2.data_mutex);
+    mutex_enter_timeout_ms(&soap_data2.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
+    strncpy(soap_data2.data, soap_buffer2, MAX_SOAP_SIZE);
+    soap_data2.data_len = strlen(soap_buffer2);
+    mutex_exit(&soap_data2.data_mutex);
 
     soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
     return;

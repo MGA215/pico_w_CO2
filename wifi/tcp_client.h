@@ -28,13 +28,10 @@ err_t tcp_client_init(void);
 /**
  * @brief Runs the TCP client, opens a socket, sends data and closes the socket
  * 
- * @param data Data to send
- * @param data_len Length of the data to send
  * @param close_tcp If TCP socket should be closed after send
- * @param data_mutex mutex for the data
  * @return true if the client should be run immediately again
  * @return false if connection was closed or communication ended
  */
-bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* data_mutex);
+bool run_tcp_client(bool close_tcp);
 
 #endif

@@ -61,6 +61,8 @@
 #define MUTEX_TIMEOUT_MS 1000
 
 #define MAX_SOAP_SIZE 4096
+#define CONFIG_SEND_BUFFER_SIZE 4096
+#define CONFIG_RECVD_BUFFER_SIZE 300 + 60
 
 
 // value representing the interval between display draws in ms

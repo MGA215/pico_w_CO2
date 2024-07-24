@@ -65,7 +65,7 @@ typedef enum debug_source
 } debug_source_e;
 
 #define DEBUG_CORE_0 true
-#define DEBUG_CORE_1 false
+#define DEBUG_CORE_1 true
 #define DEBUG_WIFI true
 #define DEBUG_TCP_CLIENT true
 

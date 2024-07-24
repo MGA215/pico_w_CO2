@@ -121,10 +121,16 @@ typedef struct soap_data
     mutex_t data_mutex;
 } soap_data_t;
 
-typedef struct sensor_config_mutex
+typedef struct config_data
 {
-    sensor_config_t sensor_config;
-    mutex_t sensor_config_mutex;
-} sensor_config_mutex_t;
+    uint8_t command[CONFIG_RECVD_BUFFER_SIZE];
+    uint8_t response[CONFIG_SEND_BUFFER_SIZE];
+    uint32_t command_len;
+    uint32_t response_len;
+    mutex_t command_mutex;
+    mutex_t response_mutex;
+    bool command_rdy;
+    bool response_rdy;
+} config_data_t;
 
 #endif

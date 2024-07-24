@@ -4,7 +4,7 @@
 #include "../common/debug.h"
 #include "../common/i2c_extras.h"
 #include "../error_codes.h"
-#include "../shared.h"
+#include "../common/shared.h"
 #include "../sensor_config.h"
 
 #include "ee895/ee895.h"
@@ -24,8 +24,6 @@
 
 // Must be increased with each new sensor type
 #define SENSOR_TYPES 8
-
-sensor_t sensors[8];
 
 sensor_config_t* sensors_config[8];
 
@@ -161,10 +159,10 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
     for (int i = 0; i < 8; i++) // Try initialize mutexes for sensor configurations, initialize default structures
     {
-        if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex)) // Check mutex initialization
-        {
-            mutex_init(&sensors_config_all[i].sensor_config_mutex); // Initialize mutex
-        }
+        // if (!mutex_is_initialized(&sensors_config_all[i].sensor_config_mutex)) // Check mutex initialization
+        // {
+        //     mutex_init(&sensors_config_all[i].sensor_config_mutex); // Initialize mutex
+        // }
         sensors_setup_sensor(i, configuration_map[i], true);
     }
 
@@ -578,9 +576,9 @@ bool sensors_verify_read_config(uint8_t sensor_index)
     {
         print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i verified", sensor_index);
         config.verified = true;
-        mutex_enter_timeout_ms(&sensors_config_all[sensor_index].sensor_config_mutex, 1000); // Safe copy configuration
-        memcpy(&sensors_config_all[sensor_index], &config, sizeof(sensor_config_t));
-        mutex_exit(&sensors_config_all[sensor_index].sensor_config_mutex);
+        // mutex_enter_timeout_ms(&sensors_config_all[sensor_index].sensor_config_mutex, 1000); // Safe copy configuration
+        // memcpy(&sensors_config_all[sensor_index], &config, sizeof(sensor_config_t));
+        // mutex_exit(&sensors_config_all[sensor_index].sensor_config_mutex);
         return true;
     }
     return false;

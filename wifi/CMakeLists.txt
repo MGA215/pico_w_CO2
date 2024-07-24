@@ -1,7 +1,5 @@
 add_library(pico-wifi INTERFACE)
 
-target_compile_options(pico-wifi INTERFACE "-g")
-
 target_sources(pico-wifi
   INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/wifi.c
@@ -17,19 +15,16 @@ target_sources(pico-wifi
   ${CMAKE_CURRENT_LIST_DIR}/lwipopts.h
 )
   
-  # target_sources(pico-wifi INTERFACE 
-  #   ${CMAKE_CURRENT_LIST_DIR}/lwipopts.h
-  # )
-  
 target_sources(pico-wifi INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/wifi.h
   ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
 )
   
 
-target_link_libraries(pico-wifi INTERFACE pico-common)
-
-target_sources(pico_cyw43_arch_lwip_threadsafe_background INTERFACE ${CMAKE_CURRENT_LIST_DIR}/lwipopts.h)
-target_sources(pico_lwip INTERFACE ${CMAKE_CURRENT_LIST_DIR}/lwipopts.h)
-target_link_libraries(pico-wifi INTERFACE pico_stdlib pico_lwip)
-target_link_libraries(pico-wifi INTERFACE pico_cyw43_arch_lwip_threadsafe_background)
+target_link_libraries(pico-wifi INTERFACE 
+  pico-common
+  pico-cobs 
+  pico_stdlib 
+  pico_lwip 
+  pico_cyw43_arch_lwip_threadsafe_background
+)

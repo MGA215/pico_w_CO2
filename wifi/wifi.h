@@ -18,9 +18,7 @@
 /**
  * @brief Wifi & network entry point
  * 
- * @param soap_1 
- * @param soap_2 
  */
-extern void wifi_main(soap_data_t* soap_1, soap_data_t* soap_2);
+extern void wifi_main();
 
 #endif

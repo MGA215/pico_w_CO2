@@ -8,17 +8,28 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
 #ifndef __TCP_SERVER_H__
 #define __TCP_SERVER_H__
 
+#include "pico/stdlib.h"
+#include "lwip/err.h"
+
 #define BUF_SIZE 4096 + 1024
 
-bool data_recved;
-uint8_t buffer_sent[BUF_SIZE];
-uint8_t buffer_recv[BUF_SIZE];
 
 
+/**
+ * @brief Initializes TCP server structure
+ * 
+ * @return err_t Return error code
+ */
+extern err_t tcp_server_init();
+
+/**
+ * @brief Runs the TCP server to listen
+ * 
+ */
+extern void tcp_server_run(void);
 
 
 

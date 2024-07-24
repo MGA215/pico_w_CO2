@@ -15,6 +15,8 @@
 #include "credentials.h"
 #include "tcp_client.h"
 #include "../common/common_include.h"
+#include "http.h"
+#include "../common/shared.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/dns.h"
@@ -62,6 +64,8 @@ static bool should_tcp_close;
 
 // If an error has occured - to prevent infinite loop
 static bool error_flag;
+
+static bool data_sending;
 
 
 /**
@@ -131,11 +135,9 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len);
  * @brief Sends data to the server
  * 
  * @param arg TCP client structure
- * @param data pointer to the data to send
- * @param data_len Length of the data to send
  * @return err_t Return error
  */
-static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len);
+static err_t tcp_client_send(void* arg, uint8_t* data);
 
 /**
  * @brief Callback when client receives any data
@@ -159,7 +161,7 @@ void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callba
 
 bool ip_found = false;
 
-bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* data_mutex)
+bool run_tcp_client(bool close_tcp)
 {
     should_tcp_close = close_tcp; // If TCP should be closed after the end of communication
     if (!&state) // No state exists
@@ -186,28 +188,32 @@ bool run_tcp_client(uint8_t* data, uint16_t data_len, bool close_tcp, mutex_t* d
         case CONNECTED: // On connected state
         {
             err_t err;
-            cyw43_arch_lwip_begin();
-            if ((err = tcp_client_send(&state, data, data_len)) != ERR_OK) // Send data
+            if (!data_sending && !data_sent)
             {
+                uint8_t* message = create_http_header(IS_COMET_CLOUD ? TCP_CLIENT_SERVER_IP_CLOUD : TCP_CLIENT_SERVER_IP_DB, IS_COMET_CLOUD, 
+                IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PATH : TCP_CLIENT_SERVER_DB_PATH, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, 
+                "http://tempuri.org/InsertMSxSample", soap_data1.data, soap_data1.data_len, &soap_data1.data_mutex); // Add safely HTTP header to SOAP message
+                cyw43_arch_lwip_begin();
+                data_sent = false;
+                if ((err = tcp_client_send(&state, message)) != ERR_OK) // Send data
+                {
+                    cyw43_arch_lwip_end();
+                    free(message);
+                    tcp_client_result(&state, err); // Print error code and close socket
+                    return false;
+                }
                 cyw43_arch_lwip_end();
-                tcp_client_result(&state, err); // Print error code and close socket
-                return false;
+                free(message);
             }
-            cyw43_arch_lwip_end();
-            while (!data_sent) {
-                tight_loop_contents(); // Wait for data sent
-                if (error_flag) // If error flag raised stop loop
+            if (data_sent && close_tcp) {
+                if (error_flag) // If error flag raised close socket
                 {
                     tcp_client_result(&state, 2); // Print error code 2 and close socket
                     break;
                 }
-            }
-            if (close_tcp) // If TCP should close
-            {
                 tcp_client_result(&state, 0); // Close connection
             }
-            data_sent = false; // No data has been sent
-            
+            else if (data_sent) data_sent = false;
             return false;
         }
     }
@@ -328,22 +334,23 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
     data_sent = true; // Data sent
     if (should_tcp_close) tcp_client_result(arg, ERR_OK); // If TCP socket should close
     data_sent_len = len; // Copy data sent length
+    data_sending = false;
     return ERR_OK;
 }
 
-static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len)
+static err_t tcp_client_send(void* arg, uint8_t* data)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message:\n");
     if (debug >= SEVERITY_TRACE && DEBUG_CORE_1 && DEBUG_WIFI && DEBUG_TCP_CLIENT)
         printf("%s\n", data);
     sleep_ms(10);
-    if (data_len >= BUF_SIZE) // Check buffer size
+    if (strlen(data) >= BUF_SIZE) // Check buffer size
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Trying to send too much data");
         return ERR_ARG;
     }
-    err_t err = tcp_write(state->tcp_pcb, data, data_len, 0); // Prepare data to send
+    err_t err = tcp_write(state->tcp_pcb, data, strlen(data), TCP_WRITE_FLAG_COPY); // Prepare data to send
     if (err != ERR_OK)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to write data to be sent: %i", err);
@@ -355,6 +362,7 @@ static err_t tcp_client_send(void* arg, uint8_t* data, uint16_t data_len)
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
         return err;
     }
+    data_sending = true;
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sent");
     return ERR_OK;
 }

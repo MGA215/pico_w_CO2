@@ -5,13 +5,15 @@
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
 #include "../common/common_include.h"
+#include "../cobs/cobslib.h"
+#include "../common/shared.h"
 
 #define POLL_TIME_S 5
 
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
     struct tcp_pcb *client_pcb;
-    bool complete;
+    bool connected;
     uint8_t* buffer_sent;
     uint8_t* buffer_recv;
     int sent_len;
@@ -27,7 +29,95 @@ typedef enum tcp_server_fsm {
 
 TCP_SERVER_T state;
 
+uint8_t buffer_sent[BUF_SIZE];
+uint32_t buffer_sent_len = 0;
+uint8_t buffer_recv[BUF_SIZE];
+uint32_t buffer_recv_len = 0;
+
 tcp_server_fsm_e server_state;
+
+/**
+ * @brief Opens server socket on IPv4 any addr, port 10001
+ * 
+ * @param arg server state structure
+ * @return true if successfully opened
+ * @return false if error has been detected
+ */
+static bool tcp_server_open(void* arg);
+
+/**
+ * @brief Callback to accept client connecting to the server
+ * 
+ * @param arg server state structure
+ * @param client_pcb pcb of the incoming connection
+ * @param err error value
+ * @return err_t return error code
+ */
+static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err);
+
+/**
+ * @brief Callback after data has been sent to the client
+ * 
+ * @param arg server state structure
+ * @param tpcb pcb structure
+ * @param len length of the sent data
+ * @return err_t return error code
+ */
+static err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
+
+/**
+ * @brief Callback when data received
+ * 
+ * @param arg server state structure
+ * @param tpcb pcb structure
+ * @param p pointer to the packet buffer
+ * @param err received error code
+ * @return err_t return error code
+ */
+err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+
+/**
+ * @brief Callback to the server poll
+ * 
+ * @param arg server state structure
+ * @param tpcb pcb structure
+ * @return err_t return error code
+ */
+static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb);
+
+/**
+ * @brief Callback for fatal server error
+ * 
+ * @param arg server state structure
+ * @param err error code
+ */
+static void tcp_server_err(void *arg, err_t err);
+
+/**
+ * @brief Result function to close server connection
+ * 
+ * @param arg server state structure
+ * @param status exit status code
+ * @return err_t return error code
+ */
+static err_t tcp_server_result(void* arg, int status);
+
+/**
+ * @brief Function to close the server
+ * 
+ * @param arg server state structure
+ * @return err_t return error code
+ */
+static err_t tcp_server_close(void* arg);
+
+/**
+ * @brief Sends data to the client
+ * 
+ * @param arg server state structure
+ * @return err_t return error code
+ */
+static err_t tcp_server_send_data(void* arg);
+
 
 
 err_t tcp_server_init()
@@ -36,6 +126,12 @@ err_t tcp_server_init()
     state.buffer_recv = buffer_recv; // Set buffer pointers
     state.buffer_sent = buffer_sent;
     server_state = CONNECTION_CLOSED; // Set initial connection to closed
+
+    if (!mutex_is_initialized(&config_data.command_mutex)) // Initialize server command & response mutexes
+        mutex_init(&config_data.command_mutex);
+    if (!mutex_is_initialized(&config_data.response_mutex))
+        mutex_init(&config_data.response_mutex);
+
     return ERR_OK;
 }
 
@@ -44,120 +140,141 @@ void tcp_server_run(void)
     if (!&state) // No state exists
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP state not initialized");
-        return false;
+        return;
     }
-    switch (server_state)
+    switch (server_state) // Check server state
     {
-        case CONNECTION_CLOSED:
-            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Opening TCP socket on port %i...", TCP_SERVER_PORT);
-            if (!tcp_server_open(&state))
+        case CONNECTION_CLOSED: // If connection closed
+            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Listening on port %i...", TCP_SERVER_PORT);
+            if (!tcp_server_open(&state)) // Spin up server
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to spin up TCP server.");
+                server_state = CONNECTION_CLOSED; // On error set state to closed
                 return;
             }
             break;
+        case CONNECTED:
+        {
+            if (config_data.response_rdy)
+            {
+                mutex_enter_timeout_ms(&config_data.response_mutex, 1000); // Safe encode copy response
+                encodeCOBS(buffer_sent, config_data.response, &config_data.response_len);
+                buffer_sent_len = config_data.response_len;
+                mutex_exit(&config_data.response_mutex);
+                tcp_server_send_data(&state); // ToDo send data
+                config_data.response_rdy = false;
+            }
+        }
         
     }
+    
 }
 
-bool tcp_server_open(void* arg)
+static bool tcp_server_open(void* arg)
 {
-    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
-    server_state = CONNECTING;
-    struct tcp_pcb* pcb = tcp_new_ip_type(IPADDR_TYPE_V4);
-    if (!pcb)
+    TCP_SERVER_T* state = (TCP_SERVER_T*)arg; // Get server state
+    server_state = CONNECTING; // Set state to connecting
+    struct tcp_pcb* pcb = tcp_new_ip_type(IPADDR_TYPE_V4); // Set PCB to accept only IPv4
+    if (!pcb) // Check pcb created
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to create pcb");
         return false;
     }
 
-    err_t err = tcp_bind(pcb, NULL, TCP_SERVER_PORT);
-    if (err)
+    err_t err = tcp_bind(pcb, NULL, TCP_SERVER_PORT); // Bind pcb to port
+    if (err) // Binding failed
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to bind server to port %i: error %i", TCP_SERVER_PORT, err);
         return false;
     }
 
-    state->server_pcb = tcp_listen_with_backlog(pcb, 1);
-    if (!state->server_pcb)
+    state->server_pcb = tcp_listen_with_backlog(pcb, 1); // Listen on pcb, allow only 1 device to connect
+    if (!state->server_pcb) // Check listening started
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to listen");
-        if (pcb)
+        if (pcb) // If pcb exists
         {
-            tcp_close(pcb);
+            tcp_close(pcb); // close pcb
         }
         return false;
     }
 
-    tcp_arg(state->server_pcb, state);
-    tcp_accept(state->server_pcb, tcp_server_accept);
+    tcp_arg(state->server_pcb, state); // set tcp arg variable
+    tcp_accept(state->server_pcb, tcp_server_accept); // set tcp server accept callback fn
     return true;
 }
 
-err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
+static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
 {
-    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
-    if (err != ERR_OK || client_pcb == NULL)
+    TCP_SERVER_T* state = (TCP_SERVER_T*)arg; // get server state
+    if (err != ERR_OK || client_pcb == NULL) // if error or no client pcb
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to accept client: %i", err);
-        tcp_server_result(arg, err != 0 ? err : ERR_CONN);
+        tcp_server_result(arg, err != 0 ? err : ERR_CONN); // close connection
         return ERR_VAL;
     }
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Client connected");
 
-    state->client_pcb = client_pcb;
-    tcp_arg(client_pcb, state);
-    tcp_sent(client_pcb, tcp_server_sent);
-    tcp_recv(client_pcb, tcp_server_recv);
-    tcp_poll(client_pcb, tcp_server_poll, POLL_TIME_S * 2);
-    tcp_err(client_pcb, tcp_server_err);
+    state->client_pcb = client_pcb; // set client pcb
+    tcp_arg(client_pcb, state); // set client args
+    tcp_sent(client_pcb, tcp_server_sent); // set server sent to client callback
+    tcp_recv(client_pcb, tcp_server_recv); // set server received from client callback
+    tcp_poll(client_pcb, tcp_server_poll, POLL_TIME_S * 2); // set server polling pcb callback
+    tcp_err(client_pcb, tcp_server_err); // set client errored callback
+    server_state = CONNECTED; // client is connected to the server
+    state->connected = true;
 
     return ERR_OK;
 }
 
 static err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len) 
 {
-    TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
+    TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "Sent %i bytes of data", len);
     return ERR_OK;
 }
 
 err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) 
 {
-    TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
-    if (!p) {
-        return tcp_server_result(arg, -1);
+    TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
+    if (!p) { // no pbuf available
+        return tcp_server_result(arg, -1); // close with -1
     }
     // this method is callback from lwIP, so cyw43_arch_lwip_begin is not required, however you
     // can use this method to cause an assertion in debug mode, if this method is called when
     // cyw43_arch_lwip_begin IS needed
     cyw43_arch_lwip_check();
-    if (p->tot_len > 0) {
-        state->recv_len = 0;
-        memset(state->buffer_recv, 0x00, BUF_SIZE);
+    if (p->tot_len > 0) { // check if pbuf contains data
+        state->recv_len = 0; // set received data length to 0
+        memset(state->buffer_recv, 0x00, BUF_SIZE); // clear received data buffer
         print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "recved %d err %d", p->tot_len, err);
 
         // Receive the buffer
-        const uint16_t buffer_left = BUF_SIZE - state->recv_len;
         state->recv_len += pbuf_copy_partial(p, state->buffer_recv + state->recv_len,
-                                             p->tot_len, 0);
-        tcp_recved(tpcb, p->tot_len);
+                                             p->tot_len, 0); // copy data from pbuf
+        tcp_recved(tpcb, p->tot_len); // inform client data has been received
+        buffer_recv_len = state->recv_len;
     }
-    pbuf_free(p);
+    pbuf_free(p); // free pbuf
+
+    mutex_enter_timeout_ms(&config_data.command_mutex, 1000); // Safe decode copy command
+    decodeCOBS(buffer_recv, config_data.command, &buffer_recv_len);
+    config_data.command_len = buffer_recv_len;
+    mutex_exit(&config_data.command_mutex);
+    config_data.command_rdy = true; // Data has been received
 
     return ERR_OK;
 }
 
 static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) 
 {
-    DEBUG_printf("tcp_server_poll_fn\n");
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP server poll");
     return ERR_OK;
 }
 
 static void tcp_server_err(void *arg, err_t err) 
 {
     if (err != ERR_ABRT) {
-        DEBUG_printf("tcp_client_err_fn %d\n", err);
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP client error: %i", err);
         tcp_server_result(arg, err);
     }
@@ -197,10 +314,24 @@ static err_t tcp_server_close(void* arg)
         tcp_close(state->server_pcb);
         state->server_pcb = NULL;
     }
+    server_state = CONNECTION_CLOSED;
+    state->connected = false;
     return err;
 }
 
-
+static err_t tcp_server_send_data(void* arg)
+{
+    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
+    state->sent_len = 0;
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "Writing %i bytes of data", buffer_sent_len);
+    err_t err = tcp_write(state->client_pcb, state->buffer_sent, buffer_sent_len, 0);
+    if (err)
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to write data over tcp: err %i", err);
+        tcp_server_result(arg, -1);
+    }
+    return ERR_OK;
+}
 
 
 

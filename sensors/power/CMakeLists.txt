@@ -1,19 +1,13 @@
-add_library(pico-power STATIC)
-
-target_include_directories(pico-power
-  INTERFACE
-)
+add_library(pico-power INTERFACE)
 
 target_link_libraries(pico-power
-PRIVATE
+INTERFACE
   hardware_i2c
   pico-common
 )
 
-target_compile_options(pico-power PRIVATE "-g")
-
 target_sources(pico-power
-PRIVATE
+INTERFACE
   ${CMAKE_CURRENT_LIST_DIR}/power.c
   ${CMAKE_CURRENT_LIST_DIR}/power.h
   ${CMAKE_CURRENT_LIST_DIR}/../../error_codes.h

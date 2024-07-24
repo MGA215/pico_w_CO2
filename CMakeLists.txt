@@ -65,13 +65,13 @@ add_subdirectory(soap)
 add_subdirectory(wifi)
 add_subdirectory(sensors)
 add_subdirectory(common)
+add_subdirectory(cobs)
 
 target_compile_options(pico_w_CO2 PRIVATE "-g")
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
-target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/shared.h)
 
 
 
@@ -80,15 +80,7 @@ target_link_libraries(pico_w_CO2
         hardware_i2c
         pico-ds3231
         pico-gfx_pack
-        pico-ee895
-        pico-cdm7162
-        pico-sunrise
-        pico-sunlight
         hardware_exception
-        pico-scd30
-        pico-cozir-lp3
-        pico-cm1107n
-        pico-mux
         pico-soap
         pico_multicore
         pico-wifi

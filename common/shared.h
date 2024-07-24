@@ -16,10 +16,12 @@
 #include "pico/stdlib.h"
 
 extern sensor_t sensors[8];
-// extern soap_data_t soap_data1;
-// extern soap_data_t soap_data2;
+extern soap_data_t soap_data1;
+extern soap_data_t soap_data2;
 
-extern sensor_config_mutex_t sensors_config_all[8]; // for TCP server to copy from/to, for now this is stored under wifi module
+
+extern config_data_t config_data; // Must be defined
+
 
 
 #endif
