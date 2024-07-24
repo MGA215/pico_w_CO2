@@ -12,7 +12,7 @@
 #ifndef __COZIR_LP3_H__
 #define __COZIR_LP3_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Retrieves measured values from the CozIR-LP3 sensor

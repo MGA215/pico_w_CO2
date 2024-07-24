@@ -12,12 +12,12 @@
 #ifndef __COMMON_INCLUDE_H__
 #define __COMMON_INCLUDE_H__
 
-#include "common/constants.h"
-#include "common/functions.h"
-#include "common/structs.h"
-#include "common/debug.h"
+#include "constants.h"
+#include "functions.h"
+#include "structs.h"
+#include "debug.h"
 
-#include "error_codes.h"
+#include "../error_codes.h"
 
 #include "pico/stdlib.h"
 

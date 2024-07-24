@@ -1,5 +1,5 @@
 #include "serialize.h"
-#include "../common_include.h"
+#include "common_include.h"
 #include "../sensor_config.h"
 #include "string.h"
 

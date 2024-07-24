@@ -12,7 +12,7 @@
 #ifndef __SUNLIGHT_H__
 #define __SUNLIGHT_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Reads measured values from the sensor

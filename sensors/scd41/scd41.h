@@ -12,7 +12,7 @@
 #ifndef __SCD41_H__
 #define __SCD41_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Retrieves measured values from the SCD41 sensor

@@ -47,8 +47,6 @@ pico_set_program_version(pico_w_CO2 "0.4")
 pico_enable_stdio_uart(pico_w_CO2 1)
 pico_enable_stdio_usb(pico_w_CO2 1)
 
-set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os")
-
 # Add the standard library to the build
 target_link_libraries(pico_w_CO2
         pico_stdlib)
@@ -68,11 +66,10 @@ add_subdirectory(wifi)
 add_subdirectory(sensors)
 add_subdirectory(common)
 
-
+target_compile_options(pico_w_CO2 PRIVATE "-g")
 
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/sensor_config.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/config_map.h)
-target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/common_include.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/shared.h)
 

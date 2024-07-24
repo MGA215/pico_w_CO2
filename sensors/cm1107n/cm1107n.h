@@ -11,7 +11,7 @@
 #ifndef __CM1107N_H__
 #define __CM1107N_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Retrieves measured values from the CM1107N sensor

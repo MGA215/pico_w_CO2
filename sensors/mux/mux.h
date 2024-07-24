@@ -12,7 +12,7 @@
 #ifndef __MUX_H__
 #define __MUX_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Enables sensor in the multiplexer

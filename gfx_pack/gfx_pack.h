@@ -12,7 +12,7 @@
 #ifndef __GFX_PACK_H__
 #define __GFX_PACK_H__
 
-#include "../common_include.h"
+#include "../common/common_include.h"
 
 typedef struct {
     uint8_t x;

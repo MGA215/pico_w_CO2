@@ -14,7 +14,7 @@
 
 #include "credentials.h"
 #include "tcp_client.h"
-#include "../common_include.h"
+#include "../common/common_include.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/dns.h"

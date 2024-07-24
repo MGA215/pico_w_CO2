@@ -12,7 +12,7 @@
 #ifndef __CDM7162_H__
 #define __CDM7162_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 
 /**

@@ -17,7 +17,7 @@
 #include "http.h"
 #include "tcp_client.h"
 
-#include "../common_include.h"
+#include "../common/common_include.h"
 
 #include "pico/cyw43_arch.h"
 #include "lwipopts.h"

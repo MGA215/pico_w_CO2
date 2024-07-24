@@ -12,7 +12,7 @@
 #ifndef __SCD30_H__
 #define __SCD30_H__
 
-#include "../common_include.h"
+#include "../../common/common_include.h"
 
 /**
  * @brief Retrieves measured values from the SCD30 sensor
