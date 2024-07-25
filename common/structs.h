@@ -112,6 +112,7 @@ typedef struct sensor
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
     uint8_t sensor_number; // Index of the sensor of a type
     uint8_t err_counter; // Counts errors in current measurement
+    uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
 } sensor_t;
 
 typedef struct soap_data
@@ -121,7 +122,7 @@ typedef struct soap_data
     mutex_t data_mutex;
 } soap_data_t;
 
-typedef struct config_data
+typedef struct
 {
     uint8_t command[CONFIG_RECVD_BUFFER_SIZE];
     uint8_t response[CONFIG_SEND_BUFFER_SIZE];
@@ -132,5 +133,29 @@ typedef struct config_data
     bool command_rdy;
     bool response_rdy;
 } config_data_t;
+
+typedef enum {
+    SERVICE_COMM_UART = 0,
+    SERVICE_COMM_TCP_SERVER = 1
+} service_comm_source_e;
+
+typedef enum 
+{
+    MEASURED_VALUE_CO2 = 0,
+    MEASURED_VALUE_T = 1,
+    MEASURED_VALUE_RH = 2,
+    MEASURED_VALUE_P = 3
+} measured_value_type_e;
+
+typedef struct 
+{
+    sensor_type_e sensor_type;
+    uint8_t sensor_type_num;
+    measured_value_type_e measured_value_type;
+    float measured_value;
+    bool channel_active;
+    sensor_t* sensor;
+} message_channel;
+
 
 #endif

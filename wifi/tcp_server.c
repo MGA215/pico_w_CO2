@@ -158,7 +158,7 @@ void tcp_server_run(void)
             if (config_data.response_rdy)
             {
                 mutex_enter_timeout_ms(&config_data.response_mutex, 1000); // Safe encode copy response
-                encodeCOBS(buffer_sent, config_data.response, &config_data.response_len);
+                encodeCOBS(config_data.response, buffer_sent, &config_data.response_len);
                 buffer_sent_len = config_data.response_len;
                 mutex_exit(&config_data.response_mutex);
                 tcp_server_send_data(&state); // ToDo send data
@@ -214,7 +214,6 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
         return ERR_VAL;
     }
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Client connected");
-
     state->client_pcb = client_pcb; // set client pcb
     tcp_arg(client_pcb, state); // set client args
     tcp_sent(client_pcb, tcp_server_sent); // set server sent to client callback
@@ -238,7 +237,8 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
     if (!p) { // no pbuf available
-        return tcp_server_result(arg, -1); // close with -1
+        return tcp_server_result(arg, 0); // close with 0
+        // return ERR_OK;
     }
     // this method is callback from lwIP, so cyw43_arch_lwip_begin is not required, however you
     // can use this method to cause an assertion in debug mode, if this method is called when
@@ -257,11 +257,11 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
     }
     pbuf_free(p); // free pbuf
 
-    mutex_enter_timeout_ms(&config_data.command_mutex, 1000); // Safe decode copy command
-    decodeCOBS(buffer_recv, config_data.command, &buffer_recv_len);
+    if (mutex_enter_timeout_ms(&config_data.command_mutex, 1000)) // Safe decode copy command
+    {decodeCOBS(buffer_recv, config_data.command, &buffer_recv_len);
     config_data.command_len = buffer_recv_len;
     mutex_exit(&config_data.command_mutex);
-    config_data.command_rdy = true; // Data has been received
+    config_data.command_rdy = true;} // Data has been received
 
     return ERR_OK;
 }
@@ -285,7 +285,7 @@ static err_t tcp_server_result(void* arg, int status)
     TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
     if (status != ERR_OK)
     {
-        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Server error status: %i", status);
+        print_ser_output(status == 0 ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Server stopping: error status: %i", status);
     }
     return tcp_server_close(arg);
 }
@@ -329,6 +329,12 @@ static err_t tcp_server_send_data(void* arg)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to write data over tcp: err %i", err);
         tcp_server_result(arg, -1);
+    }
+    err = tcp_output(state->client_pcb); // Send data
+    if (err != ERR_OK)
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
+        return err;
     }
     return ERR_OK;
 }

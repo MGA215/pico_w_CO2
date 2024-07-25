@@ -20,7 +20,14 @@ extern soap_data_t soap_data1;
 extern soap_data_t soap_data2;
 
 
-extern config_data_t config_data; // Must be defined
+extern config_data_t config_data;
+
+extern bool service_mode;
+
+extern message_channel* channels1[16];
+extern uint8_t channels1_len;
+extern message_channel* channels2[16];
+extern uint8_t channels2_len;
 
 
 

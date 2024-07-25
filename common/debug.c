@@ -7,27 +7,27 @@
 #define COLORED_DEBUG true
 
 
-
 #define DEBUG_MAIN_INIT true
 #define DEBUG_MAIN_LOOP true
 
 #define DEBUG_SENSORS true
-#define DEBUG_SOAP false
-#define DEBUG_RTC true
-#define DEBUG_DISPLAY true
-#define DEBUG_GFX true
+#define DEBUG_SOAP true
+#define DEBUG_RTC false
+#define DEBUG_DISPLAY false
+#define DEBUG_GFX false
 #define DEBUG_RAM false
+#define DEBUG_SERVICE_COMM true
 
 #define DEBUG_MUX true
 #define DEBUG_POWER true
-#define DEBUG_EE895 false
-#define DEBUG_CDM7162 false
-#define DEBUG_SUNRISE false
+#define DEBUG_EE895 true
+#define DEBUG_CDM7162 true
+#define DEBUG_SUNRISE true
 #define DEBUG_SUNLIGHT true
-#define DEBUG_SCD30 false
-#define DEBUG_SCD41 false
+#define DEBUG_SCD30 true
+#define DEBUG_SCD41 true
 #define DEBUG_COZIR_LP3 true
-#define DEBUG_CM1107N false
+#define DEBUG_CM1107N true
 
 #define DEBUG_TCP_SERVER true
 #define DEBUG_TCP_DNS true
@@ -164,6 +164,12 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 return;
             #endif
                 snprintf(source_str, 13, "[RAM]       ");
+                break;
+            case SOURCE_SERVICE_COMM:
+             #if !(DEBUG_SERVICE_COMM && DEBUG_MAIN_LOOP && DEBUG_CORE_0)
+                return;
+            #endif
+                snprintf(source_str, 13, "[SVC_COMM]  ");
                 break;
             case SOURCE_EE895:
             #if !(DEBUG_SENSORS && DEBUG_EE895 && DEBUG_CORE_0)
@@ -305,6 +311,12 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             #endif
                 snprintf(subsource_str, 13, "[RAM]       ");
                 break;
+            case SOURCE_SERVICE_COMM:
+             #if !(DEBUG_SERVICE_COMM && DEBUG_MAIN_LOOP && DEBUG_CORE_0)
+                return;
+            #endif
+                snprintf(subsource_str, 13, "[SVC_COMM]  ");
+                break;
             case SOURCE_EE895:
             #if !(DEBUG_SENSORS && DEBUG_EE895 && DEBUG_CORE_0)
                 return;
@@ -357,7 +369,7 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             #if !(DEBUG_SENSORS && DEBUG_POWER && DEBUG_CORE_0)
                 return;
             #endif
-                snprintf(source_str, 13, "[POWER]     ");
+                snprintf(subsource_str, 13, "[POWER]     ");
                 break;
             case SOURCE_WIFI:
             #if !(DEBUG_WIFI && DEBUG_CORE_1)

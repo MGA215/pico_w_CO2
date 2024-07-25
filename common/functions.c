@@ -55,7 +55,7 @@ uint32_t float2byte(float float_value)
 
 uint16_t ntoh16(uint16_t network)
 {
-    return (network >> 8) | ((network & 0x00FF) << 8);
+    return ((network & 0xFF00) >> 8) | ((network & 0x00FF) << 8);
 }
 
 uint32_t ntoh32(uint32_t network)
@@ -75,6 +75,8 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->timeout_iterator = 0;
     sensor->wake_time = at_the_end_of_time;
     sensor->config.sensor_active = false;
+    sensor->index = input_index;
+    sensor->sensor_number = 0;
     get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
     memset(sensor->state_reg, 0x00, 26);
 }

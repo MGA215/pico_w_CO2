@@ -27,6 +27,7 @@
 #include "config_map.h"
 #include "soap/soap.h"
 #include "soap/soap_channels.h"
+#include "service_comm/service_comm.h"
 
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"

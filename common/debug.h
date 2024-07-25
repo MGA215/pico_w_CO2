@@ -48,6 +48,7 @@ typedef enum debug_source
     SOURCE_DISPLAY = 6,
     SOURCE_RTC = 7,
     SOURCE_GFX = 8,
+    SOURCE_SERVICE_COMM = 9,
     SOURCE_EE895 = 10,
     SOURCE_CDM7162 = 11,
     SOURCE_SUNRISE = 12,

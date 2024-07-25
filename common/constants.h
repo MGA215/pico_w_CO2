@@ -64,6 +64,12 @@
 #define CONFIG_SEND_BUFFER_SIZE 4096
 #define CONFIG_RECVD_BUFFER_SIZE 300 + 60
 
+#define SOAP_TESTER_NAME_1 "Tester_01"
+#define SOAP_TESTER_NAME_2 "Tester_02"
+
+#define SOAP_TESTER_SN_1 24069001
+#define SOAP_TESTER_SN_2 24069002
+
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;

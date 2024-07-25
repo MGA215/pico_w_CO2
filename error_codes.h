@@ -48,6 +48,12 @@
 // TCP errors
 #define ERROR_TCP_OPEN_FAILED -51 // Error - could not open TCP socket
 
+// Service comm errors
+#define ERROR_SERVICE_COMM_SHORT_COMMAND -61 // Error - service comm command is too short
+#define ERROR_SERVICE_COMM_UNKNOWN_VALUE -62 // Error - service comm could not retrieve value
+#define ERROR_SERVICE_COMM_WRONG_OFFSET -63 // Error - data offset is too small
+#define ERROR_SERVICE_COMM_SHORT_BUFFER -64 // Error - send buffer is not big enough
+
 // EE895 Errors
 #define EE895_ERROR_NREG_REG 111 // Error ee895 - specified number of registers is invalid
 #define EE895_ERROR_READ_RESP 112 // Error ee895 - read response is not valid
