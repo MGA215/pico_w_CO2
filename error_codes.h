@@ -124,4 +124,26 @@
 #define CM1107N_ERROR_PREHEATING 732 // Error CM1107N - Sensor preheating
 
 
+// Service comm error codes
+#define P_ERR_RANGE 3 // Measured value range error
+#define P_CO2_COM 10 // CO2 module - communication error
+#define P_CO2_VAL 11 // CO2 module - measurement error
+#define P_TRH_COM 15 // HYT271 - communication error
+#define P_TRH_VAL 16 // HYT271 - measurement error
+#define P_MS_PROM 20 // MS5607 - unable to read PROM
+#define P_MS_VAL 21 // MS5607 - measurement error
+#define P_UNDEFINED 52 // Error float conversion
+#define P_NA 53 // Value NA - not available
+#define P_ORD_RANGE 55 // Range error casting float to int
+#define P_INV_REQ 129 // Invalid addressing space
+#define P_ERR_DEVICE 130 // Device not responding
+#define P_ERR_INVDL 131 // Invalid data length
+#define P_ERR_NOREADSPACE 135 // Unable to read from specified space
+#define P_ERR_NOWRITESPACE 136 // Unable to write to specified space
+#define P_ERR_UNCMD 137 // Unknown command
+#define P_ERR_REJECTED 138 // Command cannot be executed
+#define P_ERR_ACC_SERVICE 189 // Cannot enter service mode
+
+
+
 #endif

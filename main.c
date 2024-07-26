@@ -12,10 +12,7 @@
 #include "main.h"
 #include "common/debug.h"
 #include "malloc.h"
-
-
-// structure containing info about the RTC module
-struct ds3231_rtc rtc;
+#include "pico/printf.h"
 
 // string holding the datetime value
 uint8_t datetime_str[30] = {0};
@@ -155,8 +152,6 @@ void set_datetime(void)
 
 void get_datetime(uint8_t* datetime_str, uint8_t datetime_len)
 {
-    ds3231_datetime_t dt;
-
     ds3231_get_datetime(&dt, &rtc); // read datetime
     datetime2str(datetime_str, datetime_len, &dt); // convert datetime to string
 }
@@ -397,18 +392,17 @@ void create_soap_messages(void)
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     }
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message 1");
+    mutex_enter_timeout_ms(&soap_data1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
+    strncpy(soap_data1.data, soap_buffer1, MAX_SOAP_SIZE);
+    soap_data1.data_len = strlen(soap_buffer1);
+    mutex_exit(&soap_data1.data_mutex);
+
     // memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Clear old message
     // if (!soap_build(SOAP_TESTER_NAME_2, SOAP_TESTER_SN_2, datetime_str, channels2, channels2_len, soap_buffer2, MAX_SOAP_SIZE)) // Create SOAP message 2
     // {
     //     memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
     // }
     // print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message 2");
-
-    mutex_enter_timeout_ms(&soap_data1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
-    strncpy(soap_data1.data, soap_buffer1, MAX_SOAP_SIZE);
-    soap_data1.data_len = strlen(soap_buffer1);
-    mutex_exit(&soap_data1.data_mutex);
-
     // mutex_enter_timeout_ms(&soap_data2.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
     // strncpy(soap_data2.data, soap_buffer2, MAX_SOAP_SIZE);
     // soap_data2.data_len = strlen(soap_buffer2);

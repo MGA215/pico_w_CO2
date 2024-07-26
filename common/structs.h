@@ -15,6 +15,7 @@
 #include "pico/stdlib.h"
 #include "constants.h"
 #include "pico/mutex.h"
+#include "../service_comm/service_comm.h"
 
 typedef enum sensor_type
 {
@@ -132,6 +133,10 @@ typedef struct
     mutex_t response_mutex;
     bool command_rdy;
     bool response_rdy;
+    bool response_sent;
+    uint16_t data_len;
+    service_message_t message;
+    uint8_t err;
 } config_data_t;
 
 typedef enum {

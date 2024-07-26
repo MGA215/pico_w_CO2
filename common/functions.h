@@ -64,4 +64,32 @@ extern void common_init_struct(sensor_t* sensor, uint8_t input_index);
  */
 extern float round_precision(float value, uint8_t precision);
 
+/**
+ * @brief Converts error byte to float representation, outputs the float in bytes
+ * 
+ * @param error_byte Error value
+ * @return uint32_t Float bytes error value
+ */
+extern uint32_t get_error(uint8_t error_byte);
+
+/**
+ * @brief Converts datetime to bytes
+ * 
+ * @param year Year (between 200 and 2099 incl)
+ * @param month Month
+ * @param day Day
+ * @param hour Hour
+ * @param min Min
+ * @param sec Sec
+ * @return uint32_t Time representation in bytes
+ */
+uint32_t get_time_bytes(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
+
+/**
+ * @brief Get the current time in byte float representation
+ * 
+ * @return uint32_t 
+ */
+uint32_t get_current_time_bytes(void);
+
 #endif

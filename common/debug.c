@@ -10,8 +10,8 @@
 #define DEBUG_MAIN_INIT true
 #define DEBUG_MAIN_LOOP true
 
-#define DEBUG_SENSORS true
-#define DEBUG_SOAP true
+#define DEBUG_SENSORS false
+#define DEBUG_SOAP false
 #define DEBUG_RTC false
 #define DEBUG_DISPLAY false
 #define DEBUG_GFX false

@@ -14,6 +14,9 @@
 #include "pico/stdio.h"
 #include "pico/printf.h"
 #include "malloc.h"
+#include "hardware/watchdog.h"
+#include "shared.h"
+#include "timeconst.h"
 
 #include "stdlib.h"
 #include "math.h"
@@ -96,3 +99,20 @@ float round_precision(float value, uint8_t precision)
     free(buffer);
     return result;
 }
+
+uint32_t get_error(uint8_t error_byte)
+{
+    return ((uint32_t)error_byte << 24) | 0x000080FF;
+}
+
+uint32_t get_time_bytes(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec)
+{
+    if (year < 2000 || year > 2099) return 0;
+    return rok_sec[year - 2000] + mesic_sec[month] + den_sec[day] + hod_sec[hour] + min_sec[min] + sec;
+}
+
+uint32_t get_current_time_bytes(void)
+{
+    return get_time_bytes(dt.year, dt.month, dt.day, dt.hour, dt.minutes, dt.seconds);
+}
+

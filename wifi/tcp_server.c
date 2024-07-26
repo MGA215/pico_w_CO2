@@ -7,6 +7,7 @@
 #include "../common/common_include.h"
 #include "../cobs/cobslib.h"
 #include "../common/shared.h"
+#include "../service_comm/service_comm.h"
 
 #define POLL_TIME_S 5
 
@@ -18,7 +19,7 @@ typedef struct TCP_SERVER_T_ {
     uint8_t* buffer_recv;
     int sent_len;
     int recv_len;
-    int run_count;
+    int frame_index;
 } TCP_SERVER_T;
 
 typedef enum tcp_server_fsm {
@@ -32,7 +33,8 @@ TCP_SERVER_T state;
 uint8_t buffer_sent[BUF_SIZE];
 uint32_t buffer_sent_len = 0;
 uint8_t buffer_recv[BUF_SIZE];
-uint32_t buffer_recv_len = 0;
+
+uint8_t buffer_recv_frame[CONFIG_RECVD_BUFFER_SIZE];
 
 tcp_server_fsm_e server_state;
 
@@ -222,6 +224,7 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
     tcp_err(client_pcb, tcp_server_err); // set client errored callback
     server_state = CONNECTED; // client is connected to the server
     state->connected = true;
+    state->frame_index = 0;
 
     return ERR_OK;
 }
@@ -237,31 +240,70 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
     if (!p) { // no pbuf available
-        return tcp_server_result(arg, 0); // close with 0
+        return tcp_server_result(arg, ERR_RST); // close with 0
         // return ERR_OK;
     }
     // this method is callback from lwIP, so cyw43_arch_lwip_begin is not required, however you
     // can use this method to cause an assertion in debug mode, if this method is called when
     // cyw43_arch_lwip_begin IS needed
     cyw43_arch_lwip_check();
+    state->recv_len = 0; // set received data length to 0
+    config_data.response_sent = false; // Reset sent response flag
     if (p->tot_len > 0) { // check if pbuf contains data
-        state->recv_len = 0; // set received data length to 0
         memset(state->buffer_recv, 0x00, BUF_SIZE); // clear received data buffer
-        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "recved %d err %d", p->tot_len, err);
 
         // Receive the buffer
         state->recv_len += pbuf_copy_partial(p, state->buffer_recv + state->recv_len,
-                                             p->tot_len, 0); // copy data from pbuf
+                                            p->tot_len, 0); // copy data from pbuf
+
         tcp_recved(tpcb, p->tot_len); // inform client data has been received
-        buffer_recv_len = state->recv_len;
+        print_ser_output(err ? SEVERITY_ERROR : SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "recved %d err %d", p->tot_len, err);
     }
     pbuf_free(p); // free pbuf
 
+    for (int i = 0; i < state->recv_len; i++)
+    {
+        if (state->buffer_recv[i] == FRAME_DETECT) state->frame_index = 0;
+        if (state->frame_index < CONFIG_RECVD_BUFFER_SIZE) buffer_recv_frame[state->frame_index++] = state->buffer_recv[i];
+    }
+
+    if (state->frame_index < CMD_RAW_MIN_LEN) // decode header
+    {
+        return tcp_server_result(arg, ERR_ARG);
+    }
+    uint32_t frame_len = state->frame_index; // Copy frame length
+
     if (mutex_enter_timeout_ms(&config_data.command_mutex, 1000)) // Safe decode copy command
-    {decodeCOBS(buffer_recv, config_data.command, &buffer_recv_len);
-    config_data.command_len = buffer_recv_len;
-    mutex_exit(&config_data.command_mutex);
-    config_data.command_rdy = true;} // Data has been received
+    {
+        if (decodeCOBS(buffer_recv_frame, config_data.command, &frame_len) != 0) // Decode message
+        {
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to decode message");
+            mutex_exit(&config_data.command_mutex);
+            state->frame_index = 0;
+
+            return tcp_server_result(arg, ERR_ARG);
+        }
+        config_data.command_len = frame_len; // Save frame length
+        mutex_exit(&config_data.command_mutex);
+        
+        uint16_t data_len = service_comm_parse_message(); // Parse message
+
+        if (frame_len > CMD_PADDING + CMD_MAX_LEN || data_len > CMD_MAX_LEN) // Check message too long
+        {
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Message too long");
+            state->frame_index = 0;
+            return tcp_server_result(arg, ERR_ARG);
+        }
+        if (frame_len < CMD_PADDING + data_len) // Check for all data
+        {
+            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Waiting for the rest of the data");
+            return ERR_OK;
+        }
+        config_data.err = SUCCESS; // Successfully retrieved data
+        config_data.command_rdy = true; // Data has been received
+        state->frame_index = 0;
+        return ERR_OK;
+    } 
 
     return ERR_OK;
 }
@@ -328,14 +370,15 @@ static err_t tcp_server_send_data(void* arg)
     if (err)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to write data over tcp: err %i", err);
-        tcp_server_result(arg, -1);
+        return tcp_server_result(arg, err);
     }
     err = tcp_output(state->client_pcb); // Send data
     if (err != ERR_OK)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
-        return err;
+        return tcp_server_result(arg, err);
     }
+    config_data.response_sent = true;
     return ERR_OK;
 }
 
