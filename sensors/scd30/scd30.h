@@ -14,6 +14,34 @@
 
 #include "../../common/common_include.h"
 
+
+/**
+ * @brief Reads data from the SCD30 sensor
+ * 
+ * @param command Command to execute (get specific data)
+ * @param buf Buffer to save read data
+ * @param len Length of the buffer
+ * @return int32_t Return code
+ */
+extern int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len);
+
+/**
+ * @brief Writes a value to the SCD30 sensor
+ * 
+ * @param command Command to write specific data
+ * @param value Data to write
+ * @return int32_t Return code
+ */
+extern int32_t scd30_write_value(uint16_t command, uint16_t value);
+
+/**
+ * @brief Executes a command on the SCD30 sensor
+ * 
+ * @param command Command to send
+ * @return int32_t Return code
+ */
+extern int32_t scd30_write_command(uint16_t command);
+
 /**
  * @brief Retrieves measured values from the SCD30 sensor
  * 

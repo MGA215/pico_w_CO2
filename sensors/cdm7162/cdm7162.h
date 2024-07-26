@@ -14,6 +14,24 @@
 
 #include "../../common/common_include.h"
 
+/**
+ * @brief Reads data from cdm7162 sensor
+ * 
+ * @param addr register address to read from
+ * @param buf output buffer
+ * @param num_bytes number of bytes to read
+ * @return int32_t error code
+ */
+extern int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes);
+
+/**
+ * @brief Writes data to cdm7162 sensor
+ * 
+ * @param addr Register address to write to
+ * @param value Value to write
+ * @return int32_t Return code
+ */
+extern int32_t cdm7162_write(uint8_t addr, uint8_t value);
 
 /**
  * @brief Reads measured values from the sensor

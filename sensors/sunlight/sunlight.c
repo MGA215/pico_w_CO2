@@ -119,26 +119,6 @@
 static inline int sl_get_error(uint16_t error_reg);
 
 /**
- * @brief Reads data from the SUNLIGHT sensor
- * 
- * @param addr Register address to be read from
- * @param buf Data buffer
- * @param num_bytes Number of bytes to read
- * @return int Return code
- */
-static int sl_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
-
-/**
- * @brief Writes data to the SUNLIGHT sensor to specified address
- * 
- * @param addr Register address
- * @param buf Data to be sent
- * @param len Length of the data
- * @return int Return code
- */
-static int sl_write(uint8_t addr, uint8_t* buf, uint16_t len);
-
-/**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to be written
@@ -172,7 +152,7 @@ static inline int sl_get_error(uint16_t error_reg)
     else return SUNLIGHT_ERROR_SENSOR_GENERAL;
 }
 
-static int sl_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
+int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
 {
     int32_t ret;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNLIGHT_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address to read from
@@ -183,7 +163,7 @@ static int sl_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
     return SUCCESS;
 }
 
-static int sl_write(uint8_t addr, uint8_t* buf, uint16_t len)
+int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len)
 {
     int32_t ret;
     uint8_t command_buffer[len + 1];
@@ -228,7 +208,7 @@ void sunlight_get_value(sensor_t* sunlight)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Read mode");
             uint8_t data;
-            ret = sl_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
+            ret = sunlight_read(REG_MEAS_MODE, &data, 1); // Reading measurement mode
             if (ret != 0) // On invalid read
             {
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
@@ -264,14 +244,14 @@ void sunlight_get_value(sensor_t* sunlight)
             if (memcmp(sunlight->state_reg, buf, 26)) // If last state was zeros (not set)
             {
                 uint8_t data = 0x01; // Prepare data
-                ret = sl_write(REG_START_SINGLE_MEAS_MIR, &data, 1); // Set measurement trigger
+                ret = sunlight_write(REG_START_SINGLE_MEAS_MIR, &data, 1); // Set measurement trigger
             }
             else // Last state exists
             {
                 uint8_t data[27];
                 data[0] = 0x01; // Prepare data
                 memcpy(&data[1], sunlight->state_reg, 26);
-                ret = sl_write(REG_START_SINGLE_MEAS_MIR, data, 27); // Set measurement trigger
+                ret = sunlight_write(REG_START_SINGLE_MEAS_MIR, data, 27); // Set measurement trigger
             }
             if (ret != 0) // On invalid write
             {
@@ -289,7 +269,7 @@ void sunlight_get_value(sensor_t* sunlight)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Read value");
             uint8_t buf[10] = {0};
-            ret = sl_read(REG_ERR_H, buf, 10); // Read data
+            ret = sunlight_read(REG_ERR_H, buf, 10); // Read data
             if (ret != 0) // On invalid read
             {
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
@@ -337,7 +317,7 @@ void sunlight_get_value(sensor_t* sunlight)
         case MEAS_READ_STATUS: // Reading status registers
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Read status");
-            ret = sl_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 26); // Read status registers
+            ret = sunlight_read(REG_ABC_TIME_MIR_H, sunlight->state_reg, 26); // Read status registers
             if (ret != 0) // On invalid read
             {
                 memset(sunlight->state_reg, 0x00, 26); // Clear last state registers
@@ -385,9 +365,9 @@ int sunlight_read_config(sensor_config_t* config)
     uint8_t data = 0xFF;
     config->sensor_type = SUNLIGHT;
 
-    //sl_write(REG_CLEAR_ERROR, &data, 1); // Wake sensor up
+    //sunlight_write(REG_CLEAR_ERROR, &data, 1); // Wake sensor up
 
-    if ((ret = sl_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
+    if ((ret = sunlight_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
     config->enable_nRDY = data & 0b1 << 0; // Save meter control data
     config->enable_abc = data & 0b1 << 1;
     config->enable_static_IIR = data & 0b1 << 2;
@@ -395,7 +375,7 @@ int sunlight_read_config(sensor_config_t* config)
     config->enable_pressure_comp = data & 0b1 << 4;
     config->invert_nRDY = data & 0b1 << 5;
 
-    if ((ret = sl_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
+    if ((ret = sunlight_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
     config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
     config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
@@ -403,7 +383,7 @@ int sunlight_read_config(sensor_config_t* config)
     config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
     config->filter_coeff = (uint16_t)buf[12];
 
-    if ((ret = sl_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
+    if ((ret = sunlight_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
     config->pressure = ntoh16(*((uint16_t*)&buf[0])) / 10;
 
     return SUCCESS;
@@ -431,7 +411,7 @@ static int sl_write_config(sensor_config_t* config)
         data |= config->enable_pressure_comp << 4;
         data |= config->invert_nRDY << 5;
 
-        if ((ret = sl_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
+        if ((ret = sunlight_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
     }
     if (read_config.meas_period != config->meas_period ||
         read_config.meas_samples != config->meas_samples ||
@@ -451,7 +431,7 @@ static int sl_write_config(sensor_config_t* config)
 
         command_buf[12] = (uint8_t)(config->filter_coeff);
 
-        if ((ret = sl_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
+        if ((ret = sunlight_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
     }
 
     if (read_config.pressure != config->pressure && config->enable_pressure_comp) // Check pressure
@@ -460,7 +440,7 @@ static int sl_write_config(sensor_config_t* config)
         uint8_t command_buf[2] = {0};
         *((uint16_t*)&command_buf[0]) = ntoh16(config->pressure * 10); // Prepare command
 
-        if ((ret = sl_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
+        if ((ret = sunlight_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
     }
     return SUCCESS;
 }
@@ -479,7 +459,7 @@ int sunlight_reset(void)
 {
     int32_t ret;
     uint8_t data = 0xFF;
-    if ((ret = sl_write(REG_SOFT_RESET, &data, 1)) != 0) return ret; // Send reset command to sensor
+    if ((ret = sunlight_write(REG_SOFT_RESET, &data, 1)) != 0) return ret; // Send reset command to sensor
     sleep_ms(100);
     return SUCCESS;
 }

@@ -15,6 +15,26 @@
 #include "../../common/common_include.h"
 
 /**
+ * @brief Reads data from the SUNLIGHT sensor
+ * 
+ * @param addr Register address to be read from
+ * @param buf Data buffer
+ * @param num_bytes Number of bytes to read
+ * @return int Return code
+ */
+extern int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
+
+/**
+ * @brief Writes data to the SUNLIGHT sensor to specified address
+ * 
+ * @param addr Register address
+ * @param buf Data to be sent
+ * @param len Length of the data
+ * @return int Return code
+ */
+extern int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len);
+
+/**
  * @brief Reads measured values from the sensor
  * 
  * @param sunlight SUNLIGHT sensor structure

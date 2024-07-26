@@ -38,33 +38,6 @@
 static inline uint8_t s30_crc(uint8_t* buf, uint32_t len);
 
 /**
- * @brief Reads data from the SCD30 sensor
- * 
- * @param command Command to execute (get specific data)
- * @param buf Buffer to save read data
- * @param len Length of the buffer
- * @return int32_t Return code
- */
-static int32_t s30_read(uint16_t command, uint16_t* buf, uint32_t len);
-
-/**
- * @brief Writes a value to the SCD30 sensor
- * 
- * @param command Command to write specific data
- * @param value Data to write
- * @return int32_t Return code
- */
-static int32_t s30_write_value(uint16_t command, uint16_t value);
-
-/**
- * @brief Executes a command on the SCD30 sensor
- * 
- * @param command Command to send
- * @return int32_t Return code
- */
-static int32_t s30_write_command(uint16_t command);
-
-/**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to write
@@ -105,12 +78,12 @@ static inline uint8_t s30_crc(uint8_t* buf, uint32_t len)
     return crc;
 }
 
-static int32_t s30_read(uint16_t command, uint16_t* buf, uint32_t len)
+int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len)
 {
     int32_t ret;
     uint8_t read_data[len * 3];
     memset(read_data, 0x00, (len * 3)); // Clear read buffer
-    if ((ret = s30_write_command(command))) return ret; // Send command
+    if ((ret = scd30_write_command(command))) return ret; // Send command
     busy_wait_ms(3);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD30_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read resonse
     for (int i = 0; i < len; i++) // Check each word CRC
@@ -122,7 +95,7 @@ static int32_t s30_read(uint16_t command, uint16_t* buf, uint32_t len)
     return SUCCESS;
 }
 
-static int32_t s30_write_value(uint16_t command, uint16_t value)
+int32_t scd30_write_value(uint16_t command, uint16_t value)
 {
     int32_t ret;
     uint8_t commandBuffer[5];
@@ -136,7 +109,7 @@ static int32_t s30_write_value(uint16_t command, uint16_t value)
     return SUCCESS;
 }
 
-static int32_t s30_write_command(uint16_t command)
+int32_t scd30_write_command(uint16_t command)
 {
     int32_t ret;
     uint8_t commandBuffer[2];
@@ -181,7 +154,7 @@ void scd30_get_value(sensor_t* scd30)
         case MEAS_READ_STATUS: // Reading status
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Read state");
-            ret = s30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
+            ret = scd30_read(CMD_DATA_READY, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
                 scd30->co2 = NAN; // Set values to NaN
@@ -212,7 +185,7 @@ void scd30_get_value(sensor_t* scd30)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Read value");
             uint16_t buf[6];
-            ret = s30_read(CMD_READ_MEAS, buf, 6); // Read measured data
+            ret = scd30_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)
             {
                 scd30->co2 = NAN; // Set values to NaN
@@ -263,21 +236,21 @@ int32_t scd30_read_config(sensor_config_t* config)
     int32_t ret;
     uint16_t val;
     config->sensor_type = SCD30;
-    if ((ret = s30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read pressure
+    if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
     config->enable_pressure_comp = (val != 0);
 
-    if ((ret = s30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret; // Read measurement interval
+    if ((ret = scd30_read(CMD_MEAS_INTERVAL, &val, 1)) != 0) return ret; // Read measurement interval
     config->meas_period = val;
 
-    if ((ret = s30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret; // Read auto calibration
+    if ((ret = scd30_read(CMD_AUTO_CAL, &val, 1)) != 0) return ret; // Read auto calibration
     config->abc_target_value = val;
     config->enable_abc = (val != 0);
 
-    if ((ret = s30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
+    if ((ret = scd30_read(CMD_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
     config->temperature_offset = val / 100.f;
 
-    if ((ret = s30_read(CMD_ALTITUDE_COMP, &val, 1)) != 0) return ret; // Read altitude compensation
+    if ((ret = scd30_read(CMD_ALTITUDE_COMP, &val, 1)) != 0) return ret; // Read altitude compensation
     config->altitude = val;
     config->enable_altitude_comp = (val != 0);
 
@@ -297,30 +270,30 @@ static int32_t s30_write_config(sensor_config_t* config)
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing pressure");
         if (config->enable_pressure_comp) // Pressure compensation enabled
         {
-            if ((ret = s30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
         }
         else // Pressure compensation disabled
         {
-            if ((ret = s30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
         }
     }
 
     if (read_config.meas_period != config->meas_period) // Check mesaurement period
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing measurement period");
-        if ((ret = s30_write_value(CMD_MEAS_INTERVAL, config->meas_period)) != 0) return ret; // Set measurement interval
+        if ((ret = scd30_write_value(CMD_MEAS_INTERVAL, config->meas_period)) != 0) return ret; // Set measurement interval
     }
 
     if (config->enable_abc != read_config.enable_abc) // Check abc enabled
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing ABC enable");
-        if ((ret = s30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
+        if ((ret = scd30_write_value(CMD_AUTO_CAL, config->enable_abc)) != 0) return ret;
     }
 
     if ((read_config.temperature_offset - config->temperature_offset) > 0.01f) // Check temperature offset
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing temperature offset");
-        if ((ret = s30_write_value(CMD_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret; // Set temperature offset
+        if ((ret = scd30_write_value(CMD_T_OFFSET, (uint16_t)(config->temperature_offset * 100))) != 0) return ret; // Set temperature offset
     }
 
     if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
@@ -329,11 +302,11 @@ static int32_t s30_write_config(sensor_config_t* config)
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing altitude");
         if (config->enable_altitude_comp) // Altitude compensation enabled
         {
-            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret; // Write altitude
+            if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, config->altitude)) != 0) return ret; // Write altitude
         }
         else // Altitude compensation disabled
         {
-            if ((ret = s30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret; // Disable altitude compensation
+            if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret; // Disable altitude compensation
         }
     }
 

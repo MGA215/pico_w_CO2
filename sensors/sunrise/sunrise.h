@@ -15,6 +15,26 @@
 #include "../../common/common_include.h"
 
 /**
+ * @brief Reads data from the SUNRISE sensor
+ * 
+ * @param addr Register address to be read from
+ * @param buf Data buffer
+ * @param num_bytes Number of bytes to read
+ * @return int Return code
+ */
+extern int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
+
+/**
+ * @brief Writes data to the SUNRISE sensor to specified address
+ * 
+ * @param addr Register address
+ * @param buf Data to be sent
+ * @param len Length of the data
+ * @return int Return code
+ */
+extern int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len);
+
+/**
  * @brief Resets the sensor (soft reset)
  * 
  * @return int Return code

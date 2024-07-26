@@ -39,26 +39,6 @@
 
 
 /**
- * @brief Reads data from the CozIR-LP3 sensor
- * 
- * @param addr Register address to read from
- * @param buf Read data - MSB first
- * @param len Length of the data to read (in bytes)
- * @return int32_t Return code
- */
-static int32_t lp3_read(uint8_t addr, uint8_t* buf, uint8_t len);
-
-/**
- * @brief Writes data to the CozIR-LP3 sensor
- * 
- * @param addr Register address the data should be written to
- * @param data Data to write - MSB first
- * @param len Length of the data (in bytes)
- * @return int32_t Return code
- */
-static int32_t lp3_write(uint8_t addr, uint8_t* data, uint8_t len);
-
-/**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to write
@@ -75,7 +55,7 @@ static int32_t lp3_write_config(sensor_config_t* config);
 static inline void lp3_power(sensor_t* cozir_lp3, bool on);
 
 
-static int32_t lp3_read(uint8_t addr, uint8_t* buf, uint8_t len)
+int32_t cozir_lp3_read(uint8_t addr, uint8_t* buf, uint8_t len)
 {
     if (len < 1 || len > 4) return COZIR_LP3_ERROR_NREG_REG; // Check number of read bytes is 1 .. 4
     int32_t ret;
@@ -87,7 +67,7 @@ static int32_t lp3_read(uint8_t addr, uint8_t* buf, uint8_t len)
     return SUCCESS;
 }
 
-static int32_t lp3_write(uint8_t addr, uint8_t* data, uint8_t len)
+int32_t cozir_lp3_write(uint8_t addr, uint8_t* data, uint8_t len)
 {
     if (len < 1 || len > 4) return COZIR_LP3_ERROR_NREG_REG; // Check number of written bytes is 1 .. 4
     int32_t ret;
@@ -139,7 +119,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_READ_STATUS:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read status");
-            ret = lp3_read(REG_SELF_TEST, tempBuffer, 1);
+            ret = cozir_lp3_read(REG_SELF_TEST, tempBuffer, 1);
             if (ret != 0)
             {
                 cozir_lp3->co2 = NAN;
@@ -169,7 +149,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_READ_VALUE:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read value");
-            ret = lp3_read(REG_CO2, tempBuffer, 2);
+            ret = cozir_lp3_read(REG_CO2, tempBuffer, 2);
             if (ret != 0)
             {
                 cozir_lp3->co2 = NAN;
@@ -230,30 +210,30 @@ int32_t cozir_lp3_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[2];
     config->sensor_type = COZIR_LP3;
-    if ((ret = lp3_read(REG_MEAS_CONTROL, &buf[0], 1)) != 0) return ret;
-    if ((ret = lp3_read(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_MEAS_CONTROL, &buf[0], 1)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
     config->filter_coeff = buf[0];
 
-    if ((ret = lp3_read(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
     config->pressure = ntoh16(*((uint16_t*)(&buf[0])));
     config->enable_pressure_comp = config->pressure != 1013;
 
-    if ((ret = lp3_read(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
     config->enable_PWM_pin = ((buf[0] >> 7) & 0x1);
 
-    if ((ret = lp3_read(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     config->enable_abc = (buf[0] >> 1) & 0x1;
 
-    if ((ret = lp3_read(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
     config->abc_init_period = ntoh16(*((uint16_t*)(&buf[0])));
 
-    if ((ret = lp3_read(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
     config->abc_period = ntoh16(*((uint16_t*)(&buf[0])));
 
-    if ((ret = lp3_read(REG_ABC_TARGET, buf, 2)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ABC_TARGET, buf, 2)) != 0) return ret;
     config->abc_target_value = ntoh16(*((uint16_t*)(&buf[0])));
 
-    if ((ret = lp3_read(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+    if ((ret = cozir_lp3_read(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
     config->alarm_treshold_co2_high = ntoh16(*((uint16_t*)(&buf[0])));
     config->alarm_en = config->alarm_treshold_co2_high != 0;
     
@@ -271,7 +251,7 @@ static int32_t lp3_write_config(sensor_config_t* config)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing filter coefficient");
         buf[0] = (uint8_t)config->filter_coeff;
-        if ((ret = lp3_write(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;
     }
 
     if (read_config.enable_pressure_comp != config->enable_pressure_comp || read_config.pressure != config->pressure)
@@ -280,12 +260,12 @@ static int32_t lp3_write_config(sensor_config_t* config)
         if (config->enable_pressure_comp && read_config.pressure != config->pressure)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->pressure);
-            if ((ret = lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
+            if ((ret = cozir_lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
         }
         else if (!config->enable_pressure_comp && read_config.pressure != 1013)
         {
             *((uint16_t*)&buf[0]) = ntoh16(1013);
-            if ((ret = lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
+            if ((ret = cozir_lp3_write(REG_ALTITUDE_PRESSURE, buf, 2)) != 0) return ret;
         }
     }
 
@@ -293,14 +273,14 @@ static int32_t lp3_write_config(sensor_config_t* config)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing PWM pin");
         buf[0] = config->enable_PWM_pin ? 0b1 << 7 : 0;
-        if ((ret = lp3_write(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_PWM_CONTROL, &buf[0], 1)) != 0) return ret;
     }
 
     if (read_config.enable_abc != config->enable_abc)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC enable");
         buf[0] = config->enable_abc ? 0b10 : 0b00;
-        if ((ret = lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     }
     // if (config->enable_abc)
     // {
@@ -308,19 +288,19 @@ static int32_t lp3_write_config(sensor_config_t* config)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC initial period");
         *((uint16_t*)&buf[0]) = ntoh16(config->abc_init_period);
-        if ((ret = lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
     }
     if (read_config.abc_period != config->abc_period)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC standard period");
         *((uint16_t*)&buf[0]) = ntoh16(config->abc_period);
-        if ((ret = lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
     }
     if (read_config.abc_target_value != config->abc_target_value)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC target value");
         *((uint16_t*)&buf[0]) = ntoh16(config->abc_target_value);
-        if ((ret = lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
+        if ((ret = cozir_lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
     }
     // }
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high)
@@ -329,12 +309,12 @@ static int32_t lp3_write_config(sensor_config_t* config)
         if (config->alarm_en)
         {
             *((uint16_t*)&buf[0]) = ntoh16(config->alarm_treshold_co2_high);
-            if ((ret = lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+            if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
         }
         else
         {
             *((uint16_t*)&buf[0]) = ntoh16(0);
-            if ((ret = lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
+            if ((ret = cozir_lp3_write(REG_ALARM_LEVEL, buf, 2)) != 0) return ret;
         }
     }
     return SUCCESS;

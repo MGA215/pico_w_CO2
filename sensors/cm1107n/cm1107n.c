@@ -31,34 +31,6 @@
 static inline int cm_get_error(uint8_t error_reg);
 
 /**
- * @brief Reads data from the CM1107N sensor
- * 
- * @param addr Command (register to read from)
- * @param buf Read data (MSB first)
- * @param len Length of the data to read (in bytes)
- * @return int32_t Return code
- */
-static int32_t cm_read(uint8_t addr, uint8_t* buf, uint8_t len);
-
-/**
- * @brief Writes data to the CM1107N sensor
- * 
- * @param addr Command (register to write to)
- * @param data Data to write (MSB first)
- * @param len Length of the data (in bytes)
- * @return int32_t Return code
- */
-static int32_t cm_write(uint8_t addr, uint8_t* data, uint8_t len);
-
-/**
- * @brief Sends a command to the sensor
- * 
- * @param addr Command to send
- * @return int32_t Return code
- */
-static int32_t cm_write_command(uint8_t addr);
-
-/**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to write
@@ -87,7 +59,7 @@ static inline int cm_get_error(uint8_t error_reg)
     return SUCCESS;
 }
 
-static int32_t cm_read(uint8_t addr, uint8_t* buf, uint8_t len)
+int32_t cm1107n_read(uint8_t addr, uint8_t* buf, uint8_t len)
 {
     int32_t ret;
     uint8_t command_buffer[len + 2]; // Data length + command + checksum
@@ -110,7 +82,7 @@ static int32_t cm_read(uint8_t addr, uint8_t* buf, uint8_t len)
     return SUCCESS;
 }
 
-static int32_t cm_write(uint8_t addr, uint8_t *data, uint8_t len)
+int32_t cm1107n_write(uint8_t addr, uint8_t *data, uint8_t len)
 {
     int32_t ret;
     uint8_t command_buffer[len + 2]; // Data length + command + checksum
@@ -135,7 +107,7 @@ static int32_t cm_write(uint8_t addr, uint8_t *data, uint8_t len)
     return SUCCESS;
 }
 
-static int32_t cm_write_command(uint8_t addr)
+int32_t cm1107n_write_command(uint8_t addr)
 {
     int32_t ret;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CM1107N_ADDR, &addr, 1, false, I2C_TIMEOUT_US)) < 0) return ret;
@@ -175,7 +147,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Trigger measurement");
-            ret = cm_write_command(CMD_READ_DATA); // Sent measurement trigger
+            ret = cm1107n_write_command(CMD_READ_DATA); // Sent measurement trigger
             if (ret != 0) // On invalid write
             {
                 cm1107n->co2 = NAN; // Set read value to NAN
@@ -190,7 +162,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
         case MEAS_READ_VALUE:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Read value");
-            ret = cm_read(CMD_READ_DATA, tempBuffer, 3); // Read measurement
+            ret = cm1107n_read(CMD_READ_DATA, tempBuffer, 3); // Read measurement
             if (ret != 0) // On invalid read
             {
                 cm1107n->co2 = NAN; // Set read value to NAN
@@ -262,7 +234,7 @@ int32_t cm1107n_read_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[6];
     config->sensor_type = CM1107N;
-    if ((ret = cm_read(CMD_ABC, buf, 6)) != 0) return ret; // Read ABC calibration data
+    if ((ret = cm1107n_read(CMD_ABC, buf, 6)) != 0) return ret; // Read ABC calibration data
     config->enable_abc = buf[1] != 2; // Check ABC on
     config->abc_period = buf[2]; // ABC period
     config->abc_target_value = ntoh16(*((uint16_t*)&buf[3])); // ABC target CO2
@@ -288,7 +260,7 @@ int32_t cm_write_config(sensor_config_t* config)
         *((uint16_t*)&buf[3]) = ntoh16(config->abc_target_value); // ABC target CO2
         buf[5] = 100; // Reserved, default value
 
-        if ((ret = cm_write(CMD_ABC, buf, 6)) != 0) return ret; // Write ABC data
+        if ((ret = cm1107n_write(CMD_ABC, buf, 6)) != 0) return ret; // Write ABC data
     }
 
     return SUCCESS;

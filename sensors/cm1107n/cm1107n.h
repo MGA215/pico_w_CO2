@@ -14,6 +14,34 @@
 #include "../../common/common_include.h"
 
 /**
+ * @brief Reads data from the CM1107N sensor
+ * 
+ * @param addr Command (register to read from)
+ * @param buf Read data (MSB first)
+ * @param len Length of the data to read (in bytes)
+ * @return int32_t Return code
+ */
+extern int32_t cm1107n_read(uint8_t addr, uint8_t* buf, uint8_t len);
+
+/**
+ * @brief Writes data to the CM1107N sensor
+ * 
+ * @param addr Command (register to write to)
+ * @param data Data to write (MSB first)
+ * @param len Length of the data (in bytes)
+ * @return int32_t Return code
+ */
+extern int32_t cm1107n_write(uint8_t addr, uint8_t* data, uint8_t len);
+
+/**
+ * @brief Sends a command to the sensor
+ * 
+ * @param addr Command to send
+ * @return int32_t Return code
+ */
+extern int32_t cm1107n_write_command(uint8_t addr);
+
+/**
  * @brief Retrieves measured values from the CM1107N sensor
  * 
  * @param cm1107n Sensor structure; return code saved to the state variable

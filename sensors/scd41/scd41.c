@@ -59,33 +59,6 @@
 static inline uint8_t s41_crc(uint8_t* buf, uint32_t len);
 
 /**
- * @brief Reads data from the SCD41 sensor
- * 
- * @param command Command to execute (get specific data)
- * @param buf Buffer to save read data
- * @param len Length of the buffer
- * @return int32_t Return code
- */
-static int32_t s41_read(uint16_t command, uint16_t* buf, uint32_t len);
-
-/**
- * @brief Writes a value to the SCD41 sensor
- * 
- * @param command Command to write specific data
- * @param value Data to write
- * @return int32_t Return code
- */
-static int32_t s41_write_value(uint16_t command, uint16_t value);
-
-/**
- * @brief Executes a command on the SCD41 sensor
- * 
- * @param command Command to send
- * @return int32_t Return code
- */
-static int32_t s41_write_command(uint16_t command);
-
-/**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to write
@@ -132,7 +105,7 @@ static inline uint8_t s41_crc(uint8_t* buf, uint32_t len)
     return crc;
 }
 
-static int32_t s41_read(uint16_t command, uint16_t* buf, uint32_t len)
+int32_t scd41_read(uint16_t command, uint16_t* buf, uint32_t len)
 {
     int32_t ret;
     uint8_t read_data[len * 3];
@@ -151,17 +124,7 @@ static int32_t s41_read(uint16_t command, uint16_t* buf, uint32_t len)
     return SUCCESS;
 }
 
-static int32_t s41_write_command(uint16_t command)
-{
-    int32_t ret;
-    uint8_t commandBuffer[2]; // Command buffer
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command buffer
-
-    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuffer, 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
-    return SUCCESS;
-}
-
-static int32_t s41_write_value(uint16_t command, uint16_t value)
+int32_t scd41_write_value(uint16_t command, uint16_t value)
 {
     int32_t ret;
     uint8_t commandBuffer[5];
@@ -173,6 +136,16 @@ static int32_t s41_write_value(uint16_t command, uint16_t value)
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuffer, 5, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
     sleep_ms(100);
+    return SUCCESS;
+}
+
+int32_t scd41_write_command(uint16_t command)
+{
+    int32_t ret;
+    uint8_t commandBuffer[2]; // Command buffer
+    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command buffer
+
+    if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuffer, 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
     return SUCCESS;
 }
 
@@ -213,14 +186,14 @@ void scd41_get_value(sensor_t* scd41)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Read mode");
             uint16_t val = 0;
-            if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
+            if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
             if (scd41->config.enable_pressure_comp) // Pressure compensation enabled
             {
-                ret = s41_write_value(CMD_SET_PRESSURE, scd41->config.pressure); // Write pressure
+                ret = scd41_write_value(CMD_SET_PRESSURE, scd41->config.pressure); // Write pressure
             }
             else // Pressure compensation disabled
             {
-                ret = s41_write_value(CMD_SET_PRESSURE, 1013); // Write pressure
+                ret = scd41_write_value(CMD_SET_PRESSURE, 1013); // Write pressure
             }
             if (ret != 0) // On invalid write
             {
@@ -247,7 +220,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Write measure command");
-            ret = s41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
+            ret = scd41_write_command(CMD_MEASURE_SINGLE_ALL); // Send start measurement command
             if (ret != 0) // On invalid write
             {
                 scd41->co2 = NAN; // Set values to NaN
@@ -264,7 +237,7 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_READ_STATUS: // Reading status
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Read status");
-            ret = s41_read(CMD_GET_DATA_RDY_STATUS, &tempBuffer, 1); // Reading status register
+            ret = scd41_read(CMD_GET_DATA_RDY_STATUS, &tempBuffer, 1); // Reading status register
             if (ret != 0) // On invalid read
             {
                 scd41->co2 = NAN; // Set values to NaN
@@ -301,7 +274,7 @@ void scd41_get_value(sensor_t* scd41)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Read value");
             uint16_t buf[6];
-            ret = s41_read(CMD_READ_MEAS, buf, 6); // Read measured data
+            ret = scd41_read(CMD_READ_MEAS, buf, 6); // Read measured data
             if (ret != 0)
             {
                 scd41->co2 = NAN; // Set values to NaN
@@ -351,32 +324,32 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
     uint16_t val;
     config->sensor_type = SCD41;
 
-    if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop measurement
+    if ((ret = scd41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop measurement
     sleep_ms(500);
 
-    if ((ret = s41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
+    if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
     config->enable_pressure_comp = (val != 1013 && val != 0);
 
-    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
+    if ((ret = scd41_read(CMD_GET_AUTO_SELF_CAL_EN, &val, 1)) != 0) return ret; // Read auto cal state
     config->enable_abc = (bool)val;
 
-    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_INIT_PER, &val, 1)) != 0) return ret; // Read auto cal init period
+    if ((ret = scd41_read(CMD_GET_AUTO_SELF_CAL_INIT_PER, &val, 1)) != 0) return ret; // Read auto cal init period
     config->abc_init_period = val;
 
-    if ((ret = s41_read(CMD_GET_AUTO_SELF_CAL_STANDARD_PER, &val, 1)) != 0) return ret; // Read auto cal standard period
+    if ((ret = scd41_read(CMD_GET_AUTO_SELF_CAL_STANDARD_PER, &val, 1)) != 0) return ret; // Read auto cal standard period
     config->abc_period = val;
 
-    if ((ret = s41_read(CMD_GET_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
+    if ((ret = scd41_read(CMD_GET_T_OFFSET, &val, 1)) != 0) return ret; // Read temperature offset
     config->temperature_offset = val * (175.0f / UINT16_MAX);
 
-    if ((ret = s41_read(CMD_GET_ALTITUDE, &val, 1)) != 0) return ret; // Read altitude
+    if ((ret = scd41_read(CMD_GET_ALTITUDE, &val, 1)) != 0) return ret; // Read altitude
     config->altitude = val;
     config->enable_altitude_comp = (val != 0);
 
     if (!single_meas_mode) // If in periodic measurement mode
     {
-        if ((ret = s41_write_command(CMD_START_PER_MEAS)) != 0) return ret; // Start periodic measurement
+        if ((ret = scd41_write_command(CMD_START_PER_MEAS)) != 0) return ret; // Start periodic measurement
     }
 
     return SUCCESS;
@@ -389,24 +362,24 @@ static int32_t s41_write_config(sensor_config_t* config)
     bool changed = false;
     sensor_config_t read_config;
 
-    // if ((ret = s41_write_command(CMD_WAKE_UP)) != 0) return ret; // Trying to wake sensor up
+    // if ((ret = scd41_write_command(CMD_WAKE_UP)) != 0) return ret; // Trying to wake sensor up
     // sleep_ms(30);
     if ((ret = scd41_read_config(&read_config, config->single_meas_mode)) != 0) return ret; // Read config
 
-    if ((ret = s41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop periodic measurement
+    if ((ret = scd41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop periodic measurement
     sleep_ms(500);
 
     if (config->enable_abc != read_config.enable_abc)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing ABC enable");
-        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_EN, config->enable_abc)) != 0) return ret;
+        if ((ret = scd41_write_value(CMD_SET_AUTO_SELF_CAL_EN, config->enable_abc)) != 0) return ret;
         changed = true;
     }
 
     if (fabs(config->temperature_offset - read_config.temperature_offset) > 0.01f) // Set temperature offset
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing temperature offset");
-        if ((ret = s41_write_value(CMD_SET_T_OFFSET, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)))) != 0) return ret; // Write temperature offset
+        if ((ret = scd41_write_value(CMD_SET_T_OFFSET, (uint16_t)(config->temperature_offset * (UINT16_MAX / 175)))) != 0) return ret; // Write temperature offset
         changed = true;
     }
 
@@ -416,11 +389,11 @@ static int32_t s41_write_config(sensor_config_t* config)
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing altitude");
         if (config->enable_altitude_comp) // If altitude compensation should be enabled
         {
-            if ((ret = s41_write_value(CMD_SET_ALTITUDE, config->altitude)) != 0) return ret;
+            if ((ret = scd41_write_value(CMD_SET_ALTITUDE, config->altitude)) != 0) return ret;
         }
         else // Altitude compensation disabled
         {
-            if ((ret = s41_write_value(CMD_SET_ALTITUDE, 0)) != 0) return ret;
+            if ((ret = scd41_write_value(CMD_SET_ALTITUDE, 0)) != 0) return ret;
         }
         changed = true;
     }
@@ -428,25 +401,25 @@ static int32_t s41_write_config(sensor_config_t* config)
     if (config->abc_init_period != read_config.abc_init_period) // Check ABC initial period
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing ABC initial period");
-        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_INIT_PER, config->abc_init_period)) != 0) return ret; // Set ABC initial period
+        if ((ret = scd41_write_value(CMD_SET_AUTO_SELF_CAL_INIT_PER, config->abc_init_period)) != 0) return ret; // Set ABC initial period
     }
 
     if (config->abc_period != read_config.abc_period) // Check ABC standard period
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing ABC period");
-        if ((ret = s41_write_value(CMD_SET_AUTO_SELF_CAL_STANDARD_PER, config->abc_period)) != 0) return ret; // Set ABC standard period
+        if ((ret = scd41_write_value(CMD_SET_AUTO_SELF_CAL_STANDARD_PER, config->abc_period)) != 0) return ret; // Set ABC standard period
     }
 
     if (changed) // If value was changed save settings to EEPROM
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Saving config to EEPROM");
-        if ((ret = s41_write_command(CMD_PERSIST_SETTINGS)) != 0) return ret; // Save settings to EEPROM
+        if ((ret = scd41_write_command(CMD_PERSIST_SETTINGS)) != 0) return ret; // Save settings to EEPROM
         sleep_ms(800);
     }
 
     if (!(config->single_meas_mode)) // If in periodic measurement mode
     {
-        if ((ret = s41_write_command(CMD_START_PER_MEAS)) != 0) return ret; // Start periodic measurement
+        if ((ret = scd41_write_command(CMD_START_PER_MEAS)) != 0) return ret; // Start periodic measurement
     }
 
     return SUCCESS;
@@ -464,13 +437,13 @@ static inline void s41_power(sensor_t* scd41, bool on)
 
 void scd41_reset(void)
 {
-    s41_write_command(CMD_RESET); // Soft reset the sensor
+    scd41_write_command(CMD_RESET); // Soft reset the sensor
     sleep_ms(30);
 }
 
 static void s41_factory_reset(void)
 {
-    s41_write_command(CMD_FACTORY_RESET); // Factory reset the sensor
+    scd41_write_command(CMD_FACTORY_RESET); // Factory reset the sensor
     sleep_ms(1200);
 }
 
