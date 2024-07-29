@@ -21,6 +21,7 @@
 #include "string.h"
 #include "math.h"
 #include "pico/mutex.h"
+#include "hardware/watchdog.h"
 
 // Must be increased with each new sensor type
 #define SENSOR_TYPES 8
@@ -178,6 +179,7 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
     for (int i = 0; i < MIN(8, config_map_length); i++)
     {
         sensors_init(i, configuration_map[i], true); // Initialize sensor
+        watchdog_update(); // Update watchdog - just in case
     }
     sensor_start_measurement_time = make_timeout_time_us(sensor_measurement_interval_s * 1000000); // Set measurement start timer
     // set_power(false);
@@ -348,6 +350,7 @@ void sensors_read_all(void)
     {
         if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
         {
+            watchdog_update(); // Update watchdog - just in case
             if (sensors[sensor_index].err_counter >= 2) // Allow maximum of 2 read error iterations
             {
                 sensors[sensor_index].wake_time = at_the_end_of_time; // Disable sensor timer
@@ -521,7 +524,6 @@ void set_power(bool on)
     }
     power_en_set_vector(power_vector, on);
 }
-
 
 void set_5v(void)
 {

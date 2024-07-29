@@ -286,7 +286,9 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->state = SUNLIGHT_ERROR_DATA_READY_TIMEOUT; // Output timeout error state
                 return;
             }
-            ret = sl_get_error(ntoh16(*((uint16_t*)&buf[0]))); // Check returned error
+            uint16_t err_buf;
+            memcpy(&err_buf, &buf[0], 2);
+            ret = sl_get_error(ntoh16(err_buf)); // Check returned error
             if (ret != 0 && ret != SUNLIGHT_ERROR_DATA_READY_TIMEOUT) // If error & not timeout error
             {
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
@@ -300,8 +302,11 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->wake_time = make_timeout_time_ms(300); // Try again after 300 ms
                 return;
             }
-            sunlight->co2 = (int16_t)(ntoh16(*((uint16_t*)&buf[6]))); // Set CO2 value
-            sunlight->temperature = ntoh16(*((uint16_t*)&buf[8])) / 100.0f; // Set temperature value
+            uint16_t val = 0;
+            memcpy(&val, &buf[6], 2);
+            sunlight->co2 = (float)ntoh16(val); // Set CO2 value
+            memcpy(&val, &buf[8], 2);
+            sunlight->temperature = (float)ntoh16(val) / 100.0f; // Set temperature value
             if (sunlight->config.single_meas_mode) // If single measurement mode
             {
                 sunlight->wake_time = make_timeout_time_ms(20); // Timer 20 ms
@@ -377,14 +382,24 @@ int sunlight_read_config(sensor_config_t* config)
 
     if ((ret = sunlight_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
-    config->meas_period = ntoh16(*((uint16_t*)&buf[1]));
-    config->meas_samples = ntoh16(*((uint16_t*)&buf[3]));
-    config->abc_period = ntoh16(*((uint16_t*)&buf[5]));
-    config->abc_target_value = ntoh16(*((uint16_t*)&buf[9]));
+    // config->meas_period = ntoh16(*( (uint16_t*)&buf[1]));
+    memcpy(&config->meas_period, &buf[1], 2);
+    config->meas_period = ntoh16(config->meas_period);
+    // config->meas_samples = ntoh16(*( (uint16_t*)&buf[3]));
+    memcpy(&config->meas_samples, &buf[3], 2);
+    config->meas_samples = ntoh16(config->meas_samples);
+    // config->abc_period = ntoh16(*( (uint16_t*)&buf[5]));
+    memcpy(&config->abc_period, &buf[5], 2);
+    config->abc_period = ntoh16(config->abc_period);
+    // config->abc_target_value = ntoh16(*( (uint16_t*)&buf[9]));
+    memcpy(&config->abc_target_value, &buf[9], 2);
+    config->abc_target_value = ntoh16(config->abc_target_value);
     config->filter_coeff = (uint16_t)buf[12];
 
     if ((ret = sunlight_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
-    config->pressure = ntoh16(*((uint16_t*)&buf[0])) / 10;
+    // config->pressure = ntoh16(*( (uint16_t*)&buf[0])) / 10;
+    memcpy(&config->pressure, &buf[0], 2);
+    config->pressure = ntoh16(config->pressure) / 10;
 
     return SUCCESS;
 }
@@ -423,11 +438,18 @@ static int sl_write_config(sensor_config_t* config)
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Config - Writing full configuration");
         uint8_t command_buf[13] = {0};
         command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
-        *((uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
-        *((uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
-        *((uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
-
-        *((uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
+        // *( (uint16_t*)&command_buf[1]) = ntoh16(config->meas_period);
+        uint16_t val = ntoh16(config->meas_period);
+        memcpy(&command_buf[1], &val, 2);
+        // *( (uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
+        val = ntoh16(config->meas_samples);
+        memcpy(&command_buf[1], &val, 2);
+        // *( (uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
+        val = ntoh16(config->abc_period);
+        memcpy(&command_buf[1], &val, 2);
+        // *( (uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
+        val = ntoh16(config->abc_target_value);
+        memcpy(&command_buf[1], &val, 2);
 
         command_buf[12] = (uint8_t)(config->filter_coeff);
 
@@ -438,7 +460,9 @@ static int sl_write_config(sensor_config_t* config)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Config - Writing pressure");
         uint8_t command_buf[2] = {0};
-        *((uint16_t*)&command_buf[0]) = ntoh16(config->pressure * 10); // Prepare command
+        // *( (uint16_t*)&command_buf[0]) = ntoh16(config->pressure * 10); // Prepare command
+        uint16_t val = ntoh16(config->pressure * 10); // Prepare command
+        memcpy(&command_buf[0], &val, 2);
 
         if ((ret = sunlight_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
     }

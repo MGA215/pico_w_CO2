@@ -199,7 +199,11 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 cm1107n->state = ret; // Set state to read error
                 return;
             }
-            cm1107n->co2 = (float)ntoh16(*((uint16_t*)&tempBuffer[0])); // Convert read CO2 value
+            // cm1107n->co2 = (float)ntoh16(*( (uint16_t*)&tempBuffer[0]));
+            uint16_t co2 = 0; // Convert read CO2 value
+            co2 |= tempBuffer[0] << 8;
+            co2 |= tempBuffer[1] << 0;
+            cm1107n->co2 = (float)co2;
             cm1107n->meas_state = MEAS_FINISHED; // Set next state to measurement finished
             cm1107n->state = SUCCESS; // Set state to SUCCESS
             return;
@@ -237,7 +241,11 @@ int32_t cm1107n_read_config(sensor_config_t* config)
     if ((ret = cm1107n_read(CMD_ABC, buf, 6)) != 0) return ret; // Read ABC calibration data
     config->enable_abc = buf[1] != 2; // Check ABC on
     config->abc_period = buf[2]; // ABC period
-    config->abc_target_value = ntoh16(*((uint16_t*)&buf[3])); // ABC target CO2
+    uint16_t val = 0;
+    val |= buf[3] << 8;
+    val |= buf[4] << 0;
+    config->abc_target_value = val;
+    // config->abc_target_value = ntoh16(*( (uint16_t*)&buf[3])); // ABC target CO2
     return SUCCESS;
 }
 
@@ -257,7 +265,9 @@ int32_t cm_write_config(sensor_config_t* config)
         buf[0] = 100; // Wrong code accelerate value ??
         buf[1] = config->enable_abc ? 0 : 2; // ABC enabled
         buf[2] = config->abc_period; // ABC period
-        *((uint16_t*)&buf[3]) = ntoh16(config->abc_target_value); // ABC target CO2
+        buf[3] = (config->abc_target_value & 0xFF00) >> 8;
+        buf[4] = (config->abc_target_value & 0x00FF) >> 0;
+        // *( (uint16_t*)&buf[3]) = ntoh16(config->abc_target_value); // ABC target CO2
         buf[5] = 100; // Reserved, default value
 
         if ((ret = cm1107n_write(CMD_ABC, buf, 6)) != 0) return ret; // Write ABC data

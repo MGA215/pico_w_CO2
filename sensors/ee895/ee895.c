@@ -141,9 +141,16 @@ static int32_t ee_read(uint16_t addr, uint16_t nreg, uint8_t* buf)
 
     commandBuffer[0] = EE895_ADDR; // Slave address
     commandBuffer[1] = 0x03; // Read multiple holding registers
-    *((uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
-    *((uint16_t*)&commandBuffer[4]) = ntoh16(nreg); // Convert number of registers to big endian
-    *((uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
+    // *( (uint16_t*)&commandBuffer[2]) = ntoh16(addr);
+    commandBuffer[2] = (addr & 0xFF00) >> 8; // Convert reg address to big endian
+    commandBuffer[3] = (addr & 0x00FF) >> 0;
+    // *( (uint16_t*)&commandBuffer[4]) = ntoh16(nreg);
+    commandBuffer[4] = (nreg & 0xFF00) >> 8; // Convert number of registers to big endian
+    commandBuffer[5] = (nreg & 0x00FF) >> 0;
+    // *( (uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6);
+    uint16_t crc = ee_modbus_crc(commandBuffer, 6); // CRC computation
+    commandBuffer[6] = (crc & 0x00FF) >> 0;
+    commandBuffer[7] = (crc & 0xFF00) >> 8;
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, true, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(2);
@@ -163,17 +170,26 @@ static int32_t ee_write(uint16_t addr, uint16_t value)
 
     commandBuffer[0] = EE895_ADDR; // Slave address
     commandBuffer[1] = 0x06; // Write multiple holding registers
-    *((uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
-    *((uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
-    *((uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
+    // *( (uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
+    // *( (uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
+    // *( (uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
+
+    commandBuffer[2] = (addr & 0xFF00) >> 8; // Convert reg address to big endian
+    commandBuffer[3] = (addr & 0x00FF) >> 0;
+    commandBuffer[4] = (value & 0xFF00) >> 8; // Convert number of registers to big endian
+    commandBuffer[5] = (value & 0x00FF) >> 0;
+    uint16_t crc = ee_modbus_crc(commandBuffer, 6); // CRC computation
+    commandBuffer[6] = (crc & 0x00FF) >> 0;
+    commandBuffer[7] = (crc & 0xFF00) >> 8;
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Write to slave
     busy_wait_ms(3);
 
     memset(&commandBuffer[1], 0x00, 7);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, EE895_ADDR, &commandBuffer[1], 7, false, I2C_TIMEOUT_US)) < 0) return ret; // Read from slave
-
-    if (commandBuffer[1] != 0x06 || (ntoh16(*((uint16_t*)&commandBuffer[4]))) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
+    uint16_t val = 0;
+    memcpy(&val, &commandBuffer[4], 2);
+    if (commandBuffer[1] != 0x06 || (ntoh16(val)) != value) return EE895_ERROR_WRITE_RESP; // Check valid command & value
     if (ee_modbus_crc(commandBuffer, 8) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
 
     return 0;
@@ -327,8 +343,13 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32
-            float val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            // *( (uint32_t*)&tempBuffer[0]) = ntoh32(*( (uint32_t*)&tempBuffer[0])); // Fix read value to uint32
+            uint32_t tempval = 0; // Fix read value to uint32
+            tempval |= (tempBuffer[0]) << 0;
+            tempval |= (tempBuffer[1]) << 8;
+            tempval |= (tempBuffer[2]) << 16;
+            tempval |= (tempBuffer[3]) << 24;
+            float val = byte2float(ntoh32(tempval)); // Convert read value to float
             if (val < T_MIN_RANGE || val > T_MAX_RANGE) // Check float range
             {
                 ee895->temperature = NAN; // Set values to NaN
@@ -349,8 +370,13 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
-            val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            // *( (uint32_t*)&tempBuffer[0]) = ntoh32(*( (uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
+            tempval = 0; // Fix read value to uint32_t
+            tempval |= (tempBuffer[0]) << 0;
+            tempval |= (tempBuffer[1]) << 8;
+            tempval |= (tempBuffer[2]) << 16;
+            tempval |= (tempBuffer[3]) << 24;
+            val = byte2float(ntoh32(tempval)); // Convert read value to float
             if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // Check float range
             {
                 ee895->co2 = NAN; // Set values to NaN
@@ -369,8 +395,12 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->state = ret; // Set sensor state to return value
                 return;
             }
-            *((uint32_t*)&tempBuffer[0]) = ntoh32(*((uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
-            val = byte2float(*((uint32_t*)&tempBuffer[0])); // Convert read value to float
+            tempval = 0; // Fix read value to uint32_t
+            tempval |= (tempBuffer[0]) << 0;
+            tempval |= (tempBuffer[1]) << 8;
+            tempval |= (tempBuffer[2]) << 16;
+            tempval |= (tempBuffer[3]) << 24;
+            val = byte2float(ntoh32(tempval)); // Convert read value to float
             ee895->pressure = val; // Assign value
             ee895->meas_state = MEAS_FINISHED; // Finished measurement
             ee895->state = SUCCESS; // Set state
@@ -422,12 +452,23 @@ int32_t ee895_read_config(sensor_config_t* config)
     config->sensor_type = EE895;
 
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
-    config->meas_period = (uint16_t)ntoh16(*((uint16_t*)&buf[0])) / 10; // Save measurement interval
-    config->filter_coeff = (uint16_t)ntoh16(*((uint16_t*)&buf[2])); // Save filter coefficient
-    config->co2_offset = (int16_t)ntoh16(*((uint16_t*)&buf[4])); // Save offset
+    memcpy(&config->meas_period, &buf[0], 2);
+    config->meas_period = ntoh16(config->meas_period) / 10; // Save measurement interval
+    // config->meas_period = (uint16_t)ntoh16(*( (uint16_t*)&buf[0])) / 10;
+
+    memcpy(&config->filter_coeff, &buf[2], 2);
+    config->filter_coeff = ntoh16(config->filter_coeff); // Save measurement interval
+    //config->filter_coeff = (uint16_t)ntoh16(*( (uint16_t*)&buf[2])); // Save filter coefficient
+
+    memcpy(&config->co2_offset, &buf[4], 2);
+    config->co2_offset = ntoh16(config->co2_offset); // Save measurement interval
+    // config->co2_offset = (int16_t)ntoh16(*( (uint16_t*)&buf[4])); // Save offset
 
     if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
-    config->single_meas_mode = (bool)ntoh16(*((uint16_t*)&buf[0])); // Save measurement mode
+    uint16_t val = 0;
+    val |= buf[0] << 8;
+    val |= buf[1] << 0;
+    config->single_meas_mode = (bool)ntoh16(val); // Save measurement mode
     return SUCCESS;
 }
 

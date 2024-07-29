@@ -111,7 +111,9 @@ int32_t scd41_read(uint16_t command, uint16_t* buf, uint32_t len)
     uint8_t read_data[len * 3];
     memset(read_data, 0x00, len * 3); // Clear buffer
     uint8_t commandBuf[2];
-    *((uint16_t*)&commandBuf[0]) = ntoh16(command); // Prepare ommand buffer
+    // *( (uint16_t*)&commandBuf[0]) = ntoh16(command);
+    commandBuf[0] = (command & 0xFF00) >> 8; // Prepare ommand buffer
+    commandBuf[1] = (command & 0x00FF) >> 0;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuf, 2, true, I2C_TIMEOUT_US)) < 0) return ret; // Send command blocking
     busy_wait_ms(1); // Wait between write and read
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD41_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read response
@@ -130,8 +132,12 @@ int32_t scd41_write_value(uint16_t command, uint16_t value)
     uint8_t commandBuffer[5];
     memset(commandBuffer, 0x00, 5); // Clearing command buffer
 
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Adding command
-    *((uint16_t*)&commandBuffer[2]) = ntoh16(value); // Adding value
+    // *( (uint16_t*)&commandBuffer[0]) = ntoh16(command); 
+    commandBuffer[0] = (command & 0xFF00) >> 8; // Adding command
+    commandBuffer[1] = (command & 0x00FF) >> 0;
+    // *( (uint16_t*)&commandBuffer[2]) = ntoh16(value); 
+    commandBuffer[2] = (value & 0xFF00) >> 8; // Adding value
+    commandBuffer[3] = (value & 0x00FF) >> 0;
     commandBuffer[4] = s41_crc(&commandBuffer[2], 2); // Adding CRC
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuffer, 5, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
@@ -143,7 +149,9 @@ int32_t scd41_write_command(uint16_t command)
 {
     int32_t ret;
     uint8_t commandBuffer[2]; // Command buffer
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command buffer
+    // *( (uint16_t*)&commandBuffer[0]) = ntoh16(command); 
+    commandBuffer[0] = (command & 0xFF00) >> 8; // Prepare command buffer
+    commandBuffer[1] = (command & 0x00FF) >> 0;
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuffer, 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
     return SUCCESS;

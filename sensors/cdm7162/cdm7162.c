@@ -149,7 +149,10 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->state = ret; // Output return state
                 return;
             }
-            uint16_t val = *((uint16_t*)&buf[0]); // Convert read CO2 to uint16_t
+            // uint16_t val = *( (uint16_t*)&buf[0]);
+            uint16_t val = 0; // Convert read CO2 to uint16_t
+            val |= buf[0] << 0;
+            val |= buf[1] << 8;
             if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // If value out of range
             {
                 cdm7162->co2 = INT16_MAX; // Set CO2 to unknown

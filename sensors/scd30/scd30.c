@@ -101,8 +101,15 @@ int32_t scd30_write_value(uint16_t command, uint16_t value)
     uint8_t commandBuffer[5];
     memset(commandBuffer, 0x00, 5); // Clearing command buffer
 
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Adding command
-    *((uint16_t*)&commandBuffer[2]) = ntoh16(value); // Adding value
+    // *( (uint16_t*)&commandBuffer[0]) = ntoh16(command);
+    // *( (uint16_t*)&commandBuffer[2]) = ntoh16(value);
+
+    commandBuffer[0] = (command & 0xFF00) >> 8; // Adding command
+    commandBuffer[1] = (command & 0x00FF) >> 0;
+
+    commandBuffer[2] = (value & 0xFF00) >> 8; // Adding value
+    commandBuffer[3] = (value & 0x00FF) >> 0;
+
     commandBuffer[4] = s30_crc(&commandBuffer[2], 2); // Adding CRC
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD30_ADDR, commandBuffer, 5, false, I2C_TIMEOUT_US)) < 0) return ret; // Write command to the sensor
@@ -113,7 +120,8 @@ int32_t scd30_write_command(uint16_t command)
 {
     int32_t ret;
     uint8_t commandBuffer[2];
-    *((uint16_t*)&commandBuffer[0]) = ntoh16(command); // Prepare command
+    commandBuffer[0] = (command & 0xFF00) >> 8; // Adding command
+    commandBuffer[1] = (command & 0x00FF) >> 0;
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD30_ADDR, commandBuffer, 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Send command
     return SUCCESS;
@@ -195,12 +203,24 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            uint32_t val = ntoh16(*((uint32_t*)&buf[0])); // Convert co2 to uint32_t bytes
-            scd30->co2 = byte2float(val); // Convert to float
-            val = ntoh16(*((uint32_t*)&buf[2])); // Convert temperature to uint32_t bytes
-            scd30->temperature = byte2float(val); // Convert to float
-            val = ntoh16(*((uint32_t*)&buf[4])); // Convert humidity to uint32_t bytes
-            scd30->humidity = byte2float(val); // Convert to float
+            // uint32_t val = ntoh16(*( (uint32_t*)&buf[0])); // Convert co2 to uint32_t bytes
+            // scd30->co2 = byte2float(val); // Convert to float
+            uint32_t val = 0;
+            val |= ntoh16(buf[0]) << 0;
+            val |= ntoh16(buf[1]) << 16;
+            scd30->co2 = byte2float((val));
+            // val = ntoh16(*( (uint32_t*)&buf[2])); // Convert temperature to uint32_t bytes
+            // scd30->temperature = byte2float(val); // Convert to float
+            val = 0;
+            val |= ntoh16(buf[2]) << 0;
+            val |= ntoh16(buf[3]) << 16;
+            scd30->temperature = byte2float((val));
+            // val = ntoh16(*( (uint32_t*)&buf[4])); // Convert humidity to uint32_t bytes
+            // scd30->humidity = byte2float(val); // Convert to float
+            val = 0;
+            val |= ntoh16(buf[4]) << 0;
+            val |= ntoh16(buf[5]) << 16;
+            scd30->humidity = byte2float((val));
 
             scd30->meas_state = MEAS_FINISHED; // Finished measurement
             scd30->state = SUCCESS; // Set state

@@ -13,6 +13,7 @@
 #include "common/debug.h"
 #include "malloc.h"
 #include "pico/printf.h"
+#include "hardware/watchdog.h"
 
 // string holding the datetime value
 uint8_t datetime_str[30] = {0};
@@ -69,7 +70,7 @@ int main()
     } 
 
     while (true) {
-        sleep_ms(1);
+        tight_loop_contents();
         if ((ret = loop()) != 0) // main loop
         {
             print_ser_output(SEVERITY_FATAL, SOURCE_MAIN_LOOP, SOURCE_NO_SOURCE, "Loop failure: %i; Aborting...", ret);
@@ -88,6 +89,9 @@ int init(void)
 {
     int32_t ret;
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
+
+    if (watchdog_enable_caused_reboot()) print_ser_output(SEVERITY_FATAL, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Reboot caused by watchdog");
+    else print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Booting clean");
 
     if (!mutex_is_initialized(&soap_data1.data_mutex)) // Initializes mutexes for soap message buffer
         mutex_init(&soap_data1.data_mutex);
@@ -113,6 +117,7 @@ int init(void)
 
     update_display_buffer = true; // Redraw display
     sleep_ms(1000); // Init wait
+    watchdog_enable(3000, true); // 8 sec watchdog
     return SUCCESS;
 }
 
@@ -133,6 +138,7 @@ int loop(void)
     }
     if (time_reached(process_update_time)) update(); // Update display & buttons
     if (time_reached(memory_timer)) getFreeHeap(); // Check free heap
+    watchdog_update();
     return SUCCESS;
 }
 
@@ -187,7 +193,6 @@ void update_RTC()
         memcpy(datetime_str, loc_datetime_str, 30); // Update datetime string
         update_display_buffer = true; // Refresh display
     }
-
 }
 
 void read_inputs(void)

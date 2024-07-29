@@ -28,9 +28,18 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8
     if (config->power_global_control) power_vector |= (0b1 << 1);
     buf[1] = power_vector;
 
-    *((uint16_t*)&buf[2]) = config->meas_period;
-    *((uint16_t*)&buf[4]) = config->filter_coeff;
-    *((uint16_t*)&buf[6]) = config->meas_samples;
+    // *( (uint16_t*)&buf[2]) = config->meas_period;
+    // *( (uint16_t*)&buf[4]) = config->filter_coeff;
+    // *( (uint16_t*)&buf[6]) = config->meas_samples;
+
+    buf[2] = (config->meas_period & 0x00FF) >> 0;
+    buf[3] = (config->meas_period & 0xFF00) >> 8;
+
+    buf[4] = (config->filter_coeff & 0x00FF) >> 0;
+    buf[5] = (config->filter_coeff & 0xFF00) >> 8;
+
+    buf[6] = (config->meas_samples & 0x00FF) >> 0;
+    buf[7] = (config->meas_samples & 0xFF00) >> 8;
 
     if (config->co2_en) measurement_vector |= (0b1 << 0);
     if (config->temp_en) measurement_vector |= (0b1 << 1);
@@ -41,8 +50,14 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8
     if (config->single_meas_mode) measurement_vector |= (0b1 << 6);
     buf[8] = measurement_vector;
 
-    *((int16_t*)&buf[9]) = config->co2_offset;
-    *((uint32_t*)&buf[11]) = float2byte(config->temperature_offset);
+    // *( (int16_t*)&buf[9]) = config->co2_offset;
+    buf[9] = (config->co2_offset & 0x00FF) >> 0;
+    buf[10] = (config->co2_offset & 0xFF00) >> 8;
+    uint32_t temp = float2byte(config->temperature_offset);
+    buf[11] = (temp & 0x000000FF) >> 0;
+    buf[12] = (temp & 0x0000FF00) >> 8;
+    buf[13] = (temp & 0x00FF0000) >> 16;
+    buf[14] = (temp & 0xFF000000) >> 24;
 
     if (config->alarm_en) pin_vector |= (0b1 << 0);
     if (config->enable_nRDY) pin_vector |= (0b1 << 3);
@@ -51,20 +66,41 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8
     if (config->enable_PWM_pin) pin_vector |= (0b1 << 6);
     buf[15] = pin_vector;
 
-    *((uint16_t*)&buf[16]) = config->pressure;
-    *((uint16_t*)&buf[18]) = config->altitude;
-    *((uint16_t*)&buf[20]) = config->alarm_treshold_co2_high;
-    *((uint16_t*)&buf[22]) = config->alarm_treshold_co2_low;
+    // *( (uint16_t*)&buf[16]) = config->pressure;
+    // *( (uint16_t*)&buf[18]) = config->altitude;
+    // *( (uint16_t*)&buf[20]) = config->alarm_treshold_co2_high;
+    // *( (uint16_t*)&buf[22]) = config->alarm_treshold_co2_low;
+
+    buf[16] = (config->pressure & 0x00FF) >> 0;
+    buf[17] = (config->pressure & 0xFF00) >> 8;
+
+    buf[18] = (config->altitude & 0x00FF) >> 0;
+    buf[19] = (config->altitude & 0xFF00) >> 8;
+
+    buf[20] = (config->alarm_treshold_co2_high & 0x00FF) >> 0;
+    buf[21] = (config->alarm_treshold_co2_high & 0xFF00) >> 8;
+
+    buf[22] = (config->alarm_treshold_co2_low & 0x00FF) >> 0;
+    buf[23] = (config->alarm_treshold_co2_low & 0xFF00) >> 8;
 
     if (config->enable_abc) comp_cal_vector |= (0b1 << 0);
     if (config->enable_alternate_abc) comp_cal_vector |= (0b1 << 1);
     if (config->enable_altitude_comp) comp_cal_vector |= (0b1 << 6);
     if (config->enable_pressure_comp) comp_cal_vector |= (0b1 << 7);
-    buf[23] = comp_cal_vector;
+    buf[24] = comp_cal_vector;
 
-    *((uint16_t*)&buf[25]) = config->abc_target_value;
-    *((uint16_t*)&buf[27]) = config->abc_period;
-    *((uint16_t*)&buf[29]) = config->abc_init_period;
+    // *( (uint16_t*)&buf[25]) = config->abc_target_value;
+    // *( (uint16_t*)&buf[27]) = config->abc_period;
+    // *( (uint16_t*)&buf[29]) = config->abc_init_period;
+
+    buf[25] = (config->abc_target_value & 0x00FF) >> 0;
+    buf[26] = (config->abc_target_value & 0xFF00) >> 8;
+
+    buf[27] = (config->abc_period & 0x00FF) >> 0;
+    buf[28] = (config->abc_period & 0xFF00) >> 8;
+
+    buf[29] = (config->abc_init_period & 0x00FF) >> 0;
+    buf[30] = (config->abc_init_period & 0xFF00) >> 8;
 
     buf[31] = 0;
 
@@ -85,15 +121,26 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
     uint8_t buf[SERIALIZE_BUFFER_LEN];
     memcpy(buf, serialized, SERIALIZE_BUFFER_LEN);
 
+    memset(config, 0x00, sizeof(sensor_config_t));
+
     if (buf[0] > 7 && serialized[0] < 255) return ERROR_DESERIALIZATION_FAILURE;
     config->sensor_type = (sensor_type_e)buf[0];
 
     config->power_5V = (bool)((buf[1] & (0b1 << 0)) >> 0);
     config->power_global_control = (bool)((buf[1] & (0b1 << 1)) >> 1);
 
-    config->meas_period = *((uint16_t*)&buf[2]);
-    config->filter_coeff = *((uint16_t*)&buf[4]);
-    config->meas_samples = *((uint16_t*)&buf[6]);
+    // config->meas_period = *( (uint16_t*)&buf[2]);
+    // config->filter_coeff = *( (uint16_t*)&buf[4]);
+    // config->meas_samples = *( (uint16_t*)&buf[6]);
+
+    config->meas_period |= buf[2] << 0;
+    config->meas_period |= buf[3] << 8;
+
+    config->filter_coeff |= buf[4] << 0;
+    config->filter_coeff |= buf[5] << 8;
+
+    config->meas_samples |= buf[6] << 0;
+    config->meas_samples |= buf[7] << 8;
 
     config->co2_en = (bool)((buf[8] & (0b1 << 0)) >> 0);
     config->temp_en = (bool)((buf[8] & (0b1 << 1)) >> 1);
@@ -103,8 +150,16 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
     config->enable_dynamic_IIR = (bool)((buf[8] & (0b1 << 5)) >> 5);
     config->single_meas_mode = (bool)((buf[8] & (0b1 << 6)) >> 6);
 
-    config->co2_offset = *((int16_t*)&buf[9]);
-    config->temperature_offset = byte2float(*((uint32_t*)&buf[11]));
+    // config->co2_offset = *( (int16_t*)&buf[9]);
+    // config->temperature_offset = byte2float(*( (uint32_t*)&buf[11]));
+    config->co2_offset |= buf[9] << 0;
+    config->co2_offset |= buf[10] << 8;
+    uint32_t temp = 0;
+    temp |= buf[11] << 0;
+    temp |= buf[12] << 8;
+    temp |= buf[13] << 16;
+    temp |= buf[14] << 24;
+    config->temperature_offset = byte2float(temp);
 
     config->alarm_en = (bool)((buf[15] & (0b1 << 0)) >> 0);
     config->enable_nRDY = (bool)((buf[15] & (0b1 << 3)) >> 3);
@@ -112,19 +167,40 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
     config->PWM_range_high = (bool)((buf[15] & (0b1 << 5)) >> 5);
     config->enable_PWM_pin = (bool)((buf[15] & (0b1 << 6)) >> 6);
 
-    config->pressure = *((uint16_t*)&buf[16]);
-    config->altitude = *((uint16_t*)&buf[18]);
-    config->alarm_treshold_co2_high = *((uint16_t*)&buf[20]);
-    config->alarm_treshold_co2_low = *((uint16_t*)&buf[22]);
+    // config->pressure = *( (uint16_t*)&buf[16]);
+    // config->altitude = *( (uint16_t*)&buf[18]);
+    // config->alarm_treshold_co2_high = *( (uint16_t*)&buf[20]);
+    // config->alarm_treshold_co2_low = *( (uint16_t*)&buf[22]);
+
+    config->pressure |= buf[16] << 0;
+    config->pressure |= buf[17] << 8;
+
+    config->altitude |= buf[18] << 0;
+    config->altitude |= buf[19] << 8;
+
+    config->alarm_treshold_co2_high |= buf[20] << 0;
+    config->alarm_treshold_co2_high |= buf[21] << 8;
+
+    config->alarm_treshold_co2_low |= buf[22] << 0;
+    config->alarm_treshold_co2_low |= buf[23] << 8;
 
     config->enable_abc = (bool)((buf[23] & (0b1 << 0)) >> 0);
     config->enable_alternate_abc = (bool)((buf[23] & (0b1 << 1)) >> 1);
     config->enable_altitude_comp = (bool)((buf[23] & (0b1 << 6)) >> 6);
     config->enable_pressure_comp = (bool)((buf[23] & (0b1 << 7)) >> 7);
 
-    config->abc_target_value = *((uint16_t*)&buf[25]);
-    config->abc_period = *((uint16_t*)&buf[27]);
-    config->abc_init_period = *((uint16_t*)&buf[29]);
+    // config->abc_target_value = *( (uint16_t*)&buf[25]);
+    // config->abc_period = *( (uint16_t*)&buf[27]);
+    // config->abc_init_period = *( (uint16_t*)&buf[29]);
+
+    config->abc_target_value |= buf[25] << 0;
+    config->abc_target_value |= buf[26] << 8;
+
+    config->abc_period |= buf[27] << 0;
+    config->abc_period |= buf[28] << 8;
+
+    config->abc_init_period |= buf[29] << 0;
+    config->abc_init_period |= buf[30] << 8;
 
     return serializer_check_values(config);
 }

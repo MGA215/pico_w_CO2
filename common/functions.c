@@ -34,26 +34,54 @@ void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t
 
 float byte2float(uint32_t byte_value)
 {
-    uint8_t* bytes = (uint8_t*)&byte_value;
-    float output;
+    // uint8_t* bytes = (uint8_t*)&byte_value;
+    // float output;
 
-    *((uint8_t*)(&output) + 3) = bytes[0];
-    *((uint8_t*)(&output) + 2) = bytes[1];
-    *((uint8_t*)(&output) + 1) = bytes[2];
-    *((uint8_t*)(&output) + 0) = bytes[3];
+    // *( (uint8_t*)(&output) + 3) = bytes[0];
+    // *( (uint8_t*)(&output) + 2) = bytes[1];
+    // *( (uint8_t*)(&output) + 1) = bytes[2];
+    // *( (uint8_t*)(&output) + 0) = bytes[3];
+
+    // union {
+    //     uint8_t bytes[8];
+    //     float output;
+    // } b2f;
+
+    // b2f.bytes[0] = (byte_value & 0x000000FF) >> 0;
+    // b2f.bytes[0] = (byte_value & 0x0000FF00) >> 8;
+    // b2f.bytes[0] = (byte_value & 0x00FF0000) >> 16;
+    // b2f.bytes[0] = (byte_value & 0xFF000000) >> 24;
+
+    float output;
+    uint32_t bytes = 0;
+    bytes |= (byte_value & 0xFF000000) >> 24;
+    bytes |= (byte_value & 0x00FF0000) >> 8;
+    bytes |= (byte_value & 0x0000FF00) << 8;
+    bytes |= (byte_value & 0x000000FF) << 24;
+    memcpy(&output, &bytes, 4);
 
     return output;
 }
 
 uint32_t float2byte(float float_value)
 {
-    uint8_t bytes[4];
-    bytes[0] = *((uint8_t*)(&float_value) + 3);
-    bytes[1] = *((uint8_t*)(&float_value) + 2);
-    bytes[2] = *((uint8_t*)(&float_value) + 1);
-    bytes[3] = *((uint8_t*)(&float_value) + 0);
+//     uint8_t bytes[4];
+//     bytes[0] = *( (uint8_t*)(&float_value) + 3);
+//     bytes[1] = *( (uint8_t*)(&float_value) + 2);
+//     bytes[2] = *( (uint8_t*)(&float_value) + 1);
+//     bytes[3] = *( (uint8_t*)(&float_value) + 0);
 
-    return *((uint32_t*)&bytes[0]);
+//     return *( (uint32_t*)&bytes[0]);
+
+    uint32_t output;
+    uint32_t bytes = 0;
+    memcpy(&bytes, &float_value, 4);
+    output |= (bytes & 0xFF000000) >> 24;
+    output |= (bytes & 0x00FF0000) >> 8;
+    output |= (bytes & 0x0000FF00) << 8;
+    output |= (bytes & 0x000000FF) << 24;
+
+    return output;
 }
 
 uint16_t ntoh16(uint16_t network)
