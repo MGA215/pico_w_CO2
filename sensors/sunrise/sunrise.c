@@ -13,6 +13,7 @@
 #include "hardware/i2c.h"
 #include "string.h"
 #include "math.h"
+#include "pico/printf.h"
 
 #define SUNRISE_ADDR                0x68
 
@@ -171,6 +172,11 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
     command_buffer[0] = addr;
     memcpy(&command_buffer[1], buf, len);
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNRISE_ADDR, command_buffer, len + 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Write data to sensor
+    for (int i = 0; i < len + 1; i++)
+    {
+        printf("%02X", command_buffer[i]);
+    }
+    printf("\n");
     busy_wait_ms(12);
     return SUCCESS;
 }
@@ -446,13 +452,13 @@ static int sr_write_config(sensor_config_t* config)
         memcpy(&command_buf[1], &val, 2);
         // *( (uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
         val = ntoh16(config->meas_samples);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[3], &val, 2);
         // *( (uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
         val = ntoh16(config->abc_period);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[5], &val, 2);
         // *( (uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
         val = ntoh16(config->abc_target_value);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[9], &val, 2);
 
         command_buf[12] = (uint8_t)(config->filter_coeff);
 

@@ -443,13 +443,13 @@ static int sl_write_config(sensor_config_t* config)
         memcpy(&command_buf[1], &val, 2);
         // *( (uint16_t*)&command_buf[3]) = ntoh16(config->meas_samples);
         val = ntoh16(config->meas_samples);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[3], &val, 2);
         // *( (uint16_t*)&command_buf[5]) = ntoh16(config->abc_period);
         val = ntoh16(config->abc_period);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[5], &val, 2);
         // *( (uint16_t*)&command_buf[9]) = ntoh16(config->abc_target_value);
         val = ntoh16(config->abc_target_value);
-        memcpy(&command_buf[1], &val, 2);
+        memcpy(&command_buf[9], &val, 2);
 
         command_buf[12] = (uint8_t)(config->filter_coeff);
 
