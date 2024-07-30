@@ -22,7 +22,7 @@ static sensor_config_t sensor_config_default = {
     .pressure_en = false,
     .power_5V = false,
     .power_global_control = false,
-    .sensor_active = false
+    .sensor_active = false,
 };
 
 static sensor_config_t sensor_config_00 = {

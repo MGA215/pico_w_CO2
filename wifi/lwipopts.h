@@ -33,10 +33,10 @@
 #define LWIP_NETIF_LINK_CALLBACK    1
 #define LWIP_NETIF_HOSTNAME         1
 #define LWIP_NETCONN                0
-#define MEM_STATS                   0
-#define SYS_STATS                   0
-#define MEMP_STATS                  0
-#define LINK_STATS                  0
+#define MEM_STATS                   1
+#define SYS_STATS                   1
+#define MEMP_STATS                  1
+#define LINK_STATS                  1
 // #define ETH_PAD_SIZE                2
 #define LWIP_CHKSUM_ALGORITHM       3
 #define LWIP_DHCP                   1
@@ -86,5 +86,14 @@
 
 #define PICO_CYW43_ARCH_THREADSAFE_BACKGROUND 1
 #define PICO_CYW43_ARCH_DEBUG_ENABLED 0 // Disable internal debug
+
+#define LWIP_PLATFORM_ERROR printf
+#define LWIP_ERROR(message, expression, handler) do { if (!(expression)) { \
+  LWIP_PLATFORM_ERROR(message); handler;}} while(0)
+
+#define LWIP_PLATFORM_ASSERT(x) printf("LWIP Assert: "x)
+
+#define LWIP_DEBUG
+// #define LWIP_ERROR
 
 #endif /* __LWIPOPTS_H__ */

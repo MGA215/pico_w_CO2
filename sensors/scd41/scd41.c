@@ -331,6 +331,7 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
     int32_t ret;
     uint16_t val;
     config->sensor_type = SCD41;
+    config->single_meas_mode = single_meas_mode;
 
     if ((ret = scd41_write_command(CMD_STOP_PER_MEAS)) != 0) return ret; // Stop measurement
     sleep_ms(500);

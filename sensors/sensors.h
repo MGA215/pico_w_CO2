@@ -31,11 +31,10 @@ extern void sensors_init_all(sensor_config_t** configuration_map, uint8_t config
  * 
  * @param sensor_index Index of the sensor
  * @param configuration Configuration for the sensor
- * @param is_first_init true if first init, false if reinit
  * @return true if init swas successful
  * @return false if init failed
  */
-extern bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init);
+extern bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration);
 
 /**
  * @brief Whether measurement has finished

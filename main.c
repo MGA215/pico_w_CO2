@@ -117,7 +117,7 @@ int init(void)
 
     update_display_buffer = true; // Redraw display
     sleep_ms(1000); // Init wait
-    watchdog_enable(3000, false); // 8 sec watchdog
+    watchdog_enable(3000, true); // 3 sec watchdog
     return SUCCESS;
 }
 

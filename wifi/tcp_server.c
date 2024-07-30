@@ -120,6 +120,23 @@ static err_t tcp_server_close(void* arg);
  */
 static err_t tcp_server_send_data(void* arg);
 
+/**
+ * @brief Asserts client disconnected and removes client pcb
+ * 
+ * @param arg server state structure
+ * @param status Client disconnected status code
+ * @return err_t return error code
+ */
+static err_t tcp_server_client_disconnected(void* arg, int status);
+
+/**
+ * @brief Removes client pcb & callbacks
+ * 
+ * @param arg Server state structure
+ * @return err_t Return error code
+ */
+static err_t tcp_server_remove_client(void* arg);
+
 
 
 err_t tcp_server_init()
@@ -147,13 +164,13 @@ void tcp_server_run(void)
     switch (server_state) // Check server state
     {
         case CONNECTION_CLOSED: // If connection closed
-            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Listening on port %i...", TCP_SERVER_PORT);
             if (!tcp_server_open(&state)) // Spin up server
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to spin up TCP server.");
                 server_state = CONNECTION_CLOSED; // On error set state to closed
                 return;
             }
+            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Listening on port %i...", TCP_SERVER_PORT);
             break;
         case CONNECTED:
         {
@@ -187,6 +204,7 @@ static bool tcp_server_open(void* arg)
     if (err) // Binding failed
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to bind server to port %i: error %i", TCP_SERVER_PORT, err);
+        tcp_close(pcb);
         return false;
     }
 
@@ -197,6 +215,7 @@ static bool tcp_server_open(void* arg)
         if (pcb) // If pcb exists
         {
             tcp_close(pcb); // close pcb
+            sleep_ms(10);
         }
         return false;
     }
@@ -240,9 +259,10 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 {
     TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
     if (!p) { // no pbuf available
-        return tcp_server_result(arg, ERR_RST); // close with 0
+        return tcp_server_client_disconnected(arg, 0); // close with 0
         // return ERR_OK;
     }
+    // print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_TCP_SERVER, "Message incoming");
     // this method is callback from lwIP, so cyw43_arch_lwip_begin is not required, however you
     // can use this method to cause an assertion in debug mode, if this method is called when
     // cyw43_arch_lwip_begin IS needed
@@ -269,7 +289,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 
     if (state->frame_index < CMD_RAW_MIN_LEN) // decode header
     {
-        return tcp_server_result(arg, ERR_ARG);
+        return ERR_OK;
     }
     uint32_t frame_len = state->frame_index; // Copy frame length
 
@@ -281,7 +301,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
             mutex_exit(&config_data.command_mutex);
             state->frame_index = 0;
 
-            return tcp_server_result(arg, ERR_ARG);
+            return ERR_OK;
         }
         config_data.command_len = frame_len; // Save frame length
         mutex_exit(&config_data.command_mutex);
@@ -306,6 +326,37 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
     } 
 
     return ERR_OK;
+}
+
+static err_t tcp_server_client_disconnected(void* arg, int status)
+{
+    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
+    print_ser_output(status == 0 ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Client disconnected: error status: %i", status);
+    return tcp_server_remove_client(arg);
+}
+
+static err_t tcp_server_remove_client(void* arg)
+{
+    TCP_SERVER_T *state = (TCP_SERVER_T*)arg;
+    err_t err = ERR_OK;
+    if (state->client_pcb != NULL) {
+        tcp_arg(state->client_pcb, NULL);
+        tcp_poll(state->client_pcb, NULL, 0);
+        tcp_sent(state->client_pcb, NULL);
+        tcp_recv(state->client_pcb, NULL);
+        tcp_err(state->client_pcb, NULL);
+        err = tcp_close(state->client_pcb);
+        if (err != ERR_OK) {
+
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP connection close failed: %i, aborting connection", err);
+            tcp_abort(state->client_pcb);
+            err = ERR_ABRT;
+        }
+        state->client_pcb = NULL;
+    }
+    server_state = CONNECTING;
+    state->connected = false;
+    return err;
 }
 
 static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) 
@@ -351,9 +402,15 @@ static err_t tcp_server_close(void* arg)
         }
         state->client_pcb = NULL;
     }
-    if (state->server_pcb) {
+    if (state->server_pcb != NULL) {
         tcp_arg(state->server_pcb, NULL);
-        tcp_close(state->server_pcb);
+        err = tcp_close(state->server_pcb);
+        if (err != ERR_OK)
+        {
+            print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Server close failed: %i, aborting server", err);
+            tcp_abort(state->server_pcb);
+            err = ERR_ABRT;
+        }
         state->server_pcb = NULL;
     }
     server_state = CONNECTION_CLOSED;
@@ -370,13 +427,13 @@ static err_t tcp_server_send_data(void* arg)
     if (err)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to write data over tcp: err %i", err);
-        return tcp_server_result(arg, err);
+        return tcp_server_client_disconnected(arg, err);
     }
     err = tcp_output(state->client_pcb); // Send data
     if (err != ERR_OK)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
-        return tcp_server_result(arg, err);
+        return tcp_server_client_disconnected(arg, err);
     }
     config_data.response_sent = true;
     return ERR_OK;

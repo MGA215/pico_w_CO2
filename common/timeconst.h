@@ -10,8 +10,7 @@
 //*************************************************************************************************
 
 
-#include <stdint.h>
-
+#include "pico/stdlib.h"
 
 // pocet sekund v danem roce
 const uint32_t rok_sec[100] = {

@@ -196,7 +196,7 @@ static void wifi_loop(void)
         tcp_client_init();
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns); // Reset timeout
     }
-    if ((time_reached(send_data_time) || data_client_sending) && ip_found) // If should send data
+    if (((!service_mode && time_reached(send_data_time)) || data_client_sending) && ip_found) // If should send data
     {
         sleep_ms(5);
         print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");

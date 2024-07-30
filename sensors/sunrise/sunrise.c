@@ -13,7 +13,6 @@
 #include "hardware/i2c.h"
 #include "string.h"
 #include "math.h"
-#include "pico/printf.h"
 
 #define SUNRISE_ADDR                0x68
 
@@ -172,11 +171,6 @@ int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
     command_buffer[0] = addr;
     memcpy(&command_buffer[1], buf, len);
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNRISE_ADDR, command_buffer, len + 1, false, I2C_TIMEOUT_US)) < 0) return ret; // Write data to sensor
-    for (int i = 0; i < len + 1; i++)
-    {
-        printf("%02X", command_buffer[i]);
-    }
-    printf("\n");
     busy_wait_ms(12);
     return SUCCESS;
 }
