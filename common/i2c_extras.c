@@ -18,15 +18,19 @@ void reset_i2c(void)
     int i = 0;
     for (i = 0; i < 10; i++)
     {
-        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sending I2C reset pulse %d...", i);
-        gpio_put(I2C_SCL, 0); // Pull down
-        sleep_ms(1);
-        gpio_put(I2C_SCL, 1); // Pull up
-        sleep_ms(1);
-        gpio_put(I2C_SDA, 0); // Pull down
-        sleep_ms(1);
-        gpio_put(I2C_SDA, 1); // Pull up
-        sleep_ms(50);
+        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sending I2C reset burst %d...", i);
+        for (int j = 0; j < 8; j++)
+        {
+            gpio_put(I2C_SCL, 0); // Pull down
+            sleep_us(10);
+            gpio_put(I2C_SCL, 1); // Pull up
+            sleep_us(10);
+            gpio_put(I2C_SDA, 0); // Pull down
+            sleep_us(10);
+            gpio_put(I2C_SDA, 1); // Pull up
+            sleep_us(100);
+
+        }
         if (gpio_get(I2C_SDA) && gpio_get(I2C_SCL)) break; // SDA set high
     }
     print_ser_output(gpio_get(I2C_SDA) ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 

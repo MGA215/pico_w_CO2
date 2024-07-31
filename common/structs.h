@@ -112,7 +112,8 @@ typedef struct sensor
     uint8_t power_index; // Index in the power vector
     uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
     uint8_t sensor_number; // Index of the sensor of a type
-    uint8_t err_counter; // Counts errors in current measurement
+    uint8_t init_err_counter; // Counts errors in init during current measurement cycle
+    uint8_t read_err_counter; // Counts errors in reading during current measurement cycle
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
 } sensor_t;
 

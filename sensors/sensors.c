@@ -232,6 +232,8 @@ bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration)
 
     for (int i = 0; i < 2; i++) // Try initialization twice
     {
+        sensors[sensor_index].config.sensor_active = true; // Activate sensor
+
         sleep_ms(10); // Wait some time
 
         if (!sensors_mux_to_sensor(sensor_index)) continue; // Mux to sensor
@@ -246,7 +248,6 @@ bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration)
             return false; // Not initiable
         }
 
-        sensors[sensor_index].config.sensor_active = true; // Activate sensor
 
         if (!ret) print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Init sensor %i success", sensor_index);
         else // Error during initialization
@@ -349,13 +350,13 @@ static void sensors_read_all(void)
         if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
         {
             watchdog_update(); // Update watchdog - just in case
-            if (sensors[sensor_index].err_counter >= 2) // Allow maximum of 2 read error iterations
+            if (sensors[sensor_index].read_err_counter >= 2 || sensors[sensor_index].init_err_counter >= 2) // Allow maximum of 2 read error iterations
             {
                 sensors[sensor_index].wake_time = at_the_end_of_time; // Disable sensor timer
                 sensors[sensor_index].meas_state = MEAS_FINISHED; // Terminate measurement
-                break;
+                continue;
             }
-            if (sensors_read(sensor_index)) break; // If reading successful break
+            if (sensors_read(sensor_index)) continue; // If reading successful break
             sleep_ms(10);
         }
     }
@@ -374,18 +375,29 @@ static bool sensors_read(uint8_t sensor_index)
     {
         sleep_ms(10);
 
-        if (!sensors_mux_to_sensor(sensor_index)) continue; // Mux to sensor
+        if (!sensors_mux_to_sensor(sensor_index)) // Mux to sensor
+        {
+            sensors[sensor_index].read_err_counter++;
+            sensors[sensor_index].init_err_counter++;
+            continue;
+        }
         
         if (sensors[sensor_index].state && // Sensor not initialized
             sensors[sensor_index].state != ERROR_UNKNOWN_SENSOR && 
             sensors[sensor_index].state != ERROR_NO_MEAS)
         {
-            if (!sensors_init(sensor_index, &sensors[sensor_index].config)) continue; // Initialize sensor
+            if (!sensors_init(sensor_index, &sensors[sensor_index].config)) // Initialize sensor
+                {
+                    print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Initializing sensor %i failed: %i; errors: %i", 
+                                 sensor_index, sensors[sensor_index].state, sensors[sensor_index].init_err_counter);
+                    sensors[sensor_index].init_err_counter++; // Increment error counter
+                    continue;
+                }
             sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
         }
 
         if (!sensors[sensor_index].config.verified) { // Check whether config is verified
-            if (sensors[i].sensor_type == UNKNOWN || sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue;
+            if (sensors[sensor_index].sensor_type == UNKNOWN || sensors[sensor_index].state == ERROR_SENSOR_NOT_INITIALIZED) continue;
             for (int j = 0; j < 3; j++) // Read & verify config - 3 attempts
             {
                 if (sensors_verify_read_config(sensor_index)) break;
@@ -402,8 +414,8 @@ static bool sensors_read(uint8_t sensor_index)
             if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS) // Reading not successful
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading sensor %i failed: %i; errors: %i", 
-                                 sensor_index, sensors[sensor_index].state, sensors[sensor_index].err_counter);
-                sensors[sensor_index].err_counter++; // Increment error counter
+                                 sensor_index, sensors[sensor_index].state, sensors[sensor_index].read_err_counter);
+                sensors[sensor_index].read_err_counter++; // Increment error counter
                 reset_i2c(); // Reset I2C
                 mux_reset(); // Reset MUX
                 continue; // Reading failed, repeat measurement
@@ -486,6 +498,7 @@ bool sensors_is_measurement_finished(void)
 {
     for (int i = 0; i < 8; i++)
     {
+        if (!sensors[i].config.sensor_active) continue;
         if (sensors[i].meas_state != MEAS_FINISHED || !is_at_the_end_of_time(sensors[i].wake_time)) return false;
     }
     return true;
@@ -500,7 +513,8 @@ static bool sensors_start_measurement(void)
         {
             if (sensors[i].state != ERROR_UNKNOWN_SENSOR) 
             {
-                sensors[i].err_counter = 0;
+                sensors[i].init_err_counter = 0;
+                sensors[i].read_err_counter = 0;
                 sensors[i].meas_state = MEAS_STARTED;
                 sensors[i].wake_time = get_absolute_time();
             }
@@ -541,16 +555,33 @@ void sensors_read_sensors(void)
 {
     if (time_reached(sensor_start_measurement_time)) // Should new measurement be started
     {
+        static int counter = 0;
         bool out = sensors_start_measurement(); // Start new measurement
-        if (!out) 
+        if (!out && counter++ < 100) 
         {
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Cannot start new measurement.");
             sensor_start_measurement_time = make_timeout_time_ms(100);
         }
-        else 
+        else if (out)
         {
+            counter = 0;
             sensor_start_measurement_time = make_timeout_time_us(sensor_read_interval_ms * 1000);
             // set_power(true);
+        }
+        else // Safety mechanism to unblock measurement after 100 unsuccessfull attempts to start new measurement
+        {
+            counter = 0;
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Forcing new measurement");
+            for (int i = 0; i < 8; i++)
+            {
+                if (sensors[i].meas_state != MEAS_FINISHED || !is_at_the_end_of_time(sensors[i].wake_time)) 
+                {
+                    print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sensor %X blocking measurement", i);
+                    sensors[i].meas_state = MEAS_FINISHED;
+                    sensors[i].wake_time = at_the_end_of_time;
+                    sensors[i].state = ERROR_SENSOR_INIT_FAILED; // Cancel initialization
+                }
+            }
         }
     }
     if (!sensors_is_measurement_finished()) // If measurement running

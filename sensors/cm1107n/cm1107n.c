@@ -68,7 +68,7 @@ int32_t cm1107n_read(uint8_t addr, uint8_t* buf, uint8_t len)
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CM1107N_ADDR, command_buffer, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Send command
 
-    sleep_ms(1);
+    sleep_ms(3);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CM1107N_ADDR, command_buffer, len + 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Read response
 
     uint16_t cs_neg = 0;
@@ -95,7 +95,7 @@ int32_t cm1107n_write(uint8_t addr, uint8_t *data, uint8_t len)
 
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CM1107N_ADDR, command_buffer, len + 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Send data
 
-    sleep_ms(1);
+    sleep_ms(3);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CM1107N_ADDR, command_buffer, len + 2, false, I2C_TIMEOUT_US)) < 0) return ret; // Read response
 
     uint16_t cs_neg = 0;

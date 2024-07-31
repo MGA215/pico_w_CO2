@@ -93,7 +93,5 @@
 
 #define LWIP_PLATFORM_ASSERT(x) printf("LWIP Assert: "x)
 
-#define LWIP_DEBUG
-// #define LWIP_ERROR
 
 #endif /* __LWIPOPTS_H__ */
