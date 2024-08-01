@@ -224,6 +224,9 @@ void scd30_get_value(sensor_t* scd30)
 
             scd30->meas_state = MEAS_FINISHED; // Finished measurement
             scd30->state = SUCCESS; // Set state
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured CO2 value: %f", scd30->co2);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured temperature value: %f", scd30->temperature);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured RH value: %f", scd30->humidity);
             return;
         }
         default:

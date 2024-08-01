@@ -36,6 +36,11 @@ static uint8_t active_sensors;
 // Timer to start measurement
 static absolute_time_t sensor_start_measurement_time;
 
+bool sensors_measurement_ready = false;
+bool sensors_was_measurement_read = false;
+
+static bool before_measurement = true;
+
 
 /**
  * @brief Initializes sensor itself according to its type
@@ -557,20 +562,23 @@ void sensors_read_sensors(void)
     {
         static int counter = 0;
         bool out = sensors_start_measurement(); // Start new measurement
-        if (!out && counter++ < 100) 
+        if (!out && counter++ < 20) 
         {
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Cannot start new measurement.");
-            sensor_start_measurement_time = make_timeout_time_ms(100);
+            sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms / 10);
         }
         else if (out)
         {
-            counter = 0;
-            sensor_start_measurement_time = make_timeout_time_us(sensor_read_interval_ms * 1000);
+            counter = 0; // Reset unsuccessful measurement start attempts
+            sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms);
+            sensors_was_measurement_read = false; // Sensor measurement is ready to be read
+            sensors_measurement_ready = false;
+            before_measurement = false; // Not before first measurement anymore
             // set_power(true);
         }
-        else // Safety mechanism to unblock measurement after 100 unsuccessfull attempts to start new measurement
+        else // Safety mechanism to unblock measurement after 20 unsuccessfull attempts to start new measurement
         {
-            counter = 0;
+            counter = 0; // Reset unsuccessful measurement start attempts
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Forcing new measurement");
             for (int i = 0; i < 8; i++)
             {
@@ -586,7 +594,12 @@ void sensors_read_sensors(void)
     }
     if (!sensors_is_measurement_finished()) // If measurement running
     {
+        sensors_measurement_ready = false; // Measurement not ready to be read
         sensors_read_all(); // Read all sensors
+    }
+    else if (!sensors_was_measurement_read && !sensors_measurement_ready && !before_measurement) // If measurement finished and not already read and not before 1st measurement
+    {
+        sensors_measurement_ready = true; // Set measurement ready
     }
 }
 

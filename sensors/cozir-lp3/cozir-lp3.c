@@ -179,6 +179,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
 
             cozir_lp3->meas_state = MEAS_FINISHED;
             cozir_lp3->state = SUCCESS;
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Measured CO2 value: %f", cozir_lp3->co2);
             return;
         }
         default:

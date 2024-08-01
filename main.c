@@ -39,9 +39,6 @@ uint8_t display_sensor = 0;
 // Time value to check if display & button update should be performed
 absolute_time_t process_update_time;
 
-// Time value to check if SOAP message should be created
-absolute_time_t soap_create_message_time;
-
 // Number of total SOAP channels
 uint8_t soap_channels = 16;
 
@@ -95,8 +92,6 @@ int init(void)
 
     if (!mutex_is_initialized(&soap_data1.data_mutex)) // Initializes mutexes for soap message buffer
         mutex_init(&soap_data1.data_mutex);
-    if (!mutex_is_initialized(&soap_data2.data_mutex))
-        mutex_init(&soap_data2.data_mutex);
 
     multicore_launch_core1(core1_main); // Launch second core
 
@@ -111,7 +106,6 @@ int init(void)
     soap_init(sensors, channels2, channels2_len); // Initialize SOAP channels 2
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
-    soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Set SOAP write message initial interval
 
     memory_timer = make_timeout_time_ms(1000);
 
@@ -126,7 +120,7 @@ int loop(void)
     if (!service_mode)
     {
         sensors_read_sensors(); // Read sensor values
-        if (time_reached(soap_create_message_time)) create_soap_messages(); // Create SOAP messages
+        create_soap_messages(); // Create SOAP messages
     }
     else
     {
@@ -385,35 +379,11 @@ void assign_soap_channels(void)
 
 void create_soap_messages(void)
 {
-    if (sensors_is_measurement_finished())
-    {
-        soap_create_message_time = make_timeout_time_ms(100);
-        return;
-    }
-    memset(soap_buffer1, 0x00, MAX_SOAP_SIZE); // Clear old message
-    if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, datetime_str, channels1, channels1_len, soap_buffer1, MAX_SOAP_SIZE)) // Create SOAP message 1
-    {
-        memset(soap_buffer1, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
+    if (!sensors_measurement_ready || sensors_was_measurement_read) return; // Generate new message if new data available
+    if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, datetime_str, channels1, channels1_len)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
-    }
-    else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message 1");
-    mutex_enter_timeout_ms(&soap_data1.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
-    strncpy(soap_data1.data, soap_buffer1, MAX_SOAP_SIZE);
-    soap_data1.data_len = strlen(soap_buffer1);
-    mutex_exit(&soap_data1.data_mutex);
-
-    // memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Clear old message
-    // if (!soap_build(SOAP_TESTER_NAME_2, SOAP_TESTER_SN_2, datetime_str, channels2, channels2_len, soap_buffer2, MAX_SOAP_SIZE)) // Create SOAP message 2
-    // {
-    //     memset(soap_buffer2, 0x00, MAX_SOAP_SIZE); // Delete message if write wasnt successful
-    // }
-    // print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message 2");
-    // mutex_enter_timeout_ms(&soap_data2.data_mutex, MUTEX_TIMEOUT_MS); // safe copy data to wifi soap buffer
-    // strncpy(soap_data2.data, soap_buffer2, MAX_SOAP_SIZE);
-    // soap_data2.data_len = strlen(soap_buffer2);
-    // mutex_exit(&soap_data2.data_mutex);
-
-    soap_create_message_time = make_timeout_time_ms(soap_write_message_s * 1000); // Create another message in time
+    else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
+    sensors_was_measurement_read = true;
     return;
 }
 

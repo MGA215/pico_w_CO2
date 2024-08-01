@@ -119,7 +119,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             ret = cdm7162_read(REG_STATUS, &buf[0], 1); // Read status
             if (ret != 0) // On invalid read
             {
-                cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
+                cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->state = ret; // Output return state
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 return;
@@ -131,7 +131,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             }
             if (cdm7162->timeout_iterator++ > 20) // If in timeout
             {
-                cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
+                cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
@@ -145,7 +145,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             ret = cdm7162_read(REG_CO2_L, buf, 2); // Read measured CO2
             if (ret != 0) // On invalid read
             {
-                cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
+                cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = ret; // Output return state
                 return;
@@ -156,12 +156,13 @@ void cdm7162_get_value(sensor_t* cdm7162)
             val |= buf[1] << 8;
             if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // If value out of range
             {
-                cdm7162->co2 = INT16_MAX; // Set CO2 to unknown
+                cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = CDM7162_ERROR_RANGE; // Output RANGE ERROR state
                 return;
             }
             cdm7162->co2 = val; // Save measured CO2
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Measured CO2 value: %f", cdm7162->co2);
             cdm7162->state = SUCCESS; // Output SUCCESS state
             cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
             return;

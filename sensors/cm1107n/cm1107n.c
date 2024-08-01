@@ -199,13 +199,13 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 cm1107n->state = ret; // Set state to read error
                 return;
             }
-            // cm1107n->co2 = (float)ntoh16(*( (uint16_t*)&tempBuffer[0]));
             uint16_t co2 = 0; // Convert read CO2 value
             co2 |= tempBuffer[0] << 8;
             co2 |= tempBuffer[1] << 0;
             cm1107n->co2 = (float)co2;
             cm1107n->meas_state = MEAS_FINISHED; // Set next state to measurement finished
             cm1107n->state = SUCCESS; // Set state to SUCCESS
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Measured CO2 value: %f", cm1107n->co2);
             return;
         }
         default:

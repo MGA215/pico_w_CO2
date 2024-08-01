@@ -18,11 +18,8 @@
 
 extern sensor_t sensors[8];
 extern soap_data_t soap_data1;
-extern soap_data_t soap_data2;
 
-
-extern config_data_t config_data;
-
+extern service_comm_data_t config_data;
 extern bool service_mode;
 
 extern message_channel* channels1[16];

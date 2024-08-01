@@ -404,6 +404,9 @@ void ee895_get_value(sensor_t* ee895)
             ee895->pressure = val; // Assign value
             ee895->meas_state = MEAS_FINISHED; // Finished measurement
             ee895->state = SUCCESS; // Set state
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured CO2 value: %f", ee895->co2);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured temperature value: %f", ee895->temperature);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured pressure value: %f", ee895->pressure);
             return;
         }
         default:

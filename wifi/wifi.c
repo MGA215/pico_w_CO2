@@ -156,7 +156,7 @@ void wifi_main()
             sleep_ms(100);
             continue;
         }
-        enable_tcp_closing = soap_write_message_s > 60; // Enable TCP socket closing if sending interval > 1 min
+        enable_tcp_closing = wifi_send_soap_ms > 60000; // Enable TCP socket closing if sending interval > 1 min
 
         if (wifi_connect(100000, WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))// Try connecting to the network
         {
@@ -168,7 +168,7 @@ void wifi_main()
         tcp_client_init(); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server
 
-        send_data_time = make_timeout_time_ms(soap_write_message_s * 1000 + soap_write_message_initial_delay_s * 1000); // Send data after wifi_send_data_time_ms + initial offset
+        send_data_time = make_timeout_time_ms(wifi_send_soap_ms * 2); // Send data after wifi_send_data_time_ms + initial offset
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns);
 
         while (wifi)
@@ -200,7 +200,7 @@ static void wifi_loop(void)
     {
         sleep_ms(5);
         print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");
-        send_data_time = make_timeout_time_ms(soap_write_message_s * 1000); // Next message in soap_write_message_s
+        send_data_time = make_timeout_time_ms(wifi_send_soap_ms); // Next message in soap_write_message_s
         data_client_sending = run_tcp_client(false); // Run TCP client FSM
     }
     tcp_server_run(); // Run TCP server

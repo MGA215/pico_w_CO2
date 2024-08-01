@@ -138,7 +138,7 @@ typedef struct
     uint16_t data_len;
     service_message_t message;
     uint8_t err;
-} config_data_t;
+} service_comm_data_t;
 
 typedef enum {
     SERVICE_COMM_UART = 0,

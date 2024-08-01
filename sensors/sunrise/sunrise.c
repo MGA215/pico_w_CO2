@@ -318,6 +318,8 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
             }
             sunrise->state = SUCCESS; // Output SUCCESS state
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured CO2 value: %f", sunrise->co2);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured RH value: %f", sunrise->humidity);
             return;
         }
         case MEAS_READ_STATUS: // Reading status registers

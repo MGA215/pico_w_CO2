@@ -16,17 +16,6 @@
 
 #define DEBUG_TIME false
 
-/**DEBUG LEVELS
- * 0 ... DEBUG messages disabled
- * 1 ... display FATAL errors
- * 2 ... display ERROR and higher
- * 3 ... display Warn and higher
- * 4 ... display info and higher
- * 5 ... display debug and higher
- * 6 ... display trace and higher
- */
-static uint8_t debug = 4;
-
 typedef enum debug_severity
 {
     SEVERITY_TRACE = 6,
@@ -65,10 +54,12 @@ typedef enum debug_source
     SOURCE_TCP_DNS = 103
 } debug_source_e;
 
-#define DEBUG_CORE_0 true
-#define DEBUG_CORE_1 true
-#define DEBUG_WIFI true
-#define DEBUG_TCP_CLIENT true
+extern uint8_t debug;
+
+extern uint8_t debug_wifi;
+extern uint8_t debug_tcp_client;
+extern uint8_t debug_tcp_server;
+extern uint8_t debug_tcp_dns;
 
 /**
  * @brief Prints a debug message if corresponding DEBUG severity is enabled in constants.h

@@ -316,6 +316,8 @@ void sunlight_get_value(sensor_t* sunlight)
             {
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
             }
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Measured CO2 value: %f", sunlight->co2);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Measured RH value: %f", sunlight->humidity);
             sunlight->state = SUCCESS; // Output SUCCESS state
             return;
         }

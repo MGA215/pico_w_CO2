@@ -18,6 +18,9 @@
 // Measurement interval
 extern uint32_t sensor_measurement_interval_s;
 
+extern bool sensors_measurement_ready;
+extern bool sensors_was_measurement_read;
+
 /**
  * @brief Initializes sensors up to min(config_map_length, 8)
  * 

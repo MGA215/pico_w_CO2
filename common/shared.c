@@ -1,10 +1,9 @@
 #include "shared.h"
 
 sensor_t sensors[8];
-config_data_t config_data = {.command_rdy = false, .response_rdy = false};
+service_comm_data_t config_data = {.command_rdy = false, .response_rdy = false};
 
 soap_data_t soap_data1;
-soap_data_t soap_data2;
 
 bool service_mode = false;
 
