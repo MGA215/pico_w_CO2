@@ -74,15 +74,15 @@
 static uint16_t display_interval = 33;
 
 // value representing the interval between sensor readings in ms
-static uint32_t sensor_read_interval_ms = 15000;
+static uint32_t sensor_read_interval_ms = 6000;
 
 // value representing the interval between attempts to connect to wifi in ms
 static uint32_t wifi_wait_next_connect_ms = 30000;
 
-// value representing the timeout for DNS server to resolve host IP
+// value representing the timeout for DNS server to resolve host IP in ms
 static uint32_t wifi_wait_for_dns = 30000;
 
-// value representing the soap message sending interval
-static uint32_t wifi_send_soap_ms = 15000;
+// value representing the soap message sending interval in ms
+static uint32_t wifi_send_soap_ms = 6000;
 
 #endif

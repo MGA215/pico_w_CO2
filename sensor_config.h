@@ -298,7 +298,7 @@ static sensor_config_t sensor_config_15 = {
 
 static sensor_config_t sensor_config_16 = {
     .sensor_type = COZIR_LP3,
-    .filter_coeff = 16,
+    .filter_coeff = 4,
     .enable_PWM_pin = false,
     .enable_pressure_comp = false,
     .pressure = 1013,

@@ -15,9 +15,6 @@
 #include "pico/stdlib.h"
 #include "../common/structs.h"
 
-// Measurement interval
-extern uint32_t sensor_measurement_interval_s;
-
 extern bool sensors_measurement_ready;
 extern bool sensors_was_measurement_read;
 
@@ -30,14 +27,10 @@ extern bool sensors_was_measurement_read;
 extern void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_length);
 
 /**
- * @brief Initializes single sensor
+ * @brief Tries to read sensors, should be called in a loop
  * 
- * @param sensor_index Index of the sensor
- * @param configuration Configuration for the sensor
- * @return true if init swas successful
- * @return false if init failed
  */
-extern bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration);
+extern void sensors_read_all(void);
 
 /**
  * @brief Whether measurement has finished
@@ -46,11 +39,5 @@ extern bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration);
  * @return false if measurement not finished
  */
 extern bool sensors_is_measurement_finished(void);
-
-/**
- * @brief Tries to read sensors, should be called in a loop
- * 
- */
-extern void sensors_read_sensors(void);
 
 #endif

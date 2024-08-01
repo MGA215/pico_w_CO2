@@ -119,12 +119,8 @@ int loop(void)
 {
     if (!service_mode)
     {
-        sensors_read_sensors(); // Read sensor values
+        sensors_read_all(); // Read sensor values
         create_soap_messages(); // Create SOAP messages
-    }
-    else
-    {
-
     }
     if (config_data.command_rdy)
     {

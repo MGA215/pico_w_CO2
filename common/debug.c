@@ -53,7 +53,7 @@ uint8_t debug = 6; // Global max debug level
 
 static uint8_t debug_main_init = 3;
 static uint8_t debug_main_loop = 3;
-static uint8_t debug_sensors = 4;
+static uint8_t debug_sensors = 3;
 static uint8_t debug_soap = 5;
 static uint8_t debug_rtc = 0;
 static uint8_t debug_display = 0;
@@ -69,7 +69,7 @@ static uint8_t debug_sunrise = 3;
 static uint8_t debug_sunlight = 3;
 static uint8_t debug_scd30 = 3;
 static uint8_t debug_scd41 = 3;
-static uint8_t debug_cozir_lp3 = 5;
+static uint8_t debug_cozir_lp3 = 6;
 static uint8_t debug_cm1107n = 3;
 
 uint8_t debug_wifi = 3;
@@ -98,95 +98,95 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 snprintf(source_str, 13, "            ");
                 break;
             case SOURCE_MAIN_INIT:
-                if (severity > debug_main_init) return;
+                if (severity > debug_main_init && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MAIN-INIT] ");
                 break;
             case SOURCE_MAIN_LOOP:
-                if (severity > debug_main_loop) return;
+                if (severity > debug_main_loop && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MAIN-LOOP] ");
                 break;
             case SOURCE_SENSORS:
-                if (severity > debug_sensors) return;
+                if (severity > debug_sensors && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SENSORS]   ");
                 break;
             case SOURCE_SOAP:
-                if (severity > debug_soap) return;
+                if (severity > debug_soap && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SOAP]      ");
                 break;
             case SOURCE_MUX:
-                if (severity > debug_mux) return;
+                if (severity > debug_mux && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MUX]       ");
                 break;
             case SOURCE_DISPLAY:
-                if (severity > debug_display) return;
+                if (severity > debug_display && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[DISPLAY]   ");
                 break;
             case SOURCE_RTC:
-                if (severity > debug_rtc) return;
+                if (severity > debug_rtc && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[RTC]       ");
                 break;
             case SOURCE_GFX:
-                if (severity > debug_gfx) return;
+                if (severity > debug_gfx && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[GFX]       ");
                 break;
             case SOURCE_RAM:
-                if (severity > debug_ram) return;
+                if (severity > debug_ram && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[RAM]       ");
                 break;
             case SOURCE_SERVICE_COMM:
-                if (severity > debug_service_comm) return;
+                if (severity > debug_service_comm && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SVC_COMM]  ");
                 break;
             case SOURCE_EE895:
-                if (severity > debug_ee895) return;
+                if (severity > debug_ee895 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[EE895]     ");
                 break;
             case SOURCE_CDM7162:
-                if (severity > debug_cdm7162) return;
+                if (severity > debug_cdm7162 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CDM7162]   ");
                 break;
             case SOURCE_SUNRISE:
-                if (severity > debug_sunrise) return;
+                if (severity > debug_sunrise && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SUNRISE]   ");
                 break;
             case SOURCE_SUNLIGHT:
-                if (severity > debug_sunlight) return;
+                if (severity > debug_sunlight && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SUNLIGHT]  ");
                 break;
             case SOURCE_SCD30:
-                if (severity > debug_scd30) return;
+                if (severity > debug_scd30 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SCD30]     ");
                 break;
             case SOURCE_SCD41:
-                if (severity > debug_scd41) return;
+                if (severity > debug_scd41 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SCD41]     ");
                 break;
             case SOURCE_COZIR_LP3:
-                if (severity > debug_cozir_lp3) return;
+                if (severity > debug_cozir_lp3 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CozIR-LP3] ");
                 break;
             case SOURCE_CM1107N:
-                if (severity > debug_cm1107n) return;
+                if (severity > debug_cm1107n && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CM1107N]   ");
                 break;
             case SOURCE_POWER:
-                if (severity > debug_power) return;
+                if (severity > debug_power && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[POWER]     ");
                 break;
             case SOURCE_WIFI:
-                if (severity > debug_wifi) return;
+                if (severity > debug_wifi && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[WiFi]      ");
                 break;
             case SOURCE_TCP_CLIENT:
-                if (severity > debug_tcp_client) return;
+                if (severity > debug_tcp_client && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-Client]");
                 break;
             case SOURCE_TCP_SERVER:
-                if (severity > debug_tcp_server) return;
+                if (severity > debug_tcp_server && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-Server]");
                 break;
             case SOURCE_TCP_DNS:
-                if (severity > debug_tcp_dns) return;
+                if (severity > debug_tcp_dns && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-DNS]   ");
                 break;
             default:
