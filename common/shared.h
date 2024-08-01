@@ -14,7 +14,6 @@
 
 #include "structs.h"
 #include "pico/stdlib.h"
-#include "../pico-ds3231/lib/include/ds3231.h"
 
 extern sensor_t sensors[8];
 extern soap_data_t soap_data1;
@@ -27,7 +26,7 @@ extern uint8_t channels1_len;
 extern message_channel* channels2[16];
 extern uint8_t channels2_len;
 
-extern struct ds3231_rtc rtc;
-extern ds3231_datetime_t dt;
+extern datetime_t datetime;
+extern uint8_t datetime_str[30];
 
 #endif

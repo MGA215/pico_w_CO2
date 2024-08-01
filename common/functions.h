@@ -73,23 +73,19 @@ extern float round_precision(float value, uint8_t precision);
 extern uint32_t get_error(uint8_t error_byte);
 
 /**
- * @brief Converts datetime to bytes
+ * @brief Returns decimal value from hexadecimal representation (i.e. 0x10 -> 10)
  * 
- * @param year Year (between 200 and 2099 incl)
- * @param month Month
- * @param day Day
- * @param hour Hour
- * @param min Min
- * @param sec Sec
- * @return uint32_t Time representation in bytes
+ * @param hex_val Hexadecimal value
+ * @return uint8_t Decimal value
  */
-uint32_t get_time_bytes(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec);
+extern uint8_t hex2dec(uint8_t hex_val);
 
 /**
- * @brief Get the current time in byte float representation
+ * @brief Returns hexadecimal value from decimal representation (i.e. 10 -> 0x10)
  * 
- * @return uint32_t 
+ * @param dec_val Decimal value
+ * @return uint8_t Hexadecimal value
  */
-uint32_t get_current_time_bytes(void);
+extern uint8_t dec2hex(uint8_t dec_val);
 
 #endif

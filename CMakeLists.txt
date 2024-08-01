@@ -63,7 +63,7 @@ target_include_directories(pico_w_CO2 PRIVATE
 
 set(PICO_DEOPTIMIZED_DEBUG 0 CACHE BOOL "Deoptimized debug")
 
-add_subdirectory(pico-ds3231/lib)
+add_subdirectory(rtc)
 add_subdirectory(gfx_pack)
 add_subdirectory(soap)
 add_subdirectory(wifi)
@@ -71,6 +71,7 @@ add_subdirectory(sensors)
 add_subdirectory(common)
 add_subdirectory(cobs)
 add_subdirectory(service_comm)
+add_subdirectory(eeprom)
 
 target_compile_options(pico_w_CO2 PRIVATE "-g")
 
@@ -83,7 +84,7 @@ target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
         hardware_i2c
-        pico-ds3231
+        pico-rtc
         pico-gfx_pack
         hardware_exception
         pico-soap

@@ -123,6 +123,13 @@
 #define CM1107N_ERROR_DRIFT 731 // Error CM1107N - Sensor drifting
 #define CM1107N_ERROR_PREHEATING 732 // Error CM1107N - Sensor preheating
 
+// EEPROM errors
+#define EEPROM_ERROR_PAGE_OVERFLOW 833 // Error EEPROM - Page write overflow
+
+// RTC errors
+#define ERROR_RTC_INVALID_DATETIME 934 // Error RTC - Date time value is invalid
+
+
 
 // Service comm error codes
 #define P_ERR_RANGE 3 // Measured value range error

@@ -14,9 +14,7 @@
 #include "malloc.h"
 #include "pico/printf.h"
 #include "hardware/watchdog.h"
-
-// string holding the datetime value
-uint8_t datetime_str[30] = {0};
+#include "rtc/rtc.h"
 
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
@@ -49,11 +47,6 @@ uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0};
 absolute_time_t memory_timer;
 
 
-/**
- * @brief Sets RTC's datetime, modify datetime inside
- * 
- */
-void set_datetime(void);
 
 void getFreeHeap(void);
 
@@ -95,15 +88,14 @@ int init(void)
 
     multicore_launch_core1(core1_main); // Launch second core
 
-    ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initializing I2C for communication with RTC module
+    rtc_init();
 
     gfx_pack_init(); // initialize display
 
     sensors_init_all(configuration_map, 8); // initialize sensors
 
     assign_soap_channels(); // Assign SOAP channels
-    soap_init(sensors, channels1, channels1_len); // Initialize SOAP channels 1
-    soap_init(sensors, channels2, channels2_len); // Initialize SOAP channels 2
+    soap_init(sensors, channels1); // Initialize SOAP channels
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
 
@@ -132,35 +124,9 @@ int loop(void)
     return SUCCESS;
 }
 
-void set_datetime(void)
-{
-    ds3231_datetime_t dt = {
-        .year = 2024,
-        .month = 6,
-        .dotw = 5,
-        .day = 14,
-        .hour = 6,
-        .minutes = 56,
-        .seconds = 00
-    };
-    ds3231_set_datetime(&dt, &rtc); // refresh datetime
-}
-
-void get_datetime(uint8_t* datetime_str, uint8_t datetime_len)
-{
-    ds3231_get_datetime(&dt, &rtc); // read datetime
-    datetime2str(datetime_str, datetime_len, &dt); // convert datetime to string
-}
-
-int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)
-{
-    return snprintf(buf, buf_size, "%02u.%02u.%04u %02u:%02u:%02u", dt->day, dt->month, dt->year, 
-                    dt->hour, dt->minutes, dt->seconds); // Conversion of the datetime struct to date time string
-}
-
 void update()
 {
-    update_RTC(); // Updates datetime
+    update_display_buffer = rtc_update(); // Update RTC & refresh display
     read_inputs(); // Updates button inputs
     if (update_display_buffer)
     {
@@ -172,17 +138,6 @@ void update()
     }
     process_update_time = make_timeout_time_us(display_interval * 1000); // Wait for next update
     return;
-}
-
-void update_RTC()
-{
-    uint8_t loc_datetime_str[30] = {0};
-    get_datetime(loc_datetime_str, sizeof(loc_datetime_str)); // Retrieves current datetime
-    if (memcmp(loc_datetime_str, datetime_str, 30) != 0)  // If new datetime string
-    {
-        memcpy(datetime_str, loc_datetime_str, 30); // Update datetime string
-        update_display_buffer = true; // Refresh display
-    }
 }
 
 void read_inputs(void)
@@ -376,7 +331,7 @@ void assign_soap_channels(void)
 void create_soap_messages(void)
 {
     if (!sensors_measurement_ready || sensors_was_measurement_read) return; // Generate new message if new data available
-    if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, datetime_str, channels1, channels1_len)) // Create SOAP message
+    if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, channels1)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
     sensors_was_measurement_read = true;

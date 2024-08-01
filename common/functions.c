@@ -16,7 +16,6 @@
 #include "malloc.h"
 #include "hardware/watchdog.h"
 #include "shared.h"
-#include "timeconst.h"
 
 #include "stdlib.h"
 #include "math.h"
@@ -133,14 +132,21 @@ uint32_t get_error(uint8_t error_byte)
     return ((uint32_t)error_byte << 24) | 0x000080FF;
 }
 
-uint32_t get_time_bytes(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t min, uint8_t sec)
+volatile uint8_t hex2dec(uint8_t hex_val)
 {
-    if (year < 2000 || year > 2099) return 0;
-    return rok_sec[year - 2000] + mesic_sec[month] + den_sec[day] + hod_sec[hour] + min_sec[min] + sec;
+    uint8_t out;
+    uint8_t val1 = hex_val & 0xF0;
+    uint8_t val2 = val1 >> 4;
+    uint8_t val3 = val2 * 10;
+    uint8_t val4 = hex_val & 0x0F;
+    out = val3 + val4;
+    return out;
 }
 
-uint32_t get_current_time_bytes(void)
+uint8_t dec2hex(uint8_t dec_val)
 {
-    return get_time_bytes(dt.year, dt.month, dt.day, dt.hour, dt.minutes, dt.seconds);
+    uint8_t out = 0;
+    out |= dec_val % 10;
+    out |= (dec_val / 10) << 4;
+    return out;
 }
-

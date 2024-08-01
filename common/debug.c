@@ -53,23 +53,24 @@ uint8_t debug = 6; // Global max debug level
 
 static uint8_t debug_main_init = 3;
 static uint8_t debug_main_loop = 3;
-static uint8_t debug_sensors = 3;
-static uint8_t debug_soap = 5;
-static uint8_t debug_rtc = 0;
+static uint8_t debug_sensors = 4;
+static uint8_t debug_soap = 3;
+static uint8_t debug_rtc = 3;
 static uint8_t debug_display = 0;
 static uint8_t debug_gfx = 0;
 static uint8_t debug_ram = 0;
 static uint8_t debug_service_comm = 4;
+static uint8_t debug_eeprom = 3;
 
 static uint8_t debug_mux = 3;
 static uint8_t debug_power = 3;
 static uint8_t debug_ee895 = 3;
-static uint8_t debug_cdm7162 = 6;
+static uint8_t debug_cdm7162 = 3;
 static uint8_t debug_sunrise = 3;
 static uint8_t debug_sunlight = 3;
 static uint8_t debug_scd30 = 3;
 static uint8_t debug_scd41 = 3;
-static uint8_t debug_cozir_lp3 = 6;
+static uint8_t debug_cozir_lp3 = 3;
 static uint8_t debug_cm1107n = 3;
 
 uint8_t debug_wifi = 3;
@@ -136,6 +137,10 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             case SOURCE_SERVICE_COMM:
                 if (severity > debug_service_comm && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SVC_COMM]  ");
+                break;
+            case SOURCE_EEPROM:
+                if (severity > debug_eeprom && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[EEPROM]    ");
                 break;
             case SOURCE_EE895:
                 if (severity > debug_ee895 && subsource == SOURCE_NO_SOURCE) return;
@@ -236,6 +241,10 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             case SOURCE_SERVICE_COMM:
                 if (severity > debug_service_comm) return;
                 snprintf(subsource_str, 13, "[SVC_COMM]  ");
+                break;
+            case SOURCE_EEPROM:
+                if (severity > debug_eeprom) return;
+                snprintf(subsource_str, 13, "[EEPROM]    ");
                 break;
             case SOURCE_EE895:
                 if (severity > debug_ee895) return;

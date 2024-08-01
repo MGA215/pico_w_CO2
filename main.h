@@ -29,7 +29,6 @@
 #include "soap/soap_channels.h"
 #include "service_comm/service_comm.h"
 
-#include "pico-ds3231/lib/include/ds3231.h"
 #include "gfx_pack/gfx_pack.h"
 #include "sensors/sensors.h"
 
@@ -48,24 +47,6 @@ int init(void);
 int loop(void);
 
 /**
- * @brief Get current datetime string value
- * 
- * @param datetime_str string the datetime is written to
- * @param datetime_len length of the string
- */
-void get_datetime(uint8_t* datetime_str, uint8_t datetime_len);
-
-/**
- * @brief Converts datetime format to a string YYYY-MM-DD hh-mm-ss
- * 
- * @param buf output buffer containing the datetime string
- * @param buf_size max size of the buffer
- * @param dt datetime struct read from RTC module
- * @return int negative if conversion failed, otherwise number of written characters (except null byte)
- */
-int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt);
-
-/**
  * @brief Reads button inputs and reacts to them
  * 
  */
@@ -76,12 +57,6 @@ void read_inputs();
  * 
  */
 void update_display();
-
-/**
- * @brief Updates datetime from RTC
- * 
- */
-void update_RTC();
 
 /**
  * @brief Updates all components

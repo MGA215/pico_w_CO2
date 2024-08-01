@@ -16,7 +16,6 @@ target_sources(pico-common
   ${CMAKE_CURRENT_LIST_DIR}/../error_codes.h
   ${CMAKE_CURRENT_LIST_DIR}/shared.c
   ${CMAKE_CURRENT_LIST_DIR}/shared.h
-  ${CMAKE_CURRENT_LIST_DIR}/timeconst.h
 )
 
 target_sources(pico-common INTERFACE ${CMAKE_CURRENT_LIST_DIR}/common_include.h)
