@@ -12,7 +12,8 @@
 #ifndef __CDM7162_H__
 #define __CDM7162_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from cdm7162 sensor

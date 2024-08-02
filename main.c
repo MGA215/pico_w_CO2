@@ -10,11 +10,32 @@
  */
 
 #include "main.h"
-#include "common/debug.h"
-#include "malloc.h"
-#include "pico/printf.h"
-#include "hardware/watchdog.h"
+
+#include "wifi/wifi.h"
 #include "rtc/rtc.h"
+#include "gfx_pack/gfx_pack.h"
+#include "sensors/sensors.h"
+#include "soap/soap.h"
+#include "service_comm/service_comm.h"
+
+#include "common/debug.h"
+#include "common/serialize.h"
+
+#include "common/shared.h"
+#include "error_codes.h"
+#include "common/constants.h"
+#include "soap/soap_channels.h"
+#include "config_map.h"
+
+#include "pico/multicore.h"
+#include "pico/mutex.h"
+#include "hardware/gpio.h"
+#include "hardware/watchdog.h"
+#include "malloc.h"
+
+#include "string.h"
+
+#include "pico/printf.h"
 
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
@@ -89,10 +110,8 @@ int init(void)
     multicore_launch_core1(core1_main); // Launch second core
 
     rtc_init();
-
     gfx_pack_init(); // initialize display
-
-    sensors_init_all(configuration_map, 8); // initialize sensors
+    sensors_init_all(); // initialize sensors
 
     assign_soap_channels(); // Assign SOAP channels
     soap_init(sensors, channels1); // Initialize SOAP channels
@@ -103,7 +122,7 @@ int init(void)
 
     update_display_buffer = true; // Redraw display
     sleep_ms(1000); // Init wait
-    watchdog_enable(3000, true); // 3 sec watchdog
+    watchdog_enable(3000, false); // 3 sec watchdog
     return SUCCESS;
 }
 

@@ -12,8 +12,8 @@
 #ifndef __FUNCTIONS_H__
 #define __FUNCTIONS_H__
 
-#include "structs.h"
 #include "pico/stdlib.h"
+#include "structs.h"
 
 /**
  * @brief Converts 16-bit value to the other endian

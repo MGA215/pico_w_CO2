@@ -12,7 +12,8 @@
 #ifndef __COZIR_LP3_H__
 #define __COZIR_LP3_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the CozIR-LP3 sensor

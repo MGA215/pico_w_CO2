@@ -11,6 +11,8 @@
 
 #include "mux.h"
 #include "hardware/i2c.h"
+#include "common/debug.h"
+#include "error_codes.h"
 
 int32_t mux_enable_sensor(uint8_t sensor_index)
 {

@@ -13,6 +13,9 @@
 #include "math.h"
 #include "hardware/i2c.h"
 #include "string.h"
+#include "common/debug.h"
+#include "error_codes.h"
+#include "common/functions.h"
 
 #define COZIR_LP3_ADDR              0x41
 

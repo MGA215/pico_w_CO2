@@ -11,7 +11,8 @@
 #ifndef __CM1107N_H__
 #define __CM1107N_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the CM1107N sensor

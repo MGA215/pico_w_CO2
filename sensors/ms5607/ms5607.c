@@ -1,9 +1,9 @@
 #include "ms5607.h"
 #include "hardware/i2c.h"
-#include "../../common/constants.h"
-#include "../../common/debug.h"
+#include "common/constants.h"
+#include "common/debug.h"
 #include "error_codes.h"
-#include "../../common/shared.h"
+#include "common/shared.h"
 #include "string.h"
 #include "math.h"
 

@@ -13,24 +13,7 @@
 #define __MAIN_H__
 
 #include "pico/stdlib.h"
-#include "pico/multicore.h"
-#include "pico/mutex.h"
-#include "hardware/gpio.h"
-#include "error_codes.h"
-#include "string.h"
-#include "common/shared.h"
-
-#include "wifi/wifi.h"
-#include "common/constants.h"
-#include "common/serialize.h"
-#include "sensor_config.h"
-#include "config_map.h"
-#include "soap/soap.h"
-#include "soap/soap_channels.h"
-#include "service_comm/service_comm.h"
-
-#include "gfx_pack/gfx_pack.h"
-#include "sensors/sensors.h"
+#include "common/structs.h"
 
 /**
  * @brief Initializes pins, buses, modules; runs only once

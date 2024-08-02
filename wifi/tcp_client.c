@@ -14,9 +14,9 @@
 
 #include "credentials.h"
 #include "tcp_client.h"
-#include "../common/common_include.h"
 #include "http.h"
-#include "../common/shared.h"
+#include "common/shared.h"
+#include "common/debug.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/dns.h"

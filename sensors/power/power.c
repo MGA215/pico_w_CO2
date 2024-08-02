@@ -1,8 +1,8 @@
 #include "power.h"
-#include "../../common/shared.h"
+#include "common/shared.h"
 #include "hardware/i2c.h"
-#include "../../common/debug.h"
-#include "../../error_codes.h"
+#include "common/debug.h"
+#include "error_codes.h"
 
 int32_t power_en_set_vector_affected_sensors(uint8_t affected_sensors_vector, bool on)
 {

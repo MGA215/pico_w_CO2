@@ -13,7 +13,6 @@
 #define __TCP_CLIENT_H__
 
 #include "pico/stdlib.h"
-#include "pico/mutex.h"
 #include "lwip/err.h"
 
 

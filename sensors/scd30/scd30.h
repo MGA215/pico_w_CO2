@@ -12,8 +12,8 @@
 #ifndef __SCD30_H__
 #define __SCD30_H__
 
-#include "../../common/common_include.h"
-
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the SCD30 sensor

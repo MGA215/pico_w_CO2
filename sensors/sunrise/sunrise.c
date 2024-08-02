@@ -13,6 +13,9 @@
 #include "hardware/i2c.h"
 #include "string.h"
 #include "math.h"
+#include "common/debug.h"
+#include "error_codes.h"
+#include "common/functions.h"
 
 #define SUNRISE_ADDR                0x68
 

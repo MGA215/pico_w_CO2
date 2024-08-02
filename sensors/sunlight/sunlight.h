@@ -12,7 +12,8 @@
 #ifndef __SUNLIGHT_H__
 #define __SUNLIGHT_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the SUNLIGHT sensor

@@ -12,7 +12,7 @@
 #ifndef __WIFI_H__
 #define __WIFI_H__
 
-#include "../common/structs.h"
+#include "common/structs.h"
 
 
 /**

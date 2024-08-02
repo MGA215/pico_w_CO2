@@ -12,7 +12,8 @@
 #ifndef __SUNRISE_H__
 #define __SUNRISE_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the SUNRISE sensor

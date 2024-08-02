@@ -12,7 +12,8 @@
 #ifndef __SCD41_H__
 #define __SCD41_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads data from the SCD41 sensor

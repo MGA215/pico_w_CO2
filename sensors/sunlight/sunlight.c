@@ -13,6 +13,9 @@
 #include "hardware/i2c.h"
 #include "string.h"
 #include "math.h"
+#include "error_codes.h"
+#include "common/debug.h"
+#include "common/functions.h"
 
 #define SUNLIGHT_ADDR               0x68
 

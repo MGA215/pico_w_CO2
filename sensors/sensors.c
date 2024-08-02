@@ -1,12 +1,13 @@
 #include "sensors.h"
 
-#include "../common/functions.h"
-#include "../common/debug.h"
-#include "../common/i2c_extras.h"
-#include "../common/constants.h"
-#include "../error_codes.h"
-#include "../common/shared.h"
+#include "common/functions.h"
+#include "common/debug.h"
+#include "common/i2c_extras.h"
+#include "common/constants.h"
+#include "error_codes.h"
+#include "common/shared.h"
 #include "../sensor_config.h"
+#include "../config_map.h"
 
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
@@ -152,7 +153,7 @@ static void set_5v(void);
 
 
 
-void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_length)
+void sensors_init_all()
 {
     // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
     for (int i = 0; i < 8; i++) // Initialize default structures
@@ -169,13 +170,13 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
 
     memset(sensor_indices, 0x00, 8); // Reset sensor indices
     active_sensors = 0;
-    for (int i = 0; i < MIN(8, config_map_length); i++)
+    for (int i = 0; i < 8; i++)
     {
 
         sensors_init(i, configuration_map[i]); // Initialize sensor
         watchdog_update(); // Update watchdog - just in case
     }
-    for (int i = 0; i < MIN(8, config_map_length); i++)
+    for (int i = 0; i < 8; i++)
     {
         if (sensors[i].sensor_type == UNKNOWN || sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue;
         for (int j = 0; j < 3; j++)

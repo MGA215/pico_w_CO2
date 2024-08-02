@@ -13,6 +13,9 @@
 #include "math.h"
 #include "hardware/i2c.h"
 #include "string.h"
+#include "error_codes.h"
+#include "common/debug.h"
+#include "common/functions.h"
 
 #define CMD_START_PER_MEAS                  0x21B1
 #define CMD_READ_MEAS                       0xEC05

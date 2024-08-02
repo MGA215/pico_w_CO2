@@ -13,18 +13,16 @@
 #define __SENSORS_H__
 
 #include "pico/stdlib.h"
-#include "../common/structs.h"
+#include "common/structs.h"
 
 extern bool sensors_measurement_ready;
 extern bool sensors_was_measurement_read;
 
 /**
- * @brief Initializes sensors up to min(config_map_length, 8)
+ * @brief Initializes all sensors
  * 
- * @param configuration_map Map of configurations for the sensors
- * @param config_map_length Length of the map, should be 8
  */
-extern void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_length);
+extern void sensors_init_all();
 
 /**
  * @brief Tries to read sensors, should be called in a loop

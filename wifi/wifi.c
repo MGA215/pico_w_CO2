@@ -16,9 +16,9 @@
 #include "credentials.h"
 #include "tcp_client.h"
 #include "tcp_server.h"
-#include "../common/shared.h"
-
-#include "../common/common_include.h"
+#include "common/shared.h"
+#include "error_codes.h"
+#include "common/debug.h"
 
 #include "pico/cyw43_arch.h"
 #include "lwipopts.h"

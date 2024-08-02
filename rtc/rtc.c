@@ -1,8 +1,8 @@
 #include "pico-ds3231/lib/include/ds3231.h"
 #include "pico/stdlib.h"
-#include "../common/constants.h"
+#include "common/constants.h"
 #include "error_codes.h"
-#include "../common/shared.h"
+#include "common/shared.h"
 #include "timeconst.h"
 
 // RTC structure

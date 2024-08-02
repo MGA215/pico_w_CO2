@@ -13,6 +13,9 @@
 #include "hardware/i2c.h"
 #include "math.h"
 #include "string.h"
+#include "common/debug.h"
+#include "error_codes.h"
+#include "common/functions.h"
 
 #define SCD30_ADDR              0x61
 

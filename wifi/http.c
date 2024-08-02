@@ -14,13 +14,13 @@
 #define __HTTP_C__
 
 #include "http.h"
-#include "../common/common_include.h"
-#include <string.h>
-#include "pico/stdio.h"
-#include "pico/printf.h"
-#include <malloc.h>
 #include "credentials.h"
 #include "websec.h"
+#include "common/common_include.h"
+#include "pico/stdio.h"
+#include "pico/printf.h"
+#include "malloc.h"
+#include <string.h>
 
 static uint16_t header_size = 512;
 

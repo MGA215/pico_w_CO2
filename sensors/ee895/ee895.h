@@ -12,7 +12,8 @@
 #ifndef __EE895_H__
 #define __EE895_H__
 
-#include "../../common/common_include.h"
+#include "pico/stdlib.h"
+#include "common/structs.h"
 
 /**
  * @brief Reads number of registers from the EE895 with timing; must manually turn power on/off

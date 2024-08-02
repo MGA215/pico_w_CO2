@@ -10,6 +10,7 @@
  */
 
 #include "gfx_pack.h"
+#include "common/constants.h"
 #include "monospace_font.c"
 #include "string.h"
 #include "hardware/spi.h"

@@ -1,13 +1,13 @@
 #include "tcp_server.h"
+#include "cobs/cobslib.h"
 #include "credentials.h"
+#include "service_comm/service_comm.h"
+#include "common/shared.h"
+#include "common/debug.h"
 #include "lwip/pbuf.h"
 #include "lwip/dns.h"
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
-#include "../common/common_include.h"
-#include "../cobs/cobslib.h"
-#include "../common/shared.h"
-#include "../service_comm/service_comm.h"
 
 #define POLL_TIME_S 5
 
@@ -320,7 +320,6 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
             print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Waiting for the rest of the data");
             return ERR_OK;
         }
-        config_data.err = SUCCESS; // Successfully retrieved data
         config_data.command_rdy = true; // Data has been received
         state->frame_index = 0;
         return ERR_OK;

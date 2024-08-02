@@ -13,6 +13,8 @@
 #include "math.h"
 #include "hardware/i2c.h"
 #include "string.h"
+#include "common/debug.h"
+#include "error_codes.h"
 
 #define CDM7162_ADDR        0x68
 
