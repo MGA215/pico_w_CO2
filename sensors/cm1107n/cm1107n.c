@@ -245,7 +245,6 @@ int32_t cm1107n_read_config(sensor_config_t* config)
     val |= buf[3] << 8;
     val |= buf[4] << 0;
     config->abc_target_value = val;
-    // config->abc_target_value = ntoh16(*( (uint16_t*)&buf[3])); // ABC target CO2
     return SUCCESS;
 }
 

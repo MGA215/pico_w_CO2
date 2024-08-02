@@ -295,6 +295,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 
     if (mutex_enter_timeout_ms(&config_data.command_mutex, 1000)) // Safe decode copy command
     {
+        // encodeCOBS(buffer_recv_frame, config_data.command, &frame_len);
         if (decodeCOBS(buffer_recv_frame, config_data.command, &frame_len) != 0) // Decode message
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to decode message");

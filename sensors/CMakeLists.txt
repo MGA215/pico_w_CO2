@@ -10,6 +10,8 @@ add_subdirectory(cozir-lp3)
 add_subdirectory(cm1107n)
 add_subdirectory(mux)
 add_subdirectory(power)
+add_subdirectory(ms5607)
+add_subdirectory(hyt271)
 
 target_link_libraries(pico-sensors
   INTERFACE
@@ -24,6 +26,8 @@ target_link_libraries(pico-sensors
   pico-mux
   pico-power
   pico-common
+  pico-ms5607
+  pico-hyt271
 )
 
 target_sources(pico-sensors

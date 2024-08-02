@@ -49,6 +49,8 @@ typedef enum debug_source
     SOURCE_CM1107N = 27,
     SOURCE_POWER = 30,
     SOURCE_MUX = 31,
+    SOURCE_MS5607 = 32,
+    SOURCE_HYT271 = 33,
     SOURCE_WIFI = 100,
     SOURCE_TCP_CLIENT = 101,
     SOURCE_TCP_SERVER = 102,

@@ -13,7 +13,6 @@
 #define __ERROR_CODES_H__
 
 #define SUCCESS 0
-
 // PICO Errors
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
 #define PICO_ERROR_GENERIC -2 // Error PICO - Generic error (might be sensor disconnected)
@@ -129,7 +128,16 @@
 // RTC errors
 #define ERROR_RTC_INVALID_DATETIME 934 // Error RTC - Date time value is invalid
 
+// MS5607 errors
+#define MS5607_ERROR_INVALID_CRC 1013 // Error MS5607 - CRC is invalid
+#define MS5607_ERROR_PROM_ZERO 1035 // Error MS5607 - read 0s from PROM
+#define MS5607_ERROR_SHORT_BUFFER 1036 // Error MS5607 - short buffer
+#define MS5607_ERROR_VALUE_LOW 1037 // Error MS5607 - value is too low
+#define MS5607_ERROR_VALUE_HIGH 1038 // Error MS5607 - value is too high
 
+// HYT271 errors
+#define HYT271_ERROR_SHORT_BFFER 1136 // Error HYT271 - short buffer
+#define HYT271_ERROR_GENERAL 1137 // Error HYT271 - generic sensor error
 
 // Service comm error codes
 #define P_ERR_RANGE 3 // Measured value range error

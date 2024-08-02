@@ -132,15 +132,10 @@ uint32_t get_error(uint8_t error_byte)
     return ((uint32_t)error_byte << 24) | 0x000080FF;
 }
 
-volatile uint8_t hex2dec(uint8_t hex_val)
+uint8_t hex2dec(uint8_t hex_val)
 {
-    uint8_t out;
-    uint8_t val1 = hex_val & 0xF0;
-    uint8_t val2 = val1 >> 4;
-    uint8_t val3 = val2 * 10;
-    uint8_t val4 = hex_val & 0x0F;
-    out = val3 + val4;
-    return out;
+    // uint8_t out = (((hex_val & 0xF0) >> 4) * 10) + (hex_val & 0x0F);
+    return (((hex_val & 0xF0) >> 4) * 10) + (hex_val & 0x0F);
 }
 
 uint8_t dec2hex(uint8_t dec_val)

@@ -116,6 +116,29 @@ typedef struct sensor
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
 } sensor_t;
 
+typedef struct ms5607
+{
+    uint16_t prom[16];
+    float pressure;
+    float temperature;
+    uint8_t pressure_raw[3];
+    uint8_t temperature_raw[3];
+    meas_state_e meas_state;
+    int32_t state;
+} ms5607_t;
+
+typedef struct hyt271
+{
+    float temperature;
+    float humidity;
+    uint8_t temperature_raw[2];
+    uint8_t humidity_raw[2];
+    int32_t state;
+    meas_state_e meas_state;
+    absolute_time_t wake_time;
+    uint8_t err_count;
+} hyt271_t;
+
 typedef struct soap_data
 {
     uint8_t data[MAX_SOAP_SIZE];

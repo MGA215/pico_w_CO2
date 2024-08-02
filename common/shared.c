@@ -3,6 +3,9 @@
 sensor_t sensors[8];
 service_comm_data_t config_data = {.command_rdy = false, .response_rdy = false};
 
+ms5607_t ms5607;
+hyt271_t hyt271;
+
 soap_data_t soap_data1;
 
 bool service_mode = false;

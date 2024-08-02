@@ -16,6 +16,9 @@
 #include "pico/stdlib.h"
 
 extern sensor_t sensors[8];
+extern ms5607_t ms5607;
+extern hyt271_t hyt271;
+
 extern soap_data_t soap_data1;
 
 extern service_comm_data_t config_data;

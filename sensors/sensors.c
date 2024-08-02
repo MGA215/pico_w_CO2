@@ -18,6 +18,8 @@
 #include "cm1107n/cm1107n.h"
 #include "mux/mux.h"
 #include "power/power.h"
+#include "ms5607/ms5607.h"
+#include "hyt271/hyt271.h"
 
 #include "string.h"
 #include "math.h"
@@ -182,6 +184,27 @@ void sensors_init_all(sensor_config_t** configuration_map, uint8_t config_map_le
             sleep_ms(10);
         }
     }
+
+    // Initialize MS5607 values
+    ms5607.meas_state = MEAS_STARTED;
+    ms5607.state = ERROR_NO_MEAS;
+    ms5607.pressure = 0;
+    ms5607.temperature = 0;
+    memset(ms5607.pressure_raw, 0x00, 3);
+    memset(ms5607.temperature_raw, 0x00, 3);
+    memset(ms5607.prom, 0x00, 16);
+    ms5607_get_value(); // Perform MS5607 measurement
+    if (ms5607.state != 0) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read MS5607: %i", ms5607.state);
+
+    // Initialize HYT271 values
+    hyt271.meas_state = MEAS_STARTED;
+    hyt271.state = ERROR_NO_MEAS;
+    hyt271.humidity = 0;
+    hyt271.temperature = 0;
+    memset(hyt271.humidity_raw, 0x00, 2);
+    memset(hyt271.temperature_raw, 0x00, 2);
+    hyt271_get_value();
+
     sensor_start_measurement_time = make_timeout_time_us(sensor_read_interval_ms * 1000); // Set measurement start timer
     // set_power(false);
 }
@@ -362,14 +385,33 @@ void sensors_read_all(void)
     }
     if (!sensors_is_measurement_finished()) // If measurement running
     {
+        for (int i = 0; i < 2; i++) // Try pressure measurement twice
+        {
+            ms5607_get_value(); // Read pressure sensor
+            if (!ms5607.state) break; // On no error break
+            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read sensor: %i", ms5607.state);
+            ms5607.state = i != 1 ? MEAS_STARTED : MEAS_FINISHED; // If on next iteration should try another pressure measurement
+            sleep_ms(2);
+        }
+
+        if (time_reached(hyt271.wake_time)) // If should read HYT271
+        {
+            for (int i = 0; i < 2; i++) // Try humidity measurement twice
+            {
+                hyt271_get_value(); // Read HYT sensor
+                if (!hyt271.state) break; // On no error break
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to read sensor: %i", hyt271.state);
+                if (++hyt271.err_count < 2) hyt271.meas_state = MEAS_STARTED; // If on next iteration should try another measurement
+                sleep_ms(2);
+            }
+        }
+
         for (uint8_t sensor_index = 0; sensor_index < 8; sensor_index++) // Iterate sensor
         {
             if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
             {
                 watchdog_update(); // Update watchdog - just in case
-                
-                if (sensors_read(sensor_index)) continue; // If reading successful break
-                sleep_ms(10);
+                sensors_read(sensor_index); // If reading successful break
             }
         }
 
@@ -383,10 +425,11 @@ void sensors_read_all(void)
 
 static bool sensors_start_measurement(void)
 {
-    if (sensors_is_measurement_finished())
+    if (sensors_is_measurement_finished()) // Check if all sensors have finished measurement
     {
         print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Measurement starting...");
-        for (int i = 0; i < 8; i++)
+        ms5607.meas_state = MEAS_STARTED; // Start pressure measurement
+        for (int i = 0; i < 8; i++) // Start sensors measurement
         {
             if (sensors[i].state != ERROR_UNKNOWN_SENSOR) 
             {
@@ -821,6 +864,7 @@ static bool sensors_mux_to_sensor(uint8_t sensor_index)
 
 bool sensors_is_measurement_finished(void)
 {
+    if (ms5607.meas_state != MEAS_FINISHED) return false;
     for (int i = 0; i < 8; i++)
     {
         if (!sensors[i].config.sensor_active) continue;
@@ -840,7 +884,7 @@ static void set_power(bool on)
             power_vector |= (0b1 << sensors[i].power_index);
         }
     }
-    power_en_set_vector(power_vector, on);
+    power_en_set_vector_affected_sensors(power_vector, on);
 }
 
 static void set_5v(void)

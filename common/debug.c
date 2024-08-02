@@ -64,6 +64,8 @@ static uint8_t debug_eeprom = 3;
 
 static uint8_t debug_mux = 3;
 static uint8_t debug_power = 3;
+static uint8_t debug_ms5607 = 3;
+static uint8_t debug_hyt271 = 3;
 static uint8_t debug_ee895 = 3;
 static uint8_t debug_cdm7162 = 3;
 static uint8_t debug_sunrise = 3;
@@ -178,6 +180,14 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 if (severity > debug_power && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[POWER]     ");
                 break;
+            case SOURCE_MS5607:
+                if (severity > debug_ms5607 && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[MS5607]    ");
+                break;
+            case SOURCE_HYT271:
+                if (severity > debug_hyt271 && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[HYT271]    ");
+                break;
             case SOURCE_WIFI:
                 if (severity > debug_wifi && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[WiFi]      ");
@@ -281,6 +291,14 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             case SOURCE_POWER:
                 if (severity > debug_power) return;
                 snprintf(subsource_str, 13, "[POWER]     ");
+                break;
+            case SOURCE_MS5607:
+                if (severity > debug_ms5607) return;
+                snprintf(subsource_str, 13, "[MS5607]    ");
+                break;
+            case SOURCE_HYT271:
+                if (severity > debug_hyt271) return;
+                snprintf(subsource_str, 13, "[HYT271]    ");
                 break;
             case SOURCE_WIFI:
                 if (severity > debug_wifi) return;
