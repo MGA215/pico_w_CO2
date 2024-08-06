@@ -172,7 +172,8 @@ typedef enum
     MEASURED_VALUE_CO2 = 0,
     MEASURED_VALUE_T = 1,
     MEASURED_VALUE_RH = 2,
-    MEASURED_VALUE_P = 3
+    MEASURED_VALUE_P = 3,
+    MEASURED_VALUE_NUMBER = 4,
 } measured_value_type_e;
 
 typedef struct 
@@ -184,6 +185,15 @@ typedef struct
     bool channel_active;
     sensor_t* sensor;
 } message_channel;
+
+typedef struct
+{
+    uint8_t channel_name[16];
+    bool channel_active;
+    measured_value_type_e measured_value_type;
+    float* measured_value;
+    int32_t* state;
+} message_channel_general_t;
 
 
 #endif

@@ -68,6 +68,7 @@
 #define SOAP_TESTER_NAME_2 "Tester_02"
 
 #define SOAP_TESTER_SN_1 0x24069001
+#define SOAP_TESTER_SN_1G 0x24069011
 
 
 // value representing the interval between display draws in ms

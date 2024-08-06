@@ -104,8 +104,10 @@ int init(void)
     if (watchdog_enable_caused_reboot()) print_ser_output(SEVERITY_FATAL, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Reboot caused by watchdog");
     else print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Booting clean");
 
-    if (!mutex_is_initialized(&soap_data1.data_mutex)) // Initializes mutexes for soap message buffer
-        mutex_init(&soap_data1.data_mutex);
+    if (!mutex_is_initialized(&soap_data[0].data_mutex)) // Initializes mutexes for soap message buffer
+        mutex_init(&soap_data[0].data_mutex);
+    if (!mutex_is_initialized(&soap_data[1].data_mutex))
+        mutex_init(&soap_data[1].data_mutex);
 
     multicore_launch_core1(core1_main); // Launch second core
 
@@ -113,8 +115,10 @@ int init(void)
     gfx_pack_init(blight_brightness); // initialize display
     sensors_init_all(); // initialize sensors
 
-    assign_soap_channels(); // Assign SOAP channels
     soap_init(sensors, channels1); // Initialize SOAP channels
+    soap_init_general(&channel00G, &ms5607.pressure, "Tester_P", &ms5607.state, MEASURED_VALUE_P, 0, channel_map_general);
+    soap_init_general(&channel00G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channel_map_general);
+    soap_init_general(&channel00G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channel_map_general);
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
 
@@ -330,27 +334,13 @@ void update_display(void)
     return;
 }
 
-void assign_soap_channels(void)
-{
-    for (int i = 0; i < soap_channels; i++) // Assign channels from channel map
-    {
-        if (i >= 32) break; // On channel overflow 32
-        else if (i >= 16) channels2[i - 16] = channel_map2[i - 16]; // On channel overflow 16
-        else channels1[i] = channel_map1[i]; // Assign channel
-    }
-    for (int i = soap_channels; i < 32; i++) // for channels from number of channels to 32
-    {
-        if (i < 16) channels1[i] = NULL; // Fill unused channels with NULL
-        else channels2[i - 16] = NULL;
-    }
-    channels1_len = soap_channels > 16 ? 16 : soap_channels; // Number of channels in 1st buffer
-    channels2_len = soap_channels < 16 ? 0 : (soap_channels > 32 ? 16 : (soap_channels % 16)); // Number of channels in 2nd buffer
-}
-
 void create_soap_messages(void)
 {
     if (!sensors_measurement_ready || sensors_was_measurement_read) return; // Generate new message if new data available
     if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, channels1)) // Create SOAP message
+        print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
+    else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
+    if (!soap_build_general(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1G, channel_map_general)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
     sensors_was_measurement_read = true;

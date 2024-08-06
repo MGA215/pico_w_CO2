@@ -201,7 +201,7 @@ static void wifi_loop(void)
         sleep_ms(5);
         print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");
         send_data_time = make_timeout_time_ms(wifi_send_soap_ms); // Next message in soap_write_message_s
-        data_client_sending = run_tcp_client(false); // Run TCP client FSM
+        data_client_sending = run_tcp_client(false, 1); // Run TCP client FSM
     }
     tcp_server_run(); // Run TCP server
 }

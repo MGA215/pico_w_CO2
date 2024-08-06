@@ -83,12 +83,6 @@ void write_display_sensor(uint8_t* sensor_name, int state,
 void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);
 
 /**
- * @brief Assigns SOAP channels from configuration map
- * 
- */
-void assign_soap_channels(void);
-
-/**
  * @brief Creates SOAP messages and saves them to their buffers
  * 
  */

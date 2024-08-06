@@ -161,7 +161,7 @@ void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callba
 
 bool ip_found = false;
 
-bool run_tcp_client(bool close_tcp)
+bool run_tcp_client(bool close_tcp, uint8_t soap_index)
 {
     should_tcp_close = close_tcp; // If TCP should be closed after the end of communication
     if (!&state) // No state exists
@@ -192,7 +192,7 @@ bool run_tcp_client(bool close_tcp)
             {
                 uint8_t* message = create_http_header(IS_COMET_CLOUD ? TCP_CLIENT_SERVER_IP_CLOUD : TCP_CLIENT_SERVER_IP_DB, IS_COMET_CLOUD, 
                 IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PATH : TCP_CLIENT_SERVER_DB_PATH, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, 
-                "http://tempuri.org/InsertMSxSample", soap_data1.data, soap_data1.data_len, &soap_data1.data_mutex); // Add safely HTTP header to SOAP message
+                "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Add safely HTTP header to SOAP message
                 cyw43_arch_lwip_begin();
                 data_sent = false;
                 if ((err = tcp_client_send(&state, message)) != ERR_OK) // Send data
