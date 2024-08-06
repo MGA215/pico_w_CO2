@@ -21,9 +21,10 @@ typedef struct {
 
 /**
  * @brief Initializes the GFX Pack
+ * @param brightness Brightness of the display backlight
  * 
  */
-extern void gfx_pack_init(void);
+extern void gfx_pack_init(uint8_t brightness);
 
 /**
  * @brief Controls the brightness of display backlight

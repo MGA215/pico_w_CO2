@@ -80,7 +80,7 @@ static void command(uint8_t command, size_t len, const char* data);
 
 static inline uint8_t* get_char_map(char c);
 
-void gfx_pack_init(void)
+void gfx_pack_init(uint8_t brightness)
 {
     spi_init(GFX_PACK_SPI, GFX_PACK_SPI_BAUDRATE);
 
@@ -145,7 +145,7 @@ void gfx_pack_init(void)
     gfx_pack_clear_display(); // Clear display
     gfx_pack_update(); // Refresh display
 
-    gfx_pack_set_backlight(255); // Turn backlight to max
+    gfx_pack_set_backlight(brightness); // Turn backlight to max
 }
 
 static inline void gfx_pack_init_sequence(void)

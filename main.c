@@ -41,7 +41,7 @@
 uint8_t buttons_prev_state = 0;
 
 // gfx_pack backlight brightness
-uint8_t blight_brightness = 255;
+uint8_t blight_brightness = 100;
 
 // gfx_pack backlight on
 bool blight_on = true;
@@ -110,7 +110,7 @@ int init(void)
     multicore_launch_core1(core1_main); // Launch second core
 
     rtc_init();
-    gfx_pack_init(); // initialize display
+    gfx_pack_init(blight_brightness); // initialize display
     sensors_init_all(); // initialize sensors
 
     assign_soap_channels(); // Assign SOAP channels

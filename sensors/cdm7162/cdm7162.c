@@ -189,11 +189,11 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     ret = cdm_write_config(config); // Write configuration to the sensor
     sleep_ms(100);
     cdm_power(cdm7162, false); // Power off
-    if (!ret)
-    {
-        if (cdm7162->meas_state == MEAS_STARTED) cdm7162->wake_time = make_timeout_time_ms(3000);
-    }
-    else cdm7162->meas_state = MEAS_FINISHED;
+    // if (!ret)
+    // {
+    //     if (cdm7162->meas_state == MEAS_STARTED) cdm7162->wake_time = make_timeout_time_ms(3000);
+    // }
+    // else cdm7162->meas_state = MEAS_FINISHED;
     return ret;
 }
 
@@ -229,7 +229,7 @@ int32_t cdm7162_read_config(sensor_config_t* config)
     config->alarm_treshold_co2_low = (uint16_t)buf[0] * 10u;
 
     if ((ret = cdm7162_read(REG_LTA_TARGET, buf, 1)) != 0) return ret; // Read saved LTA target value
-    config->abc_target_value = (uint16_t)buf[0] + 300u;
+    config->abc_target_value = (uint16_t)buf[0] * 10 + 300u;
 
     if ((ret = cdm7162_read(REG_LTA_PERIOD, buf, 1)) != 0) return ret; // Read saved LTA period
     config->abc_period = (uint16_t)(buf[0] & 0b00111111);
@@ -344,7 +344,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
             power_down = true;
             busy_wait_ms(100);
         }
-        if ((ret = cdm7162_write(REG_LTA_TARGET, (uint8_t)(config->abc_target_value - 300))) != 0) return ret; // Write target LTA concentration
+        if ((ret = cdm7162_write(REG_LTA_TARGET, (uint8_t)((config->abc_target_value - 300) / 10))) != 0) return ret; // Write target LTA concentration
     }
     
     if (read_config.abc_period != config->abc_period) // Check period LTA
@@ -353,12 +353,12 @@ static int32_t cdm_write_config(sensor_config_t* config)
         uint8_t val;
         if (config->abc_period % 30 == 0)
         {
-            buf &= (0b1 << 7); // Set months bit
+            buf |= (0b1 << 7); // Set months bit
             val = config->abc_period / 30;
         }
         else if (config->abc_period % 7 == 0)
         {
-            buf &= (0b1 << 6);
+            buf |= (0b1 << 6);
             val = config->abc_period / 7;
         }
         if (val < 64)
