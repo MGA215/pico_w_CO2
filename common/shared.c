@@ -12,9 +12,7 @@ bool service_mode = false;
 
 // SOAP sensor channels
 message_channel* channels1[16]; // First 16 channels
-uint8_t channels1_len; // Number of channels in first buffer
-message_channel* channels2[16]; // Second 16 channels
-uint8_t channels2_len; // Number of channels in second buffer
+message_channel_general_t* channels2[16]; // Second 16 channels
 
 uint8_t datetime_str[30] = {0};
 datetime_t datetime;

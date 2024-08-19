@@ -25,9 +25,7 @@ extern service_comm_data_t config_data;
 extern bool service_mode;
 
 extern message_channel* channels1[16];
-extern uint8_t channels1_len;
-extern message_channel* channels2[16];
-extern uint8_t channels2_len;
+extern message_channel_general_t* channels2[16];
 
 extern datetime_t datetime;
 extern uint8_t datetime_str[30];
