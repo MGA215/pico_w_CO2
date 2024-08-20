@@ -21,11 +21,11 @@
 
 #include "common/debug.h"
 #include "common/serialize.h"
+#include "soap/soap_channels.h"
 
 #include "common/shared.h"
 #include "error_codes.h"
 #include "common/constants.h"
-#include "config_map.h"
 
 #include "pico/multicore.h"
 #include "pico/mutex.h"
@@ -110,9 +110,9 @@ int init(void)
     sensors_init_all(); // initialize sensors
 
     soap_init(channels1); // Initialize SOAP channels
-    soap_init_general(&channel00G, &ms5607.pressure, "Tester_P", &ms5607.state, MEASURED_VALUE_P, 0, channel_map_general);
-    soap_init_general(&channel01G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channel_map_general);
-    soap_init_general(&channel02G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channel_map_general);
+    soap_init_general(&channel00G, &ms5607.pressure, "Tester_P", &ms5607.state, MEASURED_VALUE_P, 0, channels2);
+    soap_init_general(&channel01G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channels2);
+    soap_init_general(&channel02G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channels2);
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
 
@@ -121,7 +121,7 @@ int init(void)
     update_display_buffer = true; // Redraw display
     multicore_launch_core1(core1_main); // Launch second core
     sleep_ms(1000); // Init wait
-    watchdog_enable(3000, true); // 3 sec watchdog
+    watchdog_enable(3000, false); // 3 sec watchdog
     return SUCCESS;
 }
 
@@ -168,6 +168,7 @@ void read_inputs(void)
             // blight_on = !blight_on; // Turn backlight off
             // gfx_pack_set_backlight(blight_brightness * blight_on); // set display backlight brightness
             buttons_prev_state |= (0b1 << 0);
+            busy_wait_ms(50);
         }
         // Button A down - repeat action
     }
@@ -336,7 +337,7 @@ void create_soap_messages(void)
     if (!soap_build(global_configuration.ser_num, channels1)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
-    if (!soap_build_general(global_configuration.ser_num_aux, channel_map_general)) // Create SOAP message
+    if (!soap_build_general(global_configuration.ser_num_aux, channels2)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
     sensors_was_measurement_read = true;

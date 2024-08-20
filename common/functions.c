@@ -107,6 +107,7 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->config.sensor_active = false;
     sensor->index = input_index;
     sensor->sensor_number = 0;
+    sensor->err_iter_counter = 0;
     get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
     memset(sensor->state_reg, 0x00, 26);
 }

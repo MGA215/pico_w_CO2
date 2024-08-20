@@ -16,6 +16,7 @@
 #include "common/debug.h"
 #include "error_codes.h"
 #include "common/functions.h"
+#include "../power/power.h"
 
 #define SUNRISE_ADDR                0x68
 
@@ -478,11 +479,9 @@ static int sr_write_config(sensor_config_t* config)
 
 static inline void sr_power(sensor_t* sunrise, bool on)
 {
-    if (!sunrise->config.power_global_control) // If power not controlled globally
+    if (!sunrise->config.power_global_control && !sunrise->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(sunrise->index, on);
     }
 }
 

@@ -15,6 +15,7 @@
 #include "string.h"
 #include "common/debug.h"
 #include "error_codes.h"
+#include "../power/power.h"
 
 #define CDM7162_ADDR        0x68
 
@@ -131,14 +132,15 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read data
                 return;
             }
-            if (cdm7162->timeout_iterator++ > 20) // If in timeout
+            if (cdm7162->timeout_iterator++ > 2) // If in timeout
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
             }
-            cdm7162->wake_time = make_timeout_time_ms(25); // Wait 25 ms until next status check
+            cdm7162->wake_time = make_timeout_time_ms(1000); // Wait 500 ms until next status check
+            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Data not ready to be read");
             return;
         }
         case MEAS_READ_VALUE: // Reading measured value
@@ -152,7 +154,6 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->state = ret; // Output return state
                 return;
             }
-            // uint16_t val = *( (uint16_t*)&buf[0]);
             uint16_t val = 0; // Convert read CO2 to uint16_t
             val |= buf[0] << 0;
             val |= buf[1] << 8;
@@ -183,17 +184,11 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     uint8_t buf;
     if (config->sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&cdm7162->config, config, sizeof(sensor_config_t)); // Save config
-    //cdm7162->config = &config; // Save config
     cdm_power(cdm7162, true); // Power on
 
     ret = cdm_write_config(config); // Write configuration to the sensor
     sleep_ms(100);
     cdm_power(cdm7162, false); // Power off
-    // if (!ret)
-    // {
-    //     if (cdm7162->meas_state == MEAS_STARTED) cdm7162->wake_time = make_timeout_time_ms(3000);
-    // }
-    // else cdm7162->meas_state = MEAS_FINISHED;
     return ret;
 }
 
@@ -386,11 +381,9 @@ static int32_t cdm_write_config(sensor_config_t* config)
 
 static inline void cdm_power(sensor_t* cdm7162, bool on)
 {
-    if (!cdm7162->config.power_global_control) // If power not controlled globally
+    if (!cdm7162->config.power_global_control && !cdm7162->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(cdm7162->index, on);
     }
 }
 

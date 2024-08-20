@@ -16,6 +16,7 @@
 #include "common/debug.h"
 #include "error_codes.h"
 #include "common/functions.h"
+#include "../power/power.h"
 
 #define EE895_ADDR              0x5F
 #define EE895_MAX_REG_READ      8
@@ -509,10 +510,8 @@ static int32_t ee_write_config(sensor_config_t* config)
 
 static inline void ee_power(sensor_t* ee895, bool on)
 {
-    if (!ee895->config.power_global_control) // If power not controlled globally
+    if (!ee895->config.power_global_control && !ee895->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(ee895->index, on);
     }
 }

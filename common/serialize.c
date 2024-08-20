@@ -111,7 +111,7 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
 
     config->sensor_active = (bool)((buf[2] & (0b1 << 0)) >> 0);
     config->power_5V = (bool)((buf[2] & (0b1 << 1)) >> 1);
-    config->power_control = (bool)((buf[2] & (0b1 << 2)) >> 2);
+    config->power_continuous = (bool)((buf[2] & (0b1 << 2)) >> 2);
     config->power_global_control = (bool)((buf[2] & (0b1 << 3)) >> 3);
     config->power_12V = (bool)((buf[2] & (0b1 << 4)) >> 4);
     config->sensor_IIC = (bool)((buf[2] & (0b1 << 5)) >> 5);

@@ -90,7 +90,7 @@ typedef struct sensor_config
     bool power_5V; // Sensor requires 5 V
     sensor_type_e sensor_type; // Type of sensor the configuration is written for
     uint8_t sensor_ord; // Sensor type no
-    bool power_control; // True if sensor powered continuously
+    bool power_continuous; // True if sensor powered continuously
     bool power_12V; // Sensor voltage 12 V
     bool sensor_IIC; // true if I2C comm, false for UART comm
     bool ext_pressure_comp; // If true measured value is compensated using the on-board pressure sensor
@@ -122,7 +122,8 @@ typedef struct sensor
     uint8_t sensor_number; // Index of the sensor of a type
     uint8_t init_count; // Counter of initializations in single measurement cycle
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
-    uint32_t err_counter; // Counter of total errors during the run
+    uint32_t err_total_counter; // Counter of total errors during the run
+    uint8_t err_iter_counter; // Counts 0 to 2, if value reaches 2 measurement is evaluated as error
 } sensor_t;
 
 typedef struct ms5607

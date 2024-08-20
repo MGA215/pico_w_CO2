@@ -4,6 +4,7 @@ target_link_libraries(pico-ee895
 INTERFACE
   hardware_i2c
   pico-common
+  pico-power
 )
 
 target_sources(pico-ee895

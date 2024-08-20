@@ -4,6 +4,7 @@ target_link_libraries(pico-cm1107n
 INTERFACE
   hardware_i2c
   pico-common
+  pico-power
 )
 
 target_sources(pico-cm1107n

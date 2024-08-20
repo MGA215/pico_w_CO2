@@ -51,8 +51,8 @@
  */
 uint8_t debug = 6; // Global max debug level
 
-static uint8_t debug_main_init = 3;
-static uint8_t debug_main_loop = 3;
+static uint8_t debug_main_init = 4;
+static uint8_t debug_main_loop = 4;
 static uint8_t debug_sensors = 4;
 static uint8_t debug_soap = 3;
 static uint8_t debug_rtc = 3;

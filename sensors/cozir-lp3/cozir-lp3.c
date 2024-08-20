@@ -16,7 +16,7 @@
 #include "common/debug.h"
 #include "error_codes.h"
 #include "common/functions.h"
-
+#include "../power/power.h"
 #define COZIR_LP3_ADDR              0x41
 
 #define REG_MEAS_CONTROL            0x00
@@ -135,7 +135,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             if (tempBuffer[0] == 85)
             {
                 cozir_lp3->meas_state = MEAS_READ_VALUE;
-                cozir_lp3->wake_time = make_timeout_time_ms(10);
+                cozir_lp3->wake_time = make_timeout_time_ms(25);
                 print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "No error detected");
                 return;
             }
@@ -345,10 +345,8 @@ static int32_t lp3_write_config(sensor_config_t* config)
 
 static inline void lp3_power(sensor_t* cozir_lp3, bool on)
 {
-    if (!cozir_lp3->config.power_global_control) // If power not controlled globally
+    if (!cozir_lp3->config.power_global_control && !cozir_lp3->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(cozir_lp3->index, on);
     }
 }

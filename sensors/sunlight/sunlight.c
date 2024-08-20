@@ -16,6 +16,7 @@
 #include "error_codes.h"
 #include "common/debug.h"
 #include "common/functions.h"
+#include "../power/power.h"
 
 #define SUNLIGHT_ADDR               0x68
 
@@ -476,11 +477,9 @@ static int sl_write_config(sensor_config_t* config)
 
 static inline void sl_power(sensor_t* sunlight, bool on)
 {
-    if (!sunlight->config.power_global_control) // If power not controlled globally
+    if (!sunlight->config.power_global_control && !sunlight->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(sunlight->index, on);
     }
 }
 

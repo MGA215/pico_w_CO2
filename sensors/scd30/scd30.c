@@ -16,6 +16,7 @@
 #include "common/debug.h"
 #include "error_codes.h"
 #include "common/functions.h"
+#include "../power/power.h"
 
 #define SCD30_ADDR              0x61
 
@@ -341,11 +342,9 @@ static int32_t s30_write_config(sensor_config_t* config)
 
 static inline void s30_power(sensor_t* scd30, bool on)
 {
-    if (!scd30->config.power_global_control) // If power not controlled globally
+    if (!scd30->config.power_global_control && !scd30->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(scd30->index, on);
     }
 }
 

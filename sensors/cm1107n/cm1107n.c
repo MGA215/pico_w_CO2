@@ -15,6 +15,7 @@
 #include "string.h"
 #include "common/debug.h"
 #include "error_codes.h"
+#include "../power/power.h"
 
 #define CM1107N_ADDR    0x31
 
@@ -279,11 +280,9 @@ int32_t cm_write_config(sensor_config_t* config)
 
 void cm_power(sensor_t* cm1107n, bool on)
 {
-    if (!cm1107n->config.power_global_control) // If power not controlled globally
+    if (!cm1107n->config.power_global_control && !cm1107n->config.power_continuous) // If power not controlled globally
     {
-        // Read power vector
-        // Check if bit turned [on]
-        // Write power vector
+        power_en_set_index(cm1107n->index, on);
     }
 }
 

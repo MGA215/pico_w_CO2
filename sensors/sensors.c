@@ -8,7 +8,6 @@
 #include "error_codes.h"
 #include "common/shared.h"
 #include "../sensor_config.h"
-#include "../config_map.h"
 
 #include "ee895/ee895.h"
 #include "cdm7162/cdm7162.h"
@@ -55,11 +54,10 @@ static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t
  * @brief Sets up sensor structure
  * 
  * @param sensor_index Index of the sensor
- * @param configuration Configuration to assign to the sensor
  * @return true if sensor structure set up with no errors
  * @return false if an error has occured (invalid sensor type)
  */
-static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration);
+static bool sensors_setup_sensor(uint8_t sensor_index);
 
 /**
  * @brief Initializes single sensor
@@ -144,8 +142,9 @@ static bool sensors_mux_to_sensor(uint8_t sensor_index);
  * @brief Set the power on globally controlled sensors to [on]
  * 
  * @param on Whether the power should be turned on or off
+ * @param startup Whether power should be turned on regardless of sensor power scheme
  */
-static void set_power(bool on);
+static void set_power(bool on, bool startup);
 
 /**
  * @brief Set the 5V power to sensors
@@ -178,10 +177,9 @@ static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t
 
 void sensors_init_all()
 {
-    // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
     for (int i = 0; i < 8; i++) // Initialize default structures
     {
-        sensors_setup_sensor(i, configuration_map[i]);
+        sensors_setup_sensor(i);
     }
 
     init_sensor_i2c(); // Initialize sensor I2C
@@ -189,7 +187,7 @@ void sensors_init_all()
     power_reset_all();
     sleep_ms(10);
     set_5v();
-    set_power(true);
+    set_power(true, true);
 
     active_sensors = 0;
     for (int i = 0; i < 8; i++)
@@ -228,10 +226,10 @@ void sensors_init_all()
     hyt271_get_value();
 
     sensor_start_measurement_time = make_timeout_time_us(global_configuration.meas_int * 1000); // Set measurement start timer
-    // set_power(false);
+    set_power(false, false);
 }
 
-static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration)
+static bool sensors_setup_sensor(uint8_t sensor_index)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Setting up structure %i", sensor_index);
 
@@ -254,7 +252,7 @@ static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configur
         return false; // Not initiable
     }
     sensors[sensor_index].sensor_number = config.sensor_ord; // Set sensor type index
-    sensors[sensor_index].err_counter = 0;
+    sensors[sensor_index].err_total_counter = 0;
     sensors[sensor_index].config.sensor_active = true;
     return true;
 }
@@ -290,6 +288,7 @@ static bool sensors_init(uint8_t sensor_index)
             reset_i2c(); // Reset I2C
             mux_reset(); // Reset MUX
             sensors[sensor_index].state = ERROR_SENSOR_INIT_FAILED; // Sensor initialization failed
+            sleep_ms(300);
             continue; // Retry initialization
         }
 
@@ -387,7 +386,7 @@ void sensors_read_all(void)
             sensors_was_measurement_read = false; // Sensor measurement is ready to be read
             sensors_measurement_ready = false;
             before_measurement = false; // Not before first measurement anymore
-            // set_power(true);
+            set_power(true, false);
         }
         else // Safety mechanism to unblock measurement after 20 unsuccessfull attempts to start new measurement
         {
@@ -433,17 +432,21 @@ void sensors_read_all(void)
             if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
             {
                 watchdog_update(); // Update watchdog - just in case
-                sensors_read(sensor_index); // If reading successful break
+                if (!sensors_read(sensor_index)) // If reading failed
+                {
+                    if (sensors[sensor_index].err_iter_counter == 2) continue; // If already in faulty state
+                    sensors[sensor_index].err_iter_counter++; // Increment continuous error counter
+                }
             }
         }
 
         if (sensors_is_measurement_finished()) // If all measurements finished - turn off power globally if possible
         {
-            // set_power(false);
+            set_power(false, false);
             for (int i = 0; i < 8; i++)
             {
-                if (sensors[i].state) sensors[i].err_counter++; // Counter of total errors during measurement run
-                print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Input: %i, Errors: %i", i, sensors[i].err_counter);
+                if (sensors[i].state) sensors[i].err_total_counter++; // Counter of total errors during measurement run
+                print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Input: %i, Errors: %i", i, sensors[i].err_total_counter);
             }
             if (!sensors_was_measurement_read && !sensors_measurement_ready) sensors_measurement_ready = true; // Set measurement ready
         }
@@ -498,12 +501,14 @@ static bool sensors_read(uint8_t sensor_index)
                                  sensor_index, sensors[sensor_index].state);
                 reset_i2c(); // Reset I2C
                 mux_reset(); // Reset MUX
+                sleep_ms(300);
                 continue; // Reading failed, repeat measurement
             }
             if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && 
                 is_at_the_end_of_time(sensors[sensor_index].wake_time)) // Reading finished successfully
             {
                 print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read sensor %i", sensor_index);
+                sensors[sensor_index].err_iter_counter = 0;
             }
             return true; // Sensor successfully read
         }
@@ -875,6 +880,7 @@ static bool sensors_mux_to_sensor(uint8_t sensor_index)
         sensors[sensor_index].state = ERROR_SENSOR_MUX_FAILED;
         reset_i2c(); // Reset I2C
         mux_reset(); // Reset MUX
+        sleep_ms(300);
         return false; // Retry initialization
     }
     return true;
@@ -891,12 +897,12 @@ bool sensors_is_measurement_finished(void)
     return true;
 }
 
-static void set_power(bool on)
+static void set_power(bool on, bool startup)
 {
     uint8_t power_vector = 0;
     for (int i = 0; i < 8; i++)
     {
-        if (!sensors[sensors[i].power_index].config.sensor_active) continue;
+        if (!sensors[sensors[i].power_index].config.sensor_active || (sensors[sensors[i].power_index].config.power_continuous && !startup)) continue; // Sensor inactive or sensor should be powered continuously
         else if (sensors[sensors[i].power_index].config.power_global_control)
         {
             power_vector |= (0b1 << sensors[i].power_index);

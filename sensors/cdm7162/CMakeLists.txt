@@ -4,6 +4,7 @@ target_link_libraries(pico-cdm7162
 INTERFACE
   hardware_i2c
   pico-common
+  pico-power
 )
 
 target_sources(pico-cdm7162
