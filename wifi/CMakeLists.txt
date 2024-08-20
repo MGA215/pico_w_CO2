@@ -27,5 +27,6 @@ target_link_libraries(pico-wifi INTERFACE
   pico_stdlib 
   pico_lwip 
   pico-service_comm
+  pico-uart
   pico_cyw43_arch_lwip_threadsafe_background
 )

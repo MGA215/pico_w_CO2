@@ -34,4 +34,10 @@ err_t tcp_client_init(void);
  */
 bool run_tcp_client(bool close_tcp, uint8_t soap_index);
 
+/**
+ * @brief Stops the TCP client
+ * 
+ */
+extern void tcp_client_stop(void);
+
 #endif

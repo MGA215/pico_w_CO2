@@ -4,6 +4,7 @@
 #include "common/debug.h"
 #include "common/i2c_extras.h"
 #include "common/constants.h"
+#include "../common/serialize.h"
 #include "error_codes.h"
 #include "common/shared.h"
 #include "../sensor_config.h"
@@ -21,17 +22,15 @@
 #include "power/power.h"
 #include "ms5607/ms5607.h"
 #include "hyt271/hyt271.h"
+#include "../eeprom/eeprom.h"
+
 
 #include "string.h"
 #include "math.h"
 #include "pico/mutex.h"
 #include "hardware/watchdog.h"
 
-// Must be increased with each new sensor type
 #define SENSOR_TYPES 8
-
-// Holds numbers of each sensor type, created for 8 sensor types
-static uint8_t sensor_indices[SENSOR_TYPES];
 
 // Vector of sensors with assigned configuration
 static uint8_t active_sensors;
@@ -44,27 +43,32 @@ bool sensors_was_measurement_read = false;
 
 static bool before_measurement = true;
 
+/**
+ * @brief Reads sensor configuration from the EEPROM; if reading failed, resets the device, if parsing failed, uses default configuration
+ * 
+ * @param out_config Read configuration
+ * @param sensor_index Index of the sensor
+ */
+static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t sensor_index);
 
 /**
  * @brief Sets up sensor structure
  * 
  * @param sensor_index Index of the sensor
  * @param configuration Configuration to assign to the sensor
- * @param is_first_init Whether this is the first initialization
  * @return true if sensor structure set up with no errors
  * @return false if an error has occured (invalid sensor type)
  */
-static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init);
+static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration);
 
 /**
  * @brief Initializes single sensor
  * 
  * @param sensor_index Index of the sensor
- * @param configuration Configuration for the sensor
  * @return true if init swas successful
  * @return false if init failed
  */
-static bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration);
+static bool sensors_init(uint8_t sensor_index);
 
 /**
  * @brief Initializes sensor itself according to its type
@@ -151,14 +155,33 @@ static void set_5v(void);
 
 
 
-
+static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t sensor_index)
+{
+    int32_t ret;
+    uint8_t buffer[0x100];
+    ret = eeprom_read(0x00000300 + 0x100 * sensor_index, buffer, 0x100); // Read config from EEPROM
+    if (ret) // Reading failed
+    {
+        print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_EEPROM, "Failed to read configuration from EEPROM, resetting device...");
+        watchdog_enable(1, 1);
+        sleep_ms(10);
+        return;
+    }
+    ret = serializer_deserialize(out_config, buffer, 0x100); // Parsing read configuration
+    if (ret) // If parsing failed
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Failed to parse configuration, using default config");
+        memcpy(out_config, &sensor_config_default, sizeof(sensor_config_t)); // Set output configuration to default one
+    }
+    return;
+}
 
 void sensors_init_all()
 {
     // ToDo: Read config from EEPROM for init, replace configuration map with this new configuration
     for (int i = 0; i < 8; i++) // Initialize default structures
     {
-        sensors_setup_sensor(i, configuration_map[i], true);
+        sensors_setup_sensor(i, configuration_map[i]);
     }
 
     init_sensor_i2c(); // Initialize sensor I2C
@@ -168,12 +191,10 @@ void sensors_init_all()
     set_5v();
     set_power(true);
 
-    memset(sensor_indices, 0x00, 8); // Reset sensor indices
     active_sensors = 0;
     for (int i = 0; i < 8; i++)
     {
-
-        sensors_init(i, configuration_map[i]); // Initialize sensor
+        sensors_init(i); // Initialize sensor
         watchdog_update(); // Update watchdog - just in case
     }
     for (int i = 0; i < 8; i++)
@@ -206,19 +227,22 @@ void sensors_init_all()
     memset(hyt271.temperature_raw, 0x00, 2);
     hyt271_get_value();
 
-    sensor_start_measurement_time = make_timeout_time_us(sensor_read_interval_ms * 1000); // Set measurement start timer
+    sensor_start_measurement_time = make_timeout_time_us(global_configuration.meas_int * 1000); // Set measurement start timer
     // set_power(false);
 }
 
-static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration, bool is_first_init)
+static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configuration)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Setting up structure %i", sensor_index);
 
     common_init_struct(&sensors[sensor_index], sensor_index); // Initialize sensor structure
-    sensor_config_t* config = configuration == NULL ? &sensor_config_default : configuration; // Assign configuration
 
-    sensors[sensor_index].sensor_type = configuration->sensor_type; // Copy sensor type to sensor structure
-    memcpy(&sensors[sensor_index].config, config, sizeof(sensor_config_t)); // Assign config
+    sensor_config_t config;
+    memset(&config, 0x00, sizeof(sensor_config_t));
+    sensors_read_config_from_eeprom(&config, sensor_index); // Read sensor config from EEPROM
+
+    sensors[sensor_index].sensor_type = config.sensor_type; // Copy sensor type to sensor structure
+    memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Assign config
     sensors[sensor_index].config.sensor_active = false; // Set sensor to inactive state
 
     if (sensors[sensor_index].sensor_type < 0 || sensors[sensor_index].sensor_type >= SENSOR_TYPES) // Check for invalid sensor type
@@ -229,16 +253,13 @@ static bool sensors_setup_sensor(uint8_t sensor_index, sensor_config_t* configur
         sensors[sensor_index].sensor_type = UNKNOWN;
         return false; // Not initiable
     }
-
-    if (is_first_init)  // First init, first iteration
-    {
-        sensors[sensor_index].sensor_number = sensor_indices[sensors[sensor_index].sensor_type]++; // Set sensor type index
-    }
+    sensors[sensor_index].sensor_number = config.sensor_ord; // Set sensor type index
+    sensors[sensor_index].err_counter = 0;
     sensors[sensor_index].config.sensor_active = true;
     return true;
 }
 
-static bool sensors_init(uint8_t sensor_index, sensor_config_t* configuration)
+static bool sensors_init(uint8_t sensor_index)
 {
     int32_t ret;
     if (sensors[sensor_index].sensor_type == UNKNOWN || sensors[sensor_index].config.sensor_type == UNKNOWN) return false; // Check for unknown sensor
@@ -357,12 +378,12 @@ void sensors_read_all(void)
         if (!out && counter++ < 20) 
         {
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Cannot start new measurement.");
-            sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms / 10);
+            sensor_start_measurement_time = make_timeout_time_ms(global_configuration.meas_int / 10);
         }
         else if (out)
         {
             counter = 0; // Reset unsuccessful measurement start attempts
-            sensor_start_measurement_time = make_timeout_time_ms(sensor_read_interval_ms);
+            sensor_start_measurement_time = make_timeout_time_ms(global_configuration.meas_int);
             sensors_was_measurement_read = false; // Sensor measurement is ready to be read
             sensors_measurement_ready = false;
             before_measurement = false; // Not before first measurement anymore
@@ -419,6 +440,11 @@ void sensors_read_all(void)
         if (sensors_is_measurement_finished()) // If all measurements finished - turn off power globally if possible
         {
             // set_power(false);
+            for (int i = 0; i < 8; i++)
+            {
+                if (sensors[i].state) sensors[i].err_counter++; // Counter of total errors during measurement run
+                print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Input: %i, Errors: %i", i, sensors[i].err_counter);
+            }
             if (!sensors_was_measurement_read && !sensors_measurement_ready) sensors_measurement_ready = true; // Set measurement ready
         }
     }
@@ -457,18 +483,9 @@ static bool sensors_read(uint8_t sensor_index)
             sensors[sensor_index].state != ERROR_NO_MEAS) // Sensor not initialized
         {
             if (++sensors[sensor_index].init_count > 2) break; // Maximum of 2 initialization attempts in one measurement cycle
-            if (!sensors_init(sensor_index, &sensors[sensor_index].config)) continue; // Initialize sensor
+            if (!sensors_init(sensor_index)) continue; // Initialize sensor
             sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
         }
-
-        // if (!sensors[sensor_index].config.verified) { // Check whether config is verified
-        //     if (sensors[sensor_index].sensor_type == UNKNOWN || sensors[sensor_index].state == ERROR_SENSOR_NOT_INITIALIZED) continue;
-        //     for (int j = 0; j < 2; j++) // Read & verify config - 2 attempts
-        //     {
-        //         if (sensors_verify_read_config(sensor_index)) break;
-        //         sleep_ms(10);
-        //     }
-        // }
 
         if (sensors[sensor_index].state == SUCCESS || sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
         {

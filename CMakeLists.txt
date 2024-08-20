@@ -72,6 +72,8 @@ add_subdirectory(common)
 add_subdirectory(cobs)
 add_subdirectory(service_comm)
 add_subdirectory(eeprom)
+add_subdirectory(uart)
+add_subdirectory(config)
 
 target_compile_options(pico_w_CO2 PRIVATE "-g")
 
@@ -92,6 +94,7 @@ target_link_libraries(pico_w_CO2
         pico-wifi
         pico-sensors
         pico-service_comm
+        pico-config
         )
 
         

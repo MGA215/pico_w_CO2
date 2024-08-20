@@ -31,6 +31,7 @@
 #define ERROR_SENSOR_INIT_FAILED -14 // Error sensor initialization failed
 #define ERROR_NO_MEAS -15 // Error No measurement has been performed yet
 #define ERROR_UNKNOWN_SENSOR -16 // Error Sensor identification failed - unknown sensor
+#define ERROR_CONFIG_INIT -17 // Error Failed to read configuration from EEPROM
 
 // Serialization errors
 #define ERROR_SERIALIZATION_BUFFER_LEN -21 // Error - serialization buffer is too short

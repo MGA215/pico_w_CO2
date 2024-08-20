@@ -89,10 +89,18 @@ typedef struct sensor_config
     bool power_global_control; // Power controlled globally
     bool power_5V; // Sensor requires 5 V
     sensor_type_e sensor_type; // Type of sensor the configuration is written for
+    uint8_t sensor_ord; // Sensor type no
+    bool power_control; // True if sensor powered continuously
+    bool power_12V; // Sensor voltage 12 V
+    bool sensor_IIC; // true if I2C comm, false for UART comm
+    bool ext_pressure_comp; // If true measured value is compensated using the on-board pressure sensor
+    bool sensor_active; // Whether the sensor should be accessed or not
+
+    uint8_t sensor_on_off; // When power disconnecting, get measured value (0x00 ... single value after sensor_power_up_time)
+    uint8_t sensor_power_up_time; // Time for the sensor to stabilize while power disconnecting before taking measurement, min 3 s
 
     // 
     bool verified; // Is configuration verified
-    bool sensor_active; // Whether the sensor should be accessed or not
 } sensor_config_t;
 
 typedef struct sensor
@@ -114,6 +122,7 @@ typedef struct sensor
     uint8_t sensor_number; // Index of the sensor of a type
     uint8_t init_count; // Counter of initializations in single measurement cycle
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
+    uint32_t err_counter; // Counter of total errors during the run
 } sensor_t;
 
 typedef struct ms5607
@@ -195,5 +204,39 @@ typedef struct
     int32_t* state;
 } message_channel_general_t;
 
+typedef enum
+{
+    SERVICE_MODE_DISABLED = 0,
+    SERVICE_MODE_UART = 1,
+    SERVICE_MODE_ETHERNET = 2
+} service_mode_source_e;
+
+typedef struct
+{
+    uint32_t ser_num;
+    uint32_t ser_num_aux;
+    uint8_t channel_act[16];
+    uint8_t channel_idx[16];
+    uint8_t channel_quant[16];
+    uint8_t sta_security;
+    uint8_t wlan_mode;
+    uint8_t host_name[32];
+    uint8_t sta_ssid[32];
+    uint8_t sta_password[32];
+    uint8_t sta_ip[16];
+    uint8_t sta_gw[16];
+    uint8_t sta_mask[16];
+    uint8_t sta_dns[16];
+    uint8_t soap_ip[32];
+    uint8_t soap_path[32];
+    uint16_t soap_port;
+    uint8_t cloud_ip[32];
+    uint8_t cloud_path[32];
+    uint16_t cloud_port;
+    uint32_t meas_int;
+    uint32_t soap_int;
+    uint8_t soap_mode;
+    uint8_t device_desc[16];
+} global_config_t;
 
 #endif

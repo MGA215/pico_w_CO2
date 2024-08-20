@@ -17,6 +17,7 @@
 #include "sensors/sensors.h"
 #include "soap/soap.h"
 #include "service_comm/service_comm.h"
+#include "config/config.h"
 
 #include "common/debug.h"
 #include "common/serialize.h"
@@ -24,7 +25,6 @@
 #include "common/shared.h"
 #include "error_codes.h"
 #include "common/constants.h"
-#include "soap/soap_channels.h"
 #include "config_map.h"
 
 #include "pico/multicore.h"
@@ -36,6 +36,8 @@
 #include "string.h"
 
 #include "pico/printf.h"
+
+#include "hardware/exception.h"
 
 // GFX Pack previous button state
 uint8_t buttons_prev_state = 0;
@@ -49,27 +51,17 @@ bool blight_on = true;
 // Should the display buffer be updated with new data
 bool update_display_buffer;
 
-// Sensor I2C actual baudrate
-uint32_t i2c_baud;
-
 // INdex of currently displayed sensor
 uint8_t display_sensor = 0;
 
 // Time value to check if display & button update should be performed
 absolute_time_t process_update_time;
 
-// Number of total SOAP channels
-uint8_t soap_channels = 16;
-
-// SOAP message buffer
-uint8_t soap_buffer1[MAX_SOAP_SIZE] = {0};
-uint8_t soap_buffer2[MAX_SOAP_SIZE] = {0};
-
+// Time value to check if available memory should be read
 absolute_time_t memory_timer;
 
-
-
 void getFreeHeap(void);
+
 
 int main()
 {
@@ -109,22 +101,25 @@ int init(void)
     if (!mutex_is_initialized(&soap_data[1].data_mutex))
         mutex_init(&soap_data[1].data_mutex);
 
-    multicore_launch_core1(core1_main); // Launch second core
 
-    rtc_init();
+    svc_pin_init(); // Initialize service mode pin
+    rtc_init(); // Initialize RTC
+
+    if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
     gfx_pack_init(blight_brightness); // initialize display
     sensors_init_all(); // initialize sensors
 
-    soap_init(sensors, channels1); // Initialize SOAP channels
+    soap_init(channels1); // Initialize SOAP channels
     soap_init_general(&channel00G, &ms5607.pressure, "Tester_P", &ms5607.state, MEASURED_VALUE_P, 0, channel_map_general);
-    soap_init_general(&channel00G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channel_map_general);
-    soap_init_general(&channel00G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channel_map_general);
+    soap_init_general(&channel01G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channel_map_general);
+    soap_init_general(&channel02G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channel_map_general);
 
     process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
 
     memory_timer = make_timeout_time_ms(1000);
 
     update_display_buffer = true; // Redraw display
+    multicore_launch_core1(core1_main); // Launch second core
     sleep_ms(1000); // Init wait
     watchdog_enable(3000, true); // 3 sec watchdog
     return SUCCESS;
@@ -137,12 +132,13 @@ int loop(void)
         sensors_read_all(); // Read sensor values
         create_soap_messages(); // Create SOAP messages
     }
-    if (config_data.command_rdy)
+    if (config_data.command_rdy) // Check if service command is ready
     {
-        service_comm_eng_process_command();
+        service_comm_eng_process_command(); // Process service command
     }
     if (time_reached(process_update_time)) update(); // Update display & buttons
     if (time_reached(memory_timer)) getFreeHeap(); // Check free heap
+    check_svc_mode(); // Check for service mode state
     watchdog_update();
     return SUCCESS;
 }
@@ -337,13 +333,43 @@ void update_display(void)
 void create_soap_messages(void)
 {
     if (!sensors_measurement_ready || sensors_was_measurement_read) return; // Generate new message if new data available
-    if (!soap_build(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1, channels1)) // Create SOAP message
+    if (!soap_build(global_configuration.ser_num, channels1)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
-    if (!soap_build_general(SOAP_TESTER_NAME_1, SOAP_TESTER_SN_1G, channel_map_general)) // Create SOAP message
+    if (!soap_build_general(global_configuration.ser_num_aux, channel_map_general)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
     sensors_was_measurement_read = true;
+    return;
+}
+
+void svc_pin_init(void)
+{
+    gpio_init(SVC_MODE); // Initialize service mode pin
+    gpio_set_function(SVC_MODE, GPIO_FUNC_SIO); // Set service mode pin function to I/O
+    gpio_pull_up(SVC_MODE); // Pull up
+}
+
+void check_svc_mode(void)
+{
+    bool svc_pin_state = gpio_get(SVC_MODE) ? true : false; // Get SVC mode pin state
+    bool service_mode_active = service_mode ? true : false;
+    if (svc_pin_state == service_mode_active) // If state is the same as service mode (change detected)
+    {
+        static uint8_t debug_severity_state;
+        if (!svc_pin_state) // Service mode enter
+        {
+            debug_severity_state = debug; // Save debug severity level
+            print_ser_output(SEVERITY_WARN, SOURCE_MAIN_LOOP, SOURCE_NO_SOURCE, "Entering service mode via UART");
+            debug = 0; // Disable debug
+            service_mode = SERVICE_MODE_UART; // Enter service mode
+        }
+        else // Service mode exit
+        {
+            service_mode = SERVICE_MODE_DISABLED; // Exit service mode
+            debug = debug_severity_state; // Restore debug level
+        }
+    }
     return;
 }
 

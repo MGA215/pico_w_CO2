@@ -190,9 +190,28 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index)
             err_t err;
             if (!data_sending && !data_sent)
             {
-                uint8_t* message = create_http_header(IS_COMET_CLOUD ? TCP_CLIENT_SERVER_IP_CLOUD : TCP_CLIENT_SERVER_IP_DB, IS_COMET_CLOUD, 
-                IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PATH : TCP_CLIENT_SERVER_DB_PATH, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, 
-                "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Add safely HTTP header to SOAP message
+                uint8_t* message;
+                switch (global_configuration.soap_mode)
+                {
+                    case 0x01: // soap
+                    {
+                        message = create_http_header(global_configuration.soap_ip, false, global_configuration.soap_path, global_configuration.soap_port, 
+                            "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Safe add HTTP header to message
+                        break;
+                    }
+                    case 0x02: // cloud
+                    {
+                        message = create_http_header(global_configuration.cloud_ip, false, global_configuration.cloud_path, global_configuration.cloud_port, 
+                            "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Safe add HTTP header to message
+                        break;
+                    }
+                    default:
+                    {
+                        tcp_client_result(&state, ERR_ARG); // Cannot send message -> close client
+                        return false;
+                    }
+                }
+
                 cyw43_arch_lwip_begin();
                 data_sent = false;
                 if ((err = tcp_client_send(&state, message)) != ERR_OK) // Send data
@@ -223,15 +242,15 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index)
 err_t tcp_client_init(void)
 {
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
-    if (IS_COMET_CLOUD) // data to cloud
+    if (global_configuration.soap_mode == 0x02) // data to cloud
     {
         ip_found = false;
         ip_addr_t ip_dns;
-        ip4addr_aton(DNS_IP, &ip_dns); // Convert DNS IP string to IP
+        ip4addr_aton(global_configuration.sta_dns, &ip_dns); // Convert DNS IP string to IP
         dns_init();
         dns_setserver(0, &ip_dns); // Set DNS server
         cyw43_arch_lwip_begin();
-        err_t err = dns_gethostbyname(TCP_CLIENT_SERVER_IP_CLOUD, &state.remote_addr, tcp_client_ip_found, NULL); // Get cloud IP
+        err_t err = dns_gethostbyname(global_configuration.cloud_ip, &state.remote_addr, tcp_client_ip_found, NULL); // Get cloud IP
         if (err && err != ERR_INPROGRESS)
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_DNS, "Failed to retrieve IP: %i", err);
@@ -242,7 +261,7 @@ err_t tcp_client_init(void)
     }
     else // data to DB
     {
-        ip4addr_aton(TCP_CLIENT_SERVER_IP_DB, &state.remote_addr); // Assign DB IP addr
+        ip4addr_aton(global_configuration.soap_ip, &state.remote_addr); // Assign DB IP addr
         ip_found = true;
     }
     client_state = CONNECTION_CLOSED; // Set connection state to closed
@@ -261,7 +280,7 @@ static bool tcp_client_open(void* arg)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg; // Client state structure
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Connecting to %s port %u...", ip4addr_ntoa(&state->remote_addr), 
-        IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT);
+        global_configuration.soap_mode == 0x02 ? global_configuration.cloud_port : global_configuration.soap_port);
     state->tcp_pcb = tcp_new_ip_type(IP_GET_TYPE(&state->remote_addr)); // Create PCB with IP address
     if (!state->tcp_pcb)
     {
@@ -278,7 +297,8 @@ static bool tcp_client_open(void* arg)
     state->buffer_len = 0;
 
     cyw43_arch_lwip_begin();
-    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, IS_COMET_CLOUD ? TCP_CLIENT_SERVER_CLOUD_PORT : TCP_CLIENT_SERVER_DB_PORT, tcp_client_connected); // Connect to the TCP socket
+    err_t err = tcp_connect(state->tcp_pcb, &state->remote_addr, 
+        global_configuration.soap_mode == 0x02 ? global_configuration.cloud_port : global_configuration.soap_port, tcp_client_connected); // Connect to the TCP socket
     cyw43_arch_lwip_end();
     if (err) // If connection errored
     {
@@ -434,7 +454,10 @@ static err_t tcp_client_close(void* arg)
     return err;
 }
 
-
+void tcp_client_stop(void)
+{
+    tcp_client_close(&state);
+}
 
 
 

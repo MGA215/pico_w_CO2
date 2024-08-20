@@ -439,6 +439,10 @@ static err_t tcp_server_send_data(void* arg)
     return ERR_OK;
 }
 
+void tcp_server_stop(void)
+{
+    tcp_server_close(&state);
+}
 
 
 

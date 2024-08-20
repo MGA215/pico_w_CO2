@@ -23,7 +23,7 @@
  * @param len length of serialized buffer
  * @returns int32_t Return code
  */
-int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8_t len);
+int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint16_t len);
 
 /**
  * @brief Deserializes configuration
@@ -33,6 +33,6 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint8
  * @param len Length of serialized configuration buffer
  * @returns int32_t Return code
  */
-int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uint8_t len);
+int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uint16_t len);
 
 #endif

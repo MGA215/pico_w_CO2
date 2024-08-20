@@ -25,11 +25,6 @@ void reset_i2c(void)
             sleep_us(10);
             gpio_put(I2C_SCL, 1); // Pull up
             sleep_us(10);
-            gpio_put(I2C_SDA, 0); // Pull down
-            sleep_us(10);
-            gpio_put(I2C_SDA, 1); // Pull up
-            sleep_us(100);
-
         }
         if (gpio_get(I2C_SDA) && gpio_get(I2C_SCL)) break; // SDA set high
     }

@@ -88,6 +88,17 @@ void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);
  */
 void create_soap_messages(void);
 
+/**
+ * @brief Checks for service mode pin change
+ * 
+ */
+void check_svc_mode(void);
+
+/**
+ * @brief Initializes the service mode pin
+ * 
+ */
+void svc_pin_init(void);
 
 
 

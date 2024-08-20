@@ -15,6 +15,8 @@
 #include "structs.h"
 #include "pico/stdlib.h"
 
+extern global_config_t global_configuration;
+
 extern sensor_t sensors[8];
 extern ms5607_t ms5607;
 extern hyt271_t hyt271;
@@ -22,9 +24,9 @@ extern hyt271_t hyt271;
 extern soap_data_t soap_data[2];
 
 extern service_comm_data_t config_data;
-extern bool service_mode;
+extern service_mode_source_e service_mode;
 
-extern message_channel* channels1[16];
+extern message_channel channels1[16];
 extern message_channel_general_t* channels2[16];
 
 extern datetime_t datetime;

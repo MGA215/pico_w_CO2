@@ -19,6 +19,7 @@
 #include "common/shared.h"
 #include "error_codes.h"
 #include "common/debug.h"
+#include "uart/uart.h"
 
 #include "pico/cyw43_arch.h"
 #include "lwipopts.h"
@@ -55,7 +56,7 @@ static void wifi_loop(void);
 
  // Callback function for the wifi scan
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
-    if (result && !strcmp(result->ssid, WIFI_SSID)) 
+    if (result && !strcmp(result->ssid, global_configuration.sta_ssid)) 
     {
         wifi = true;
     }
@@ -131,22 +132,26 @@ void wifi_main()
     }    
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Initialized WiFi on core 1");
     cyw43_arch_enable_sta_mode(); // enable station mode
+    if (!global_configuration.wlan_mode)
+    {
+        cyw43_arch_lwip_begin();
+        dhcp_release_and_stop(cyw43_state.netif);
+        ip4_addr_t ip_addr;
+        ip4_addr_t gw_addr;
+        ip4_addr_t netmask;
+        ip4addr_aton(global_configuration.sta_ip, &ip_addr);
+        ip4addr_aton(global_configuration.sta_gw, &gw_addr);
+        ip4addr_aton(global_configuration.sta_mask, &netmask);
 
-    cyw43_arch_lwip_begin();
-    dhcp_release_and_stop(cyw43_state.netif);
-    ip4_addr_t ip_addr;
-    ip4_addr_t gw_addr;
-    ip4_addr_t netmask;
-    ip4addr_aton(IP_ADDR, &ip_addr);
-    ip4addr_aton(GW_ADDR, &gw_addr);
-    ip4addr_aton(NETMASK, &netmask);
-
-    netif_set_addr(cyw43_state.netif, &ip_addr, &netmask, &gw_addr);
-    cyw43_arch_lwip_end();
-    netif_set_hostname(cyw43_state.netif, HOSTNAME);
+        netif_set_addr(cyw43_state.netif, &ip_addr, &netmask, &gw_addr);
+        cyw43_arch_lwip_end();
+    }
+    netif_set_hostname(cyw43_state.netif, global_configuration.host_name);
     cyw43_wifi_pm(&cyw43_state, CYW43_NO_POWERSAVE_MODE);
 
     absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
+
+    uart_service_init(); // Initialize service comm UART
 
     while (true) // Connection attempt
     {
@@ -156,9 +161,17 @@ void wifi_main()
             sleep_ms(100);
             continue;
         }
-        enable_tcp_closing = wifi_send_soap_ms > 60000; // Enable TCP socket closing if sending interval > 1 min
+        enable_tcp_closing = global_configuration.soap_int > 60000; // Enable TCP socket closing if sending interval > 1 min
 
-        if (wifi_connect(100000, WIFI_SSID, WIFI_PASSWORD, CYW43_AUTH_WPA2_AES_PSK))// Try connecting to the network
+        uint32_t auth_mode;
+        switch(global_configuration.sta_security)
+        {
+            case 0x00: auth_mode = CYW43_AUTH_OPEN; break;
+            case 0x02: auth_mode = CYW43_AUTH_WPA2_AES_PSK; break;
+            default: auth_mode = CYW43_AUTH_OPEN; break;
+        }
+
+        if (wifi_connect(100000, global_configuration.sta_ssid, global_configuration.sta_password, auth_mode))// Try connecting to the network
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to connect to the network, next try in %d seconds", wifi_wait_next_connect_ms);
             wifi_wait_next_connect_time = make_timeout_time_ms(wifi_wait_next_connect_ms); // Try again in wifi_wait_next_connect_ms
@@ -168,14 +181,27 @@ void wifi_main()
         tcp_client_init(); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server
 
-        send_data_time = make_timeout_time_ms(wifi_send_soap_ms * 2); // Send data after wifi_send_data_time_ms + initial offset
+        send_data_time = make_timeout_time_ms(global_configuration.soap_int * 2); // Send data after wifi_send_data_time_ms + initial offset
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns);
 
         while (wifi)
         {
+            if (service_mode == SERVICE_MODE_UART)
+            {
+                tcp_server_stop();
+                tcp_client_stop();
+                break;
+            }
             wifi_loop(); // Main WiFi loop
         }
         sleep_ms(10);
+
+        while (service_mode == SERVICE_MODE_UART)
+        {
+            uart_service_read_command();
+            if (config_data.response_rdy) uart_service_send_response();
+            tight_loop_contents();
+        }
     }
     
     cyw43_arch_deinit(); // Deinit CYW43 driver
@@ -200,7 +226,7 @@ static void wifi_loop(void)
     {
         sleep_ms(5);
         print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");
-        send_data_time = make_timeout_time_ms(wifi_send_soap_ms); // Next message in soap_write_message_s
+        send_data_time = make_timeout_time_ms(global_configuration.soap_int); // Next message in soap_write_message_s
         data_client_sending = run_tcp_client(false, 0); // Run TCP client FSM
     }
     tcp_server_run(); // Run TCP server

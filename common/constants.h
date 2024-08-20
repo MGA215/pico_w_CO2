@@ -16,10 +16,10 @@
 #define CONNECTED_SENSORS 8
 
 #define I2C_BAUDRATE 40000
+#define I2C_TIMEOUT_US 12000
 #define I2C_SENSOR i2c0
 #define I2C_SDA 4
 #define I2C_SCL 5
-#define I2C_TIMEOUT_US 12000
 
 #define I2C_DEVICE i2c1
 
@@ -52,7 +52,7 @@
 #define EN_1 26
 #define EN_2 27
 
-#define SERIALIZE_BUFFER_LEN 32
+#define SVC_MODE 28
 
 #define MUX_ADDR 0x70
 #define POWER_EN_ADDR 0x39
@@ -64,18 +64,9 @@
 #define CONFIG_SEND_BUFFER_SIZE 4096
 #define CONFIG_RECVD_BUFFER_SIZE 300 + 60
 
-#define SOAP_TESTER_NAME_1 "Tester_01"
-#define SOAP_TESTER_NAME_2 "Tester_02"
-
-#define SOAP_TESTER_SN_1 0x24069001
-#define SOAP_TESTER_SN_1G 0x24069011
-
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;
-
-// value representing the interval between sensor readings in ms
-static uint32_t sensor_read_interval_ms = 6000;
 
 // value representing the interval between attempts to connect to wifi in ms
 static uint32_t wifi_wait_next_connect_ms = 30000;
@@ -83,7 +74,5 @@ static uint32_t wifi_wait_next_connect_ms = 30000;
 // value representing the timeout for DNS server to resolve host IP in ms
 static uint32_t wifi_wait_for_dns = 30000;
 
-// value representing the soap message sending interval in ms
-static uint32_t wifi_send_soap_ms = 6000;
 
 #endif

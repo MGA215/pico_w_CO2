@@ -31,6 +31,12 @@ extern err_t tcp_server_init();
  */
 extern void tcp_server_run(void);
 
+/**
+ * @brief Stops the TCP server if currently running
+ * 
+ */
+extern void tcp_server_stop(void);
+
 
 
 
