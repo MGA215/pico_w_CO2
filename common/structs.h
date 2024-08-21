@@ -238,6 +238,7 @@ typedef struct
     uint32_t soap_int;
     uint8_t soap_mode;
     uint8_t device_desc[16];
+    uint8_t aux_msg;
 } global_config_t;
 
 #endif

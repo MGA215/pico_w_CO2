@@ -124,9 +124,9 @@ int init(void)
     sensors_init_all(); // initialize sensors
 
     soap_init(channels1); // Initialize SOAP channels
-    soap_init_general(&channel00G, &ms5607.pressure, "Tester_P", &ms5607.state, MEASURED_VALUE_P, 0, channels2);
-    soap_init_general(&channel01G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channels2);
-    soap_init_general(&channel02G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channels2);
+    soap_init_general(&channel00G, &hyt271.temperature, "Tamb", &hyt271.state, MEASURED_VALUE_T, 0, channels2);
+    soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.state, MEASURED_VALUE_RH, 1, channels2);
+    soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.state, MEASURED_VALUE_P, 2, channels2);
 
     sleep_ms(10); // Init wait
     return SUCCESS;

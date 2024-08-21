@@ -30,6 +30,9 @@ static bool wifi = false;
 static absolute_time_t send_data_time;
 static absolute_time_t wait_dns;
 static bool data_client_sending = false;
+static uint8_t message_index;
+static uint8_t message_sent_index;
+static bool sending = false;
 
 static bool enable_tcp_closing;
 
@@ -238,12 +241,28 @@ static void wifi_loop(void)
         tcp_client_init();
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns); // Reset timeout
     }
-    if (((!service_mode && time_reached(send_data_time)) || data_client_sending) && ip_found) // If should send data
+
+    if (!sending) sending = time_reached(send_data_time); // Check if message should be sent
+    
+    if ((!service_mode && sending) && ip_found && global_configuration.soap_mode) // If should send data
     {
         sleep_ms(5);
         print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");
-        send_data_time = make_timeout_time_ms(global_configuration.soap_int); // Next message in soap_write_message_s
-        data_client_sending = run_tcp_client(false, 0); // Run TCP client FSM
+        if (time_reached(send_data_time))
+        {
+            message_index = 0;
+            message_sent_index = 255;
+        }
+        send_data_time = make_timeout_time_ms(global_configuration.soap_int); // Next message timeout
+
+        if ((data_client_sending || !tcp_client_is_running()) && message_sent_index != message_index) // If data should be being sent or client is not running (for initial condition) AND message with the same index was not sent
+        {
+            data_client_sending = run_tcp_client(false, message_index); // Run TCP client FSM
+        }
+        if (!data_client_sending) message_sent_index = message_index; // Save last message index that has been sent if already sent
+        if (!data_client_sending && !tcp_client_is_running()) message_index++; // If no data being sent and client is not running
+        if ((global_configuration.aux_msg == 0x01 && message_index == 2) || 
+            (global_configuration.aux_msg != 0x01 && message_index == 1)) sending = false; // Chech messages sent
     }
     tcp_server_run(); // Run TCP server
 }

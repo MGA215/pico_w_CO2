@@ -239,6 +239,11 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index)
     return false;
 }
 
+bool tcp_client_is_running(void)
+{
+    return client_state ? true : false;
+}
+
 err_t tcp_client_init(void)
 {
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure

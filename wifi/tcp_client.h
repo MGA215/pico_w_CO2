@@ -40,4 +40,12 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index);
  */
 extern void tcp_client_stop(void);
 
+/**
+ * @brief Checks whether TCP client is running
+ * 
+ * @return true if client is running
+ * @return false if client has stopped
+ */
+extern bool tcp_client_is_running(void);
+
 #endif
