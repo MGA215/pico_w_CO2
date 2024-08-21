@@ -190,6 +190,9 @@ void sensors_init_all()
     set_power(true, true);
 
     active_sensors = 0;
+    watchdog_update();
+    sleep_ms(1000); // Sensor power up time (mainly because of CM1107N)
+    watchdog_update();
     for (int i = 0; i < 8; i++)
     {
         sensors_init(i); // Initialize sensor
@@ -200,6 +203,7 @@ void sensors_init_all()
         if (sensors[i].sensor_type == UNKNOWN || sensors[i].state == ERROR_SENSOR_NOT_INITIALIZED) continue;
         for (int j = 0; j < 3; j++)
         {
+            watchdog_update();
             if (sensors_verify_read_config(i)) break;
             sleep_ms(10);
         }
@@ -214,7 +218,8 @@ void sensors_init_all()
     memset(ms5607.temperature_raw, 0x00, 3);
     memset(ms5607.prom, 0x00, 16);
     ms5607_get_value(); // Perform MS5607 measurement
-    if (ms5607.state != 0) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read MS5607: %i", ms5607.state);
+    if (ms5607.state != SUCCESS) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read MS5607: %i", ms5607.state);
+    watchdog_update();
 
     // Initialize HYT271 values
     hyt271.meas_state = MEAS_STARTED;
@@ -224,6 +229,7 @@ void sensors_init_all()
     memset(hyt271.humidity_raw, 0x00, 2);
     memset(hyt271.temperature_raw, 0x00, 2);
     hyt271_get_value();
+    watchdog_update();
 
     sensor_start_measurement_time = make_timeout_time_us(global_configuration.meas_int * 1000); // Set measurement start timer
     set_power(false, false);

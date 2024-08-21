@@ -14,6 +14,9 @@ extern uint8_t buffer_recv[];
 
 void uart_service_init(void)
 {
+    if (!mutex_is_initialized(&config_data.command_mutex)) mutex_init(&config_data.command_mutex);
+    if (!mutex_is_initialized(&config_data.response_mutex)) mutex_init(&config_data.response_mutex);
+
     if (uart_is_enabled(UART_INST)) return;
     gpio_init(UART_TX);
     gpio_init(UART_RX);

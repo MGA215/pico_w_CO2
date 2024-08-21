@@ -13,6 +13,12 @@
 
 #include "pico/stdlib.h"
 
+
+#define SW_VERSION_MAJOR 1
+#define SW_VERSION_MINOR 0
+#define SW_VERSION_PATCH 0
+#define SW_VERSION_BUILD 0
+
 #define CONNECTED_SENSORS 8
 
 #define I2C_BAUDRATE 40000

@@ -230,6 +230,7 @@ int32_t cdm7162_read_config(sensor_config_t* config)
     config->abc_period = (uint16_t)(buf[0] & 0b00111111);
     if (buf[0] & (0b1 << 6)) config->abc_period *= 7; // Week bit H
     else if (buf[0] & (0b1 << 7)) config->abc_period *= 30; // Month bit H
+    config->abc_period *= 24; // Convert to hours
     return SUCCESS;
 }
 
@@ -346,15 +347,16 @@ static int32_t cdm_write_config(sensor_config_t* config)
     {
         buf = 0;
         uint8_t val;
-        if (config->abc_period % 30 == 0)
+        uint16_t period = config->abc_period / 24; // Convert abc period to days
+        if (period % 30 == 0)
         {
             buf |= (0b1 << 7); // Set months bit
-            val = config->abc_period / 30;
+            val = period / 30;
         }
         else if (config->abc_period % 7 == 0)
         {
             buf |= (0b1 << 6);
-            val = config->abc_period / 7;
+            val = period / 7;
         }
         if (val < 64)
         {

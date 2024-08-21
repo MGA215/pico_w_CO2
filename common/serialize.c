@@ -268,7 +268,7 @@ static inline int32_t serializer_check_values(sensor_config_t* config)
             if (config->pressure < 800 || config->pressure > 1055) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->altitude > 2550) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->abc_target_value < 300 || config->abc_target_value > 555) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
-            if (config->abc_period > (30 * 64)) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
+            if (config->abc_period > (30 * 64 * 24)) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->alarm_treshold_co2_high > 2550) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->alarm_treshold_co2_low > 2550) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             break;
@@ -303,7 +303,7 @@ static inline int32_t serializer_check_values(sensor_config_t* config)
         }
         case CM1107N:
         {
-            if (config->abc_period < 1 || config->abc_period > 30) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
+            if (config->abc_period < 1 * 24 || config->abc_period > 30 * 24) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->abc_target_value < 400 || config->abc_target_value > 1500) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             break;
         }

@@ -232,11 +232,11 @@ int32_t cozir_lp3_read_config(sensor_config_t* config)
 
     if ((ret = cozir_lp3_read(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
     memcpy(&config->abc_init_period, &buf[0], 2);
-    config->abc_init_period = ntoh16(config->abc_init_period);
+    config->abc_init_period = (uint16_t)(((uint32_t)ntoh16(config->abc_init_period) * 50) / 3600);
 
     if ((ret = cozir_lp3_read(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
     memcpy(&config->abc_period, &buf[0], 2);
-    config->abc_period = ntoh16(config->abc_period);
+    config->abc_period = (uint16_t)(((uint32_t)ntoh16(config->abc_period) * 50) / 3600);
 
     if ((ret = cozir_lp3_read(REG_ABC_TARGET, buf, 2)) != 0) return ret;
     memcpy(&config->abc_target_value, &buf[0], 2);
@@ -294,26 +294,27 @@ static int32_t lp3_write_config(sensor_config_t* config)
         buf[0] = config->enable_abc ? 0b10 : 0b00;
         if ((ret = cozir_lp3_write(REG_ABC_CONTROL, &buf[0], 1)) != 0) return ret;
     }
-    // if (config->enable_abc)
-    // {
+
     if (config->abc_init_period == config->abc_period)
     {
-        if (config->abc_period == 0xFFFF) config->abc_period = 0xFFFE;
+        if (config->abc_period == (uint16_t)(((uint32_t)0xFFFF * 50) / 3600)) config->abc_period = (uint16_t)(((uint32_t)0xFFFF * 50) / 3600) - 1; // Converting to hours
         else config->abc_period += 1;
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - ABC initial period and standard period have the same value, ABC standard period set to %04X", config->abc_period);
     }
     if (read_config.abc_init_period != config->abc_init_period)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC initial period");
-        buf[0] = (config->abc_init_period & 0xFF00) >> 8;
-        buf[1] = (config->abc_init_period & 0x00FF) >> 0;
+        uint16_t init_per = (uint16_t)((3600 * (uint32_t)config->abc_init_period) / 50);
+        buf[0] = (init_per & 0xFF00) >> 8;
+        buf[1] = (init_per & 0x00FF) >> 0;
         if ((ret = cozir_lp3_write(REG_ABC_INIT_PERIOD, buf, 2)) != 0) return ret;
     }
     if (read_config.abc_period != config->abc_period)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing ABC standard period");
-        buf[0] = (config->abc_period & 0xFF00) >> 8;
-        buf[1] = (config->abc_period & 0x00FF) >> 0;
+        uint16_t per = (uint16_t)((3600 * (uint32_t)config->abc_period) / 50);
+        buf[0] = (per & 0xFF00) >> 8;
+        buf[1] = (per & 0x00FF) >> 0;
         if ((ret = cozir_lp3_write(REG_ABC_PERIOD, buf, 2)) != 0) return ret;
     }
     if (read_config.abc_target_value != config->abc_target_value)
@@ -323,7 +324,7 @@ static int32_t lp3_write_config(sensor_config_t* config)
         buf[1] = (config->abc_target_value & 0x00FF) >> 0;
         if ((ret = cozir_lp3_write(REG_ABC_TARGET, buf, 2)) != 0) return ret;
     }
-    // }
+    
     if (read_config.alarm_treshold_co2_high != config->alarm_treshold_co2_high)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Config - Writing alarm treshold");

@@ -53,6 +53,12 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
  */
 static void wifi_loop(void);
 
+/**
+ * @brief Initializes wifi stuff
+ * 
+ */
+static void wifi_init(void);
+
 
  // Callback function for the wifi scan
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
@@ -126,28 +132,7 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
 
 void wifi_main() 
 {
-    if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
-        print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to initialize WiFi on core 1");
-        return;
-    }    
-    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Initialized WiFi on core 1");
-    cyw43_arch_enable_sta_mode(); // enable station mode
-    if (!global_configuration.wlan_mode)
-    {
-        cyw43_arch_lwip_begin();
-        dhcp_release_and_stop(cyw43_state.netif);
-        ip4_addr_t ip_addr;
-        ip4_addr_t gw_addr;
-        ip4_addr_t netmask;
-        ip4addr_aton(global_configuration.sta_ip, &ip_addr);
-        ip4addr_aton(global_configuration.sta_gw, &gw_addr);
-        ip4addr_aton(global_configuration.sta_mask, &netmask);
-
-        netif_set_addr(cyw43_state.netif, &ip_addr, &netmask, &gw_addr);
-        cyw43_arch_lwip_end();
-    }
-    netif_set_hostname(cyw43_state.netif, global_configuration.host_name);
-    cyw43_wifi_pm(&cyw43_state, CYW43_NO_POWERSAVE_MODE);
+    wifi_init();
 
     absolute_time_t wifi_wait_next_connect_time = nil_time; // Time to connect to wifi time
 
@@ -155,6 +140,18 @@ void wifi_main()
 
     while (true) // Connection attempt
     {
+        if (service_mode == SERVICE_MODE_UART)
+        {
+            while (service_mode == SERVICE_MODE_UART)
+            {
+                uart_service_read_command();
+                if (config_data.response_rdy) uart_service_send_response();
+                tight_loop_contents();
+            }
+            cyw43_arch_deinit();
+            wifi_init();
+        }
+            
         
         if (!time_reached(wifi_wait_next_connect_time)) // If time to connect not reached
         {
@@ -179,7 +176,7 @@ void wifi_main()
         }
         wifi_wait_next_connect_time = nil_time;
         tcp_client_init(); // Initialize TCP client
-        tcp_server_init(); // Initialize TCP server
+        tcp_server_init(); // Initialize TCP server structs
 
         send_data_time = make_timeout_time_ms(global_configuration.soap_int * 2); // Send data after wifi_send_data_time_ms + initial offset
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns);
@@ -195,17 +192,36 @@ void wifi_main()
             wifi_loop(); // Main WiFi loop
         }
         sleep_ms(10);
-
-        while (service_mode == SERVICE_MODE_UART)
-        {
-            uart_service_read_command();
-            if (config_data.response_rdy) uart_service_send_response();
-            tight_loop_contents();
-        }
     }
     
     cyw43_arch_deinit(); // Deinit CYW43 driver
     return;
+}
+
+static void wifi_init(void)
+{
+    if (cyw43_arch_init()) { // Initialize CYW43 WiFi driver
+        print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to initialize WiFi on core 1");
+        return;
+    }    
+    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Initialized WiFi on core 1");
+    cyw43_arch_enable_sta_mode(); // enable station mode
+    if (!global_configuration.wlan_mode)
+    {
+        cyw43_arch_lwip_begin();
+        dhcp_release_and_stop(cyw43_state.netif);
+        ip4_addr_t ip_addr;
+        ip4_addr_t gw_addr;
+        ip4_addr_t netmask;
+        ip4addr_aton(global_configuration.sta_ip, &ip_addr);
+        ip4addr_aton(global_configuration.sta_gw, &gw_addr);
+        ip4addr_aton(global_configuration.sta_mask, &netmask);
+
+        netif_set_addr(cyw43_state.netif, &ip_addr, &netmask, &gw_addr);
+        cyw43_arch_lwip_end();
+    }
+    netif_set_hostname(cyw43_state.netif, global_configuration.host_name);
+    cyw43_wifi_pm(&cyw43_state, CYW43_NO_POWERSAVE_MODE);
 }
 
 static void wifi_loop(void)

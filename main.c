@@ -104,9 +104,23 @@ int init(void)
 
     svc_pin_init(); // Initialize service mode pin
     rtc_init(); // Initialize RTC
+    gfx_pack_init(blight_brightness); // initialize display
+
+    check_svc_mode();
+    process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
+
+    memory_timer = make_timeout_time_ms(1000);
+
+    update_display_buffer = true; // Redraw display
+    multicore_launch_core1(core1_main); // Launch second core
+    watchdog_enable(3000, true); // 3 sec watchdog
+
+    while (service_mode == SERVICE_MODE_UART) // If in UART service mode do main loop without initialization
+    {
+        loop();
+    }
 
     if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
-    gfx_pack_init(blight_brightness); // initialize display
     sensors_init_all(); // initialize sensors
 
     soap_init(channels1); // Initialize SOAP channels
@@ -114,14 +128,7 @@ int init(void)
     soap_init_general(&channel01G, &hyt271.temperature, "Tester_T", &hyt271.state, MEASURED_VALUE_T, 1, channels2);
     soap_init_general(&channel02G, &hyt271.humidity, "Tester_RH", &hyt271.state, MEASURED_VALUE_RH, 2, channels2);
 
-    process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
-
-    memory_timer = make_timeout_time_ms(1000);
-
-    update_display_buffer = true; // Redraw display
-    multicore_launch_core1(core1_main); // Launch second core
-    sleep_ms(1000); // Init wait
-    watchdog_enable(3000, false); // 3 sec watchdog
+    sleep_ms(10); // Init wait
     return SUCCESS;
 }
 
