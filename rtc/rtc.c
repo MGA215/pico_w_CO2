@@ -5,6 +5,8 @@
 #include "common/shared.h"
 #include "timeconst.h"
 
+#define RTC_ADDR 0x68
+
 // RTC structure
 static ds3231_rtc_t rtc;
 
@@ -25,7 +27,17 @@ static int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt
 
 void rtc_init(void)
 {
-    ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initialize DS3231 module
+    rtc.i2c_port = I2C_DEVICE; // Initialize DS3231 module
+    rtc.i2c_addr = RTC_ADDR;
+    rtc.i2c_sda_pin = I2C_DEVICE_SDA;
+    rtc.i2c_scl_pin = I2C_DEVICE_SCL;
+
+    i2c_init(I2C_DEVICE, I2C_DEVICE_FERQ);
+    gpio_set_function(I2C_DEVICE_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_DEVICE_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_DEVICE_SDA);
+    gpio_pull_up(I2C_DEVICE_SCL);
+    // ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initialize DS3231 module
     rtc_time = make_timeout_time_ms(rtc_read_interval_ms); // Read time in 250 ms
 }
 

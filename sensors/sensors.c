@@ -222,14 +222,12 @@ void sensors_init_all()
     watchdog_update();
 
     // Initialize HYT271 values
-    hyt271.meas_state = MEAS_STARTED;
+    hyt271.meas_state = MEAS_FINISHED;
     hyt271.state = ERROR_NO_MEAS;
     hyt271.humidity = 0;
     hyt271.temperature = 0;
     memset(hyt271.humidity_raw, 0x00, 2);
     memset(hyt271.temperature_raw, 0x00, 2);
-    hyt271_get_value();
-    watchdog_update();
 
     sensor_start_measurement_time = make_timeout_time_us(global_configuration.meas_int * 1000); // Set measurement start timer
     set_power(false, false);
@@ -474,6 +472,8 @@ static bool sensors_start_measurement(void)
                 sensors[i].init_count = 0;
             }
         }       
+        hyt271.wake_time = get_absolute_time();
+        hyt271.meas_state = MEAS_STARTED;
         return true; 
     }
     return false;
@@ -598,6 +598,21 @@ static bool sensors_verify_read_config(uint8_t sensor_index)
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i mismatch", sensor_index);
         if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
         {
+            config.co2_en = sensors[sensor_index].config.co2_en; // Copy sensor configuration that is not saved to the sensor itself
+            config.temp_en = sensors[sensor_index].config.temp_en;
+            config.RH_en = sensors[sensor_index].config.RH_en;
+            config.pressure_en = sensors[sensor_index].config.pressure_en;
+            config.ext_pressure_comp = sensors[sensor_index].config.ext_pressure_comp;
+            config.power_12V = sensors[sensor_index].config.power_12V;
+            config.power_5V = sensors[sensor_index].config.power_5V;
+            config.power_continuous = sensors[sensor_index].config.power_continuous;
+            config.power_global_control = sensors[sensor_index].config.power_global_control;
+            config.sensor_active = sensors[sensor_index].config.sensor_active;
+            config.sensor_IIC = sensors[sensor_index].config.sensor_IIC;
+            config.sensor_on_off = sensors[sensor_index].config.sensor_on_off;
+            config.sensor_ord = sensors[sensor_index].config.sensor_ord;
+            config.sensor_power_up_time = sensors[sensor_index].config.sensor_power_up_time;
+            config.sensor_type = sensors[sensor_index].config.sensor_type;            
             memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
         }
         return false;
@@ -895,6 +910,7 @@ static bool sensors_mux_to_sensor(uint8_t sensor_index)
 bool sensors_is_measurement_finished(void)
 {
     if (ms5607.meas_state != MEAS_FINISHED) return false;
+    if (hyt271.meas_state != MEAS_FINISHED || !is_at_the_end_of_time(hyt271.wake_time)) return false;
     for (int i = 0; i < 8; i++)
     {
         if (!sensors[i].config.sensor_active) continue;

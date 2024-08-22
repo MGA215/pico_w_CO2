@@ -41,6 +41,7 @@ void hyt271_get_value()
         }
         case MEAS_READ_VALUE:
         {
+            sleep_us(1);
             if ((ret = i2c_read_timeout_us(I2C_DEVICE, HYT271_ADDR, tmp_buffer, 4, false, I2C_TIMEOUT_US)) < 0) // Read measurement
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to read measurement data: %i", ret);

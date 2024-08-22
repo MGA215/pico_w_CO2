@@ -17,18 +17,18 @@
 #define SW_VERSION_MAJOR 1
 #define SW_VERSION_MINOR 0
 #define SW_VERSION_PATCH 2
-#define SW_VERSION_BUILD 0
+#define SW_VERSION_BUILD 2
 
 #define CONNECTED_SENSORS 8
 
-#define I2C_BAUDRATE 40000
+#define I2C_FREQ 40000
 #define I2C_TIMEOUT_US 12000
 #define I2C_SENSOR i2c0
 #define I2C_SDA 4
 #define I2C_SCL 5
 
 #define I2C_DEVICE i2c1
-
+#define I2C_DEVICE_FERQ 100000
 #define I2C_DEVICE_SDA 6
 #define I2C_DEVICE_SCL 7
 

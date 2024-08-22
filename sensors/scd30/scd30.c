@@ -291,19 +291,7 @@ static int32_t s30_write_config(sensor_config_t* config)
     sensor_config_t read_config;
     if ((ret = scd30_read_config(&read_config)) != 0) return ret; // Read config
 
-    if (config->enable_pressure_comp != read_config.enable_pressure_comp ||
-        (config->enable_pressure_comp && (config->pressure != read_config.pressure))) // Check pressure enable and value
-    {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing pressure");
-        if (config->enable_pressure_comp) // Pressure compensation enabled
-        {
-            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
-        }
-        else // Pressure compensation disabled
-        {
-            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
-        }
-    }
+    
 
     if (read_config.meas_period != config->meas_period) // Check mesaurement period
     {
@@ -334,6 +322,19 @@ static int32_t s30_write_config(sensor_config_t* config)
         else // Altitude compensation disabled
         {
             if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret; // Disable altitude compensation
+        }
+    }
+    if (config->enable_pressure_comp != read_config.enable_pressure_comp ||
+        (config->enable_pressure_comp && (config->pressure != read_config.pressure)) || !config->single_meas_mode) // Check pressure enable and value
+    {
+        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing pressure");
+        if (config->enable_pressure_comp) // Pressure compensation enabled
+        {
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
+        }
+        else // Pressure compensation disabled
+        {
+            if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
         }
     }
 

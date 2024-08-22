@@ -77,7 +77,7 @@ static uint8_t debug_cm1107n = 3;
 
 uint8_t debug_wifi = 3;
 uint8_t debug_tcp_client = 3;
-uint8_t debug_tcp_server = 3;
+uint8_t debug_tcp_server = 5;
 uint8_t debug_tcp_dns = 3;
 
 uint8_t debug_core0 = 6;

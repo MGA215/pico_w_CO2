@@ -154,6 +154,7 @@ void update()
 {
     update_display_buffer = rtc_update(); // Update RTC & refresh display
     read_inputs(); // Updates button inputs
+    // printf("%i\n", debug);
     if (update_display_buffer)
     {
         write_display(); // Writes data to be displayed to display frame buffer
