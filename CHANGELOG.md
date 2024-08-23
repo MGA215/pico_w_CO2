@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Problem when entering service mode the log stopped working
+- Problem when entering service mode using tester program the log stopped working
 
 ## [1.0.3] - 2024-08-23
 

@@ -29,15 +29,15 @@ void uart_service_init(void)
 void uart_service_read_command(void)
 {
     uint32_t ptr = 0;
-    if (uart_is_readable_within_us(UART_INST, 1000))
+    if (uart_is_readable_within_us(UART_INST, MUTEX_TIMEOUT_MS))
     {
         do
         {
             buffer_recv[ptr++] = uart_getc(UART_INST);
             if (ptr >= (360 - 1)) break;
-        } while (uart_is_readable_within_us(UART_INST, 1000));
+        } while (uart_is_readable_within_us(UART_INST, MUTEX_TIMEOUT_MS));
         buffer_recv[ptr] = '\0';
-        if (mutex_enter_timeout_ms(&config_data.command_mutex, 1000))
+        if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS))
         {
             uint32_t len = ptr;
             decodeCOBS(buffer_recv, config_data.command, &len);
@@ -58,7 +58,7 @@ void uart_service_read_command(void)
 void uart_service_send_response(void)
 {
     uint16_t response_len;
-    if (mutex_enter_timeout_ms(&config_data.response_mutex, 1000))
+    if (mutex_enter_timeout_ms(&config_data.response_mutex, MUTEX_TIMEOUT_MS))
     {
         encodeCOBS(config_data.response, buffer_sent, &config_data.response_len);
         response_len = config_data.response_len;

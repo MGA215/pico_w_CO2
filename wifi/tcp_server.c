@@ -176,7 +176,7 @@ void tcp_server_run(void)
         {
             if (config_data.response_rdy)
             {
-                mutex_enter_timeout_ms(&config_data.response_mutex, 1000); // Safe encode copy response
+                mutex_enter_timeout_ms(&config_data.response_mutex, MUTEX_TIMEOUT_MS); // Safe encode copy response
                 encodeCOBS(config_data.response, buffer_sent, &config_data.response_len);
                 buffer_sent_len = config_data.response_len;
                 mutex_exit(&config_data.response_mutex);
@@ -293,7 +293,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
     }
     uint32_t frame_len = state->frame_index; // Copy frame length
 
-    if (mutex_enter_timeout_ms(&config_data.command_mutex, 1000)) // Safe decode copy command
+    if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS)) // Safe decode copy command
     {
         // encodeCOBS(buffer_recv_frame, config_data.command, &frame_len);
         if (decodeCOBS(buffer_recv_frame, config_data.command, &frame_len) != 0) // Decode message

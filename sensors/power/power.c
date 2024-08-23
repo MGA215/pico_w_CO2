@@ -4,6 +4,9 @@
 #include "common/debug.h"
 #include "error_codes.h"
 
+#define POWER_EN_ADDR 0x39
+#define POWER_5V_ADDR 0x38
+
 int32_t power_en_set_vector_affected_sensors(uint8_t affected_sensors_vector, bool on)
 {
     uint8_t power_vector;

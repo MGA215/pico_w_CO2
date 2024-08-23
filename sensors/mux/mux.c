@@ -9,6 +9,8 @@
  * 
  */
 
+#define MUX_ADDR 0x70
+
 #include "mux.h"
 #include "hardware/i2c.h"
 #include "common/debug.h"

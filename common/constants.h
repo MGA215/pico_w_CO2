@@ -13,38 +13,46 @@
 
 #include "pico/stdlib.h"
 
-
+// Software version
 #define SW_VERSION_MAJOR 1
 #define SW_VERSION_MINOR 0
 #define SW_VERSION_PATCH 4
 #define SW_VERSION_BUILD 0
 
+// Number of max sensors connected to the board
 #define CONNECTED_SENSORS 8
 
+// Sensor I2C bus
 #define I2C_FREQ 40000
 #define I2C_TIMEOUT_US 12000
 #define I2C_SENSOR i2c0
-#define I2C_SDA 4
-#define I2C_SCL 5
+#define I2C_SENSOR_SDA 4
+#define I2C_SENSOR_SCL 5
 
+// Other devices I2C bus
 #define I2C_DEVICE i2c1
 #define I2C_DEVICE_FERQ 100000
 #define I2C_DEVICE_SDA 6
 #define I2C_DEVICE_SCL 7
 
+// Sensor UART
 #define UART_SENSOR_TXD 8
 #define UART_SENSOR_RXD 9
 
+// 12 V power for sensors enable pin
 #define VOLTAGE_12V_EN 11
 
+// Buttons
 #define GFX_PACK_BUTTON_A 12
 #define GFX_PACK_BUTTON_B 13
 #define GFX_PACK_BUTTON_C 14
 #define GFX_PACK_BUTTON_D 15
 #define GFX_PACK_BUTTON_E 22
 
+// Multiplexer reset pin
 #define MUX_RST 16
 
+// Display
 #define GFX_PACK_SPI spi0
 #define GFX_PACK_SPI_BAUDRATE 10000000
 #define GFX_PACK_BACKLIGHT_PIN 10
@@ -55,17 +63,17 @@
 #define GFX_PACK_RESET_PIN 21
 #define GFX_PACK_MASTER_IN_SLAVE_OUT_PIN 2147483647
 
+// Sensor EN pins
 #define EN_1 26
 #define EN_2 27
 
+// UART service mode pin
 #define SVC_MODE 28
 
-#define MUX_ADDR 0x70
-#define POWER_EN_ADDR 0x39
-#define POWER_5V_ADDR 0x38
-
+// Mutex default timeout value
 #define MUTEX_TIMEOUT_MS 1000
 
+// Buffer sizes
 #define MAX_SOAP_SIZE 4096
 #define CONFIG_SEND_BUFFER_SIZE 4096
 #define CONFIG_RECVD_BUFFER_SIZE 300 + 60
