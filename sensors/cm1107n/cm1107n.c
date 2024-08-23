@@ -141,8 +141,8 @@ void cm1107n_get_value(sensor_t* cm1107n)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas started");
             cm_power(cm1107n, true); // Power on
-            cm1107n->wake_time = make_timeout_time_ms(1000); // Timeout in 1 s - power stabilization
-            cm1107n->state = SUCCESS;
+            if (!cm1107n->config.power_continuous) cm1107n->wake_time = make_timeout_time_ms(cm1107n->config.sensor_power_up_time); // Time for power stabilization
+            if (cm1107n->state) cm1107n->state = ERROR_NO_MEAS;
             cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next FSM state - trigger measurement
             cm1107n->timeout_iterator = 0;
             return;

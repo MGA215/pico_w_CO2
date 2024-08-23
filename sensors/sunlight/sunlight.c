@@ -202,10 +202,10 @@ void sunlight_get_value(sensor_t* sunlight)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Meas started");
             sl_power(sunlight, true); // Power on
-            sunlight->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
+            if (!sunlight->config.power_continuous) sunlight->wake_time = make_timeout_time_ms(sunlight->config.sensor_power_up_time); // Time for power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunlight->timeout_iterator = 0; // Initialize iterator value
-            sunlight->state = SUCCESS;
+            if (sunlight->state) sunlight->state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode

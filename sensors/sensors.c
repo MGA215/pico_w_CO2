@@ -393,6 +393,10 @@ void sensors_read_all(void)
             sensors_measurement_ready = false;
             before_measurement = false; // Not before first measurement anymore
             set_power(true, false);
+            for (int i = 0; i < 8; i++) // Initialize measurement cycle variables
+            {
+                sensors[i].err_iter_counter = 0;
+            }
         }
         else // Safety mechanism to unblock measurement after 20 unsuccessfull attempts to start new measurement
         {
@@ -406,6 +410,7 @@ void sensors_read_all(void)
                     sensors[i].meas_state = MEAS_FINISHED;
                     sensors[i].wake_time = at_the_end_of_time;
                     sensors[i].state = ERROR_SENSOR_INIT_FAILED; // Cancel initialization
+                    sensors[i].err_total_counter++;
                 }
             }
         }
@@ -504,6 +509,15 @@ static bool sensors_read(uint8_t sensor_index)
             if (++sensors[sensor_index].init_count > 2) break; // Maximum of 2 initialization attempts in one measurement cycle
             if (!sensors_init(sensor_index)) continue; // Initialize sensor
             sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
+        }
+        if (!sensors[sensor_index].config.verified)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                watchdog_update();
+                if (sensors_verify_read_config(sensor_index)) break; // Verify config
+                sleep_ms(10);
+            }
         }
 
         if (sensors[sensor_index].state == SUCCESS || sensors[sensor_index].state == ERROR_NO_MEAS) // If sensor initialized
@@ -606,25 +620,25 @@ static bool sensors_verify_read_config(uint8_t sensor_index)
     if (!sensors_compare_config(&sensors[sensor_index].config, &config) && !ret) // Compare config with the one set
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i mismatch", sensor_index);
-        if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
-        {
-            config.co2_en = sensors[sensor_index].config.co2_en; // Copy sensor configuration that is not saved to the sensor itself
-            config.temp_en = sensors[sensor_index].config.temp_en;
-            config.RH_en = sensors[sensor_index].config.RH_en;
-            config.pressure_en = sensors[sensor_index].config.pressure_en;
-            config.ext_pressure_comp = sensors[sensor_index].config.ext_pressure_comp;
-            config.power_12V = sensors[sensor_index].config.power_12V;
-            config.power_5V = sensors[sensor_index].config.power_5V;
-            config.power_continuous = sensors[sensor_index].config.power_continuous;
-            config.power_global_control = sensors[sensor_index].config.power_global_control;
-            config.sensor_active = sensors[sensor_index].config.sensor_active;
-            config.sensor_IIC = sensors[sensor_index].config.sensor_IIC;
-            config.sensor_on_off = sensors[sensor_index].config.sensor_on_off;
-            config.sensor_ord = sensors[sensor_index].config.sensor_ord;
-            config.sensor_power_up_time = sensors[sensor_index].config.sensor_power_up_time;
-            config.sensor_type = sensors[sensor_index].config.sensor_type;            
-            memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
-        }
+        // if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
+        // {
+        //     config.co2_en = sensors[sensor_index].config.co2_en; // Copy sensor configuration that is not saved to the sensor itself
+        //     config.temp_en = sensors[sensor_index].config.temp_en;
+        //     config.RH_en = sensors[sensor_index].config.RH_en;
+        //     config.pressure_en = sensors[sensor_index].config.pressure_en;
+        //     config.ext_pressure_comp = sensors[sensor_index].config.ext_pressure_comp;
+        //     config.power_12V = sensors[sensor_index].config.power_12V;
+        //     config.power_5V = sensors[sensor_index].config.power_5V;
+        //     config.power_continuous = sensors[sensor_index].config.power_continuous;
+        //     config.power_global_control = sensors[sensor_index].config.power_global_control;
+        //     config.sensor_active = sensors[sensor_index].config.sensor_active;
+        //     config.sensor_IIC = sensors[sensor_index].config.sensor_IIC;
+        //     config.sensor_on_off = sensors[sensor_index].config.sensor_on_off;
+        //     config.sensor_ord = sensors[sensor_index].config.sensor_ord;
+        //     config.sensor_power_up_time = sensors[sensor_index].config.sensor_power_up_time;
+        //     config.sensor_type = sensors[sensor_index].config.sensor_type;            
+        //     memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
+        // }
         return false;
     }
     else if (!ret)
@@ -683,7 +697,7 @@ static int32_t sensors_read_config(sensor_config_t* configuration, uint8_t senso
     }
     else
     {
-        print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read configuration %i", sensor_index);
+        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read configuration %i", sensor_index);
         configuration->co2_en = sensors[sensor_index].config.co2_en; // Set some sw parameters
         configuration->temp_en = sensors[sensor_index].config.temp_en;
         configuration->RH_en = sensors[sensor_index].config.RH_en;

@@ -9,11 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Configuration verification after sensor reinit
+
 ### Changed
+
+- Timer after sensor power-up
 
 ### Removed
 
 ### Fixed
+
+- Fixed bug counting no measurement taken as an error
+- Fixed bug with sensor not zeroing its iteration error counter causing the sensor to stop measurement
 
 ## [1.0.5] - 2024-08-23
 

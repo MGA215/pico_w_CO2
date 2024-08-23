@@ -131,7 +131,11 @@ int32_t ms5607_get_adc_val(int32_t channel, uint8_t* buffer, uint8_t buffer_leng
 
 void ms5607_get_value(void)
 {
-    if (ms5607.meas_state != MEAS_STARTED) return;
+    if (ms5607.meas_state != MEAS_STARTED)
+    {
+        ms5607.meas_state = MEAS_FINISHED;
+        return;
+    }
     int32_t i, ret;
     uint32_t d1, d2;
     uint8_t temp_buffer[3];

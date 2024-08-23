@@ -107,7 +107,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas finished");
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
-            cozir_lp3->state = SUCCESS;
+            if (cozir_lp3->state) cozir_lp3->state = ERROR_NO_MEAS;
             cozir_lp3->timeout_iterator = 0; // Initialize iterator
             return;
         }
@@ -115,7 +115,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
             lp3_power(cozir_lp3, true);
-            cozir_lp3->wake_time = make_timeout_time_ms(2000);
+            if (!cozir_lp3->config.power_continuous) cozir_lp3->wake_time = make_timeout_time_ms(cozir_lp3->config.sensor_power_up_time); // Time for power stabilization
             cozir_lp3->meas_state = MEAS_READ_STATUS;
             return;
         }

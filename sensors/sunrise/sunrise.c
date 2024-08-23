@@ -203,10 +203,10 @@ void sunrise_get_value(sensor_t* sunrise)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Meas started");
             sr_power(sunrise, true); // Power on
-            sunrise->wake_time = make_timeout_time_ms(100); // Timer 100 ms - power stabilization
+            if (!sunrise->config.power_continuous) sunrise->wake_time = make_timeout_time_ms(sunrise->config.sensor_power_up_time); // Time for power stabilization
             sunrise->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunrise->timeout_iterator = 0; // Initialize iterator value
-            sunrise->state = SUCCESS;
+            if (sunrise->state) sunrise->state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -217,7 +217,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (ret != 0) // On invalid read
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = ret; // Output return state
                 return;
@@ -225,7 +225,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (!((sunrise->config.single_meas_mode && data == 0x01) || (!sunrise->config.single_meas_mode && data == 0x00))) // If wrong mode set
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = SUNRISE_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
@@ -261,7 +261,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (ret != 0) // On invalid read
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = ret; // Output return state
                 return;
@@ -278,7 +278,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (ret != 0) // On invalid read
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = ret; // Output return state
                 return;
@@ -286,7 +286,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (sunrise->timeout_iterator++ > (sunrise->config.meas_samples)) // If data not present for 4* the measurement time needed
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = SUNRISE_ERROR_DATA_READY_TIMEOUT;
                 return;
@@ -297,7 +297,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (ret != 0 && ret != SUNRISE_ERROR_DATA_READY_TIMEOUT) // If error & not timeout error
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
-                sunrise->co2 = INT16_MAX; // Set CO2 to unknown
+                sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
                 sunrise->state = ret; // Output return state
                 return;

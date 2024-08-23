@@ -110,9 +110,9 @@ void cdm7162_get_value(sensor_t* cdm7162)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas started");
             cdm_power(cdm7162, true); // Power on
-            cdm7162->wake_time = make_timeout_time_ms(750); // can be modified
+            if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_ms(cdm7162->config.sensor_power_up_time); // Time for power stabilization
             cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
-            cdm7162->state = SUCCESS;
+            if (cdm7162->state) cdm7162->state = ERROR_NO_MEAS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }

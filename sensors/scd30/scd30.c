@@ -157,10 +157,10 @@ void scd30_get_value(sensor_t* scd30)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Meas start");
             s30_power(scd30, true); // Power off
-            scd30->wake_time = make_timeout_time_ms(1500); // Time for power stabilization
+            if (!scd30->config.power_continuous) scd30->wake_time = make_timeout_time_ms(scd30->config.sensor_power_up_time); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             scd30->timeout_iterator = 0; // Initialize read status timeout iterator
-            scd30->state = SUCCESS;
+            if (scd30->state) scd30->state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -207,20 +207,16 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            // uint32_t val = ntoh16(*( (uint32_t*)&buf[0])); // Convert co2 to uint32_t bytes
-            // scd30->co2 = byte2float(val); // Convert to float
             uint32_t val = 0;
             val |= ntoh16(buf[0]) << 0;
             val |= ntoh16(buf[1]) << 16;
             scd30->co2 = byte2float((val));
-            // val = ntoh16(*( (uint32_t*)&buf[2])); // Convert temperature to uint32_t bytes
-            // scd30->temperature = byte2float(val); // Convert to float
+
             val = 0;
             val |= ntoh16(buf[2]) << 0;
             val |= ntoh16(buf[3]) << 16;
             scd30->temperature = byte2float((val));
-            // val = ntoh16(*( (uint32_t*)&buf[4])); // Convert humidity to uint32_t bytes
-            // scd30->humidity = byte2float(val); // Convert to float
+
             val = 0;
             val |= ntoh16(buf[4]) << 0;
             val |= ntoh16(buf[5]) << 16;
@@ -324,10 +320,10 @@ static int32_t s30_write_config(sensor_config_t* config)
             if ((ret = scd30_write_value(CMD_ALTITUDE_COMP, 0)) != 0) return ret; // Disable altitude compensation
         }
     }
-    if (config->enable_pressure_comp != read_config.enable_pressure_comp ||
-        (config->enable_pressure_comp && (config->pressure != read_config.pressure)) || !config->single_meas_mode) // Check pressure enable and value
+    if ((config->enable_pressure_comp != read_config.enable_pressure_comp ||
+        (config->enable_pressure_comp && (config->pressure != read_config.pressure))) || !config->single_meas_mode) // Check pressure enable and value
     {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "Config - Writing pressure");
+        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD30, "Starting continuous measurement & writing pressure");
         if (config->enable_pressure_comp) // Pressure compensation enabled
         {
             if ((ret = scd30_write_value(CMD_START_CONT_MEAS, config->pressure)) != 0) return ret; // Write pressure
@@ -335,6 +331,11 @@ static int32_t s30_write_config(sensor_config_t* config)
         else // Pressure compensation disabled
         {
             if ((ret = scd30_write_value(CMD_START_CONT_MEAS, 0)) != 0) return ret; // Disable pressure compensation
+        }
+        if (config->single_meas_mode)
+        {
+            if ((ret = scd30_write_command(CMD_STOP_CONT_MEAS)) != 0) return ret; // Stop continuous measurement
+            print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_SCD30, "Stopping continuous measurement");
         }
     }
 

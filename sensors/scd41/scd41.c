@@ -187,9 +187,9 @@ void scd41_get_value(sensor_t* scd41)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Meas started");
             s41_power(scd41, true); // Power off
-            scd41->wake_time = make_timeout_time_ms(30); // Time for power stabilization
+            if (!scd41->config.power_continuous) scd41->wake_time = make_timeout_time_ms(scd41->config.sensor_power_up_time); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
-            scd41->state = SUCCESS;
+            if (scd41->state) scd41->state = ERROR_NO_MEAS;
             scd41->timeout_iterator = 0; // Initialize read status timeout iterator
             scd41->measurement_iterator = 0; // Initialize read single measurement iterator
             return;

@@ -174,9 +174,6 @@ static int32_t ee_write(uint16_t addr, uint16_t value)
 
     commandBuffer[0] = EE895_ADDR; // Slave address
     commandBuffer[1] = 0x06; // Write multiple holding registers
-    // *( (uint16_t*)&commandBuffer[2]) = ntoh16(addr); // Convert reg address to big endian
-    // *( (uint16_t*)&commandBuffer[4]) = ntoh16(value); // Convert number of registers to big endian
-    // *( (uint16_t*)&commandBuffer[6]) = ee_modbus_crc(commandBuffer, 6); // CRC computation
 
     commandBuffer[2] = (addr & 0xFF00) >> 8; // Convert reg address to big endian
     commandBuffer[3] = (addr & 0x00FF) >> 0;
@@ -251,14 +248,14 @@ void ee895_get_value(sensor_t* ee895)
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
             ee_power(ee895, true); // Power on
-            ee895->wake_time = make_timeout_time_ms(750); // Time for power stabilization
+            if (!ee895->config.power_continuous) ee895->wake_time = make_timeout_time_ms(ee895->config.sensor_power_up_time); // Time for power stabilization
             if (ee895->config.single_meas_mode) 
             {
                 ee895->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // If single measurement mode - wait for trigger ready
             }
             else ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
             ee895->timeout_iterator = 0; // Initialize read status timeout iterator
-            ee895->state = SUCCESS;
+            if (ee895->state) ee895->state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
