@@ -11,7 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added extra delay for EEPROM reading
+
 ### Removed
+
+### Fixed
+
+- Reverted power vector nibble switch
+- Fixed bug with pressure sensor going to SUCCESS state while not connected
 
 ## [1.0.4] - 2024-08-23
 

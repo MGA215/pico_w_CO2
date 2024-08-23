@@ -231,6 +231,7 @@ void ms5607_get_value(void)
     ms5607.pressure = (float)press;
     ms5607.temperature = (float)temp;
     ms5607.meas_state = MEAS_FINISHED;
+    ms5607.state = SUCCESS;
 
     return;
 }

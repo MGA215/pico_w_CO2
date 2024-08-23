@@ -60,7 +60,7 @@ static uint8_t debug_display = 0;
 static uint8_t debug_gfx = 0;
 static uint8_t debug_ram = 0;
 static uint8_t debug_service_comm = 4;
-static uint8_t debug_eeprom = 3;
+static uint8_t debug_eeprom = 4;
 
 static uint8_t debug_mux = 3;
 static uint8_t debug_power = 3;

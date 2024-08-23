@@ -88,4 +88,12 @@ extern uint8_t hex2dec(uint8_t hex_val);
  */
 extern uint8_t dec2hex(uint8_t dec_val);
 
+/**
+ * @brief Reverts bits in a byte (last bit becomes first one)
+ * 
+ * @param b Byte to reverse
+ * @return uint8_t Reversed byte
+ */
+extern uint8_t reverse_bits_in_byte(uint8_t b);
+
 #endif

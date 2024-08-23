@@ -21,7 +21,7 @@ int32_t eeprom_read(uint32_t addr, uint8_t* buffer, uint16_t num_bytes)
 
     if ((ret = i2c_write_timeout_us(I2C_DEVICE, i2c_addr, addr_bytes, 2, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address to read from
 
-    if ((ret = i2c_read_timeout_us(I2C_DEVICE, i2c_addr, buffer, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read data
+    if ((ret = i2c_read_timeout_us(I2C_DEVICE, i2c_addr, buffer, num_bytes, false, I2C_TIMEOUT_US * 8)) < 0) return ret; // Read data
     return SUCCESS;
 }
 
@@ -38,7 +38,7 @@ int32_t eeprom_write(uint32_t addr, uint8_t* buffer, uint16_t num_bytes)
 
     memcpy(&write_buffer[2], buffer, num_bytes); // Copy data to write
 
-    if ((ret = i2c_write_timeout_us(I2C_DEVICE, i2c_addr, write_buffer, num_bytes + 2, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Write data
+    if ((ret = i2c_write_timeout_us(I2C_DEVICE, i2c_addr, write_buffer, num_bytes + 2, false, I2C_TIMEOUT_US * 8)) < 0) return ret; // Write data
     busy_wait_ms(10); // Wait for data write in EEPROM
     return SUCCESS;
 }

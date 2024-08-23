@@ -93,7 +93,7 @@ int init(void)
     int32_t ret;
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
 
-    if (watchdog_enable_caused_reboot()) print_ser_output(SEVERITY_FATAL, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Reboot caused by watchdog");
+    if (watchdog_enable_caused_reboot()) print_ser_output(SEVERITY_WARN, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Reboot caused by watchdog");
     else print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Booting clean");
 
     if (!mutex_is_initialized(&soap_data[0].data_mutex)) // Initializes mutexes for soap message buffer

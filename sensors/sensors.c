@@ -410,13 +410,16 @@ void sensors_read_all(void)
     }
     if (!sensors_is_measurement_finished()) // If measurement running
     {
-        for (int i = 0; i < 2; i++) // Try pressure measurement twice
+        if (ms5607.meas_state != MEAS_FINISHED)
         {
-            ms5607_get_value(); // Read pressure sensor
-            if (!ms5607.state) break; // On no error break
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read sensor: %i", ms5607.state);
-            ms5607.state = i != 1 ? MEAS_STARTED : MEAS_FINISHED; // If on next iteration should try another pressure measurement
-            sleep_ms(2);
+            for (int i = 0; i < 2; i++) // Try pressure measurement twice
+            {
+                ms5607_get_value(); // Read pressure sensor
+                if (!ms5607.state) break; // On no error break
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read sensor: %i", ms5607.state);
+                ms5607.meas_state = i != 1 ? MEAS_STARTED : MEAS_FINISHED; // If on next iteration should try another pressure measurement
+                sleep_ms(2);
+            }
         }
 
         if (time_reached(hyt271.wake_time)) // If should read HYT271
