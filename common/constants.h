@@ -17,7 +17,7 @@
 #define SW_VERSION_MAJOR 1
 #define SW_VERSION_MINOR 0
 #define SW_VERSION_PATCH 4
-#define SW_VERSION_BUILD 3
+#define SW_VERSION_BUILD 4
 
 // Number of max sensors connected to the board
 #define CONNECTED_SENSORS 8

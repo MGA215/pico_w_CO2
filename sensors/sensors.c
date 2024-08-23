@@ -226,6 +226,7 @@ void sensors_init_all()
     hyt271.state = ERROR_NO_MEAS;
     hyt271.humidity = 0;
     hyt271.temperature = 0;
+    hyt271.wake_time = at_the_end_of_time;
     memset(hyt271.humidity_raw, 0x00, 2);
     memset(hyt271.temperature_raw, 0x00, 2);
 
@@ -374,6 +375,7 @@ static int32_t sensors_init_sensor_type(sensor_t* sensor, sensor_config_t* confi
 
 void sensors_read_all(void)
 {
+    static uint8_t sensor_index = 0;
     if (time_reached(sensor_start_measurement_time)) // Should new measurement be started
     {
         static int counter = 0;
@@ -434,18 +436,23 @@ void sensors_read_all(void)
             }
         }
 
-        for (uint8_t sensor_index = 0; sensor_index < 8; sensor_index++) // Iterate sensor
+        // for (uint8_t sensor_index; sensor_index < 8; sensor_index++) // Iterate sensor
+        // {
+        
+        if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
         {
-            if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
+            watchdog_update(); // Update watchdog - just in case
+            if (!sensors_read(sensor_index)) // If reading failed
             {
-                watchdog_update(); // Update watchdog - just in case
-                if (!sensors_read(sensor_index)) // If reading failed
-                {
-                    if (sensors[sensor_index].err_iter_counter == 2) continue; // If already in faulty state
-                    sensors[sensor_index].err_iter_counter++; // Increment continuous error counter
-                }
+                // if (sensors[sensor_index].err_iter_counter == 2) continue; // If already in faulty state
+                sensors[sensor_index].err_iter_counter++; // Increment continuous error counter
             }
         }
+        if (sensors[sensor_index].err_iter_counter == 2) sensors[sensor_index].meas_state = MEAS_FINISHED; // Force quit sensor measurement if 2 continuous errors
+        sensor_index++;
+        if (sensor_index == 8) sensor_index = 0;
+            
+        // }
 
         if (sensors_is_measurement_finished()) // If all measurements finished - turn off power globally if possible
         {
