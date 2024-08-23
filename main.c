@@ -363,9 +363,10 @@ void check_svc_mode(void)
 {
     bool svc_pin_state = gpio_get(SVC_MODE) ? true : false; // Get SVC mode pin state
     bool service_mode_active = service_mode ? true : false;
-    if (svc_pin_state == service_mode_active) // If state is the same as service mode (change detected)
+    if ((svc_pin_state == service_mode_active && service_mode != SERVICE_MODE_ETHERNET) || // If state is the same as service mode (change detected)
+        (!svc_pin_state && service_mode == SERVICE_MODE_ETHERNET)) // or if in ethernet svc mode and pin is low
     {
-        static uint8_t debug_severity_state;
+        static uint8_t debug_severity_state = 0;
         if (!svc_pin_state) // Service mode enter
         {
             debug_severity_state = debug; // Save debug severity level
