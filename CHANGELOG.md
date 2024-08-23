@@ -9,13 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Fixed
+
+## [1.0.6] - 2024-08-23
+
+### Added
+
 - Configuration verification after sensor reinit
 
 ### Changed
 
 - Timer after sensor power-up
-
-### Removed
 
 ### Fixed
 
