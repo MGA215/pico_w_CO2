@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SUNRISE and SUNLIGHT sensors meter control register not being set properly
+- Removed option to set CO2 offset for Sensor 0 via configuration
+- Added support for reinit on error toggle
+- fixed SUNRISE and SUNLIGHT sensor reset only on writing to EEPROM
+- fixed SUNRISE and SUNLIGHT sensor pressure configuration to be written after reset
+
 ## [1.0.6] - 2024-08-23
 
 ### Added

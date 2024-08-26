@@ -458,15 +458,9 @@ int32_t ee895_read_config(sensor_config_t* config)
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
     memcpy(&config->meas_period, &buf[0], 2);
     config->meas_period = ntoh16(config->meas_period) / 10; // Save measurement interval
-    // config->meas_period = (uint16_t)ntoh16(*( (uint16_t*)&buf[0])) / 10;
 
     memcpy(&config->filter_coeff, &buf[2], 2);
     config->filter_coeff = ntoh16(config->filter_coeff); // Save measurement interval
-    //config->filter_coeff = (uint16_t)ntoh16(*( (uint16_t*)&buf[2])); // Save filter coefficient
-
-    memcpy(&config->co2_offset, &buf[4], 2);
-    config->co2_offset = ntoh16(config->co2_offset); // Save measurement interval
-    // config->co2_offset = (int16_t)ntoh16(*( (uint16_t*)&buf[4])); // Save offset
 
     if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
     uint16_t val = 0;
@@ -491,11 +485,6 @@ static int32_t ee_write_config(sensor_config_t* config)
     if (read_config.filter_coeff != config->filter_coeff) { // If filter coeff changed
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing filter coefficient");
         if ((ret = ee895_write_reg(REG_MEAS_FILTER, config->filter_coeff)) != 0) return ret;
-    }
-    if (read_config.co2_offset != config->co2_offset) // If offset changed
-    {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing CO2 offset");
-        if ((ret = ee895_write_reg(REG_MEAS_OFFSET, (uint16_t)config->co2_offset)) != 0) return ret;
     }
     if (read_config.single_meas_mode != config->single_meas_mode) // If measurement mode changed
     {

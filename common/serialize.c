@@ -46,8 +46,6 @@ int32_t serializer_serialize(sensor_config_t* config, uint8_t* serialized, uint1
     if (config->single_meas_mode) measurement_vector |= (0b1 << 6);
     buf[8] = measurement_vector;
 
-    buf[9] = (config->co2_offset & 0x00FF) >> 0;
-    buf[10] = (config->co2_offset & 0xFF00) >> 8;
     uint32_t temp = float2byte(config->temperature_offset);
     buf[11] = (temp & 0x000000FF) >> 0;
     buf[12] = (temp & 0x0000FF00) >> 8;
@@ -128,9 +126,6 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
 
     config->meas_samples |= buf[0x14] << 0;
     config->meas_samples |= buf[0x15] << 8;
-
-    config->co2_offset |= buf[0x16] << 0;
-    config->co2_offset |= buf[0x17] << 8;
 
     config->pressure |= buf[0x18] << 0;
     config->pressure |= buf[0x19] << 8;

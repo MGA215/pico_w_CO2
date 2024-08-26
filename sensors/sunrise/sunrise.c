@@ -364,8 +364,6 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
         return ret;
     }
 
-    sunrise_reset(); // Reset sensor
-
     sr_power(sunrise, false); // Power off
     if (!ret)
     {
@@ -383,38 +381,30 @@ int sunrise_read_config(sensor_config_t* config)
     config->sensor_type = SUNRISE;
     if ((ret = sunrise_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
-    // config->meas_period = ntoh16(*( (uint16_t*)&buf[1]));
     memcpy(&config->meas_period, &buf[1], 2);
     config->meas_period = ntoh16(config->meas_period);
-    // config->meas_samples = ntoh16(*( (uint16_t*)&buf[3]));
     memcpy(&config->meas_samples, &buf[3], 2);
     config->meas_samples = ntoh16(config->meas_samples);
-    // config->abc_period = ntoh16(*( (uint16_t*)&buf[5]));
     memcpy(&config->abc_period, &buf[5], 2);
     config->abc_period = ntoh16(config->abc_period);
-    // config->abc_target_value = ntoh16(*( (uint16_t*)&buf[9]));
     memcpy(&config->abc_target_value, &buf[9], 2);
     config->abc_target_value = ntoh16(config->abc_target_value);
     config->filter_coeff = (uint16_t)buf[12];
 
     if ((ret = sunrise_read(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Read meter control register
-    config->enable_nRDY = data & 0b1 << 0; // Save meter control data
-    config->enable_abc = data & 0b1 << 1;
-    config->enable_static_IIR = data & 0b1 << 2;
-    config->enable_dynamic_IIR = data & 0b1 << 3;
-    config->enable_pressure_comp = data & 0b1 << 4;
-    config->invert_nRDY = data & 0b1 << 5;
-
-    if ((ret = sunrise_read(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret; // Read pressure register
-    // config->pressure = ntoh16(*( (uint16_t*)&buf[0])) / 10;
-    memcpy(&config->pressure, &buf[0], 2);
-    config->pressure = ntoh16(config->pressure) / 10;
+    config->enable_nRDY = !(data & 0b1 << 0); // Save meter control data
+    config->enable_abc = !(data & 0b1 << 1);
+    config->enable_static_IIR = !(data & 0b1 << 2);
+    config->enable_dynamic_IIR = !(data & 0b1 << 3);
+    config->enable_pressure_comp = !(data & 0b1 << 4);
+    config->invert_nRDY = !(data & 0b1 << 5);
 
     return SUCCESS;
 }
 
 static int sr_write_config(sensor_config_t* config)
 {
+    bool changed = false;
     int32_t ret;
     sensor_config_t read_config;
     if ((ret = sunrise_read_config(&read_config)) != 0) return ret; // Read SUNRISE config
@@ -428,14 +418,15 @@ static int sr_write_config(sensor_config_t* config)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "Config - Writing meter control");
         uint8_t data = 0; // meter control vector
-        data |= config->enable_nRDY;
-        data |= config->enable_abc << 1;
-        data |= config->enable_static_IIR << 2;
-        data |= config->enable_dynamic_IIR << 3;
-        data |= config->enable_pressure_comp << 4;
-        data |= config->invert_nRDY << 5;
+        data |= !config->enable_nRDY;
+        data |= !config->enable_abc << 1;
+        data |= !config->enable_static_IIR << 2;
+        data |= !config->enable_dynamic_IIR << 3;
+        data |= !config->enable_pressure_comp << 4;
+        data |= !config->invert_nRDY << 5;
 
         if ((ret = sunrise_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
+        changed = true;
     }
     if (read_config.meas_period != config->meas_period ||
         read_config.meas_samples != config->meas_samples ||
@@ -463,16 +454,24 @@ static int sr_write_config(sensor_config_t* config)
         command_buf[12] = (uint8_t)(config->filter_coeff);
 
         if ((ret = sunrise_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
+        changed = true;
     }
-
-    if (read_config.pressure != config->pressure && config->enable_pressure_comp) // Check pressure
+    if (changed) // If configuration changed
     {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "Config - Writing pressure");
-        uint8_t command_buf[2] = {0};
-        uint16_t val = ntoh16(config->pressure * 10); // Prepare command
-        memcpy(&command_buf[0], &val, 2);
-
-        if ((ret = sunrise_write(REG_AIR_PRESSURE_H, command_buf, 2)) != 0) return ret; // Write pressure register
+        sunrise_reset();
+    }
+    if (config->enable_pressure_comp) // If pressure compensation enabled write pressure from EEPROM
+    {
+        uint8_t buf[2];
+        uint16_t val = ntoh16(config->pressure * 10);
+        memcpy(buf, &val, 2);
+        if ((ret = sunrise_write(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret;
+        sleep_ms(10);
+        uint8_t recv[2];
+        if ((ret = sunrise_read(REG_AIR_PRESSURE_H, recv, 2)) != 0) return ret;
+        memcpy(&val, recv, 2);
+        if (config->pressure != ntoh16(val) / 10) 
+            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_SUNRISE, "Pressure mismatch: Written: %i, read: %i", config->pressure, ntoh16(val) / 10);
     }
     return SUCCESS;
 }

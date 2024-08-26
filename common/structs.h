@@ -55,7 +55,6 @@ typedef struct sensor_config
     bool pressure_en; // Sensor measures pressure
 
     // Offsets
-    int16_t co2_offset; // Set measured co2 offset                                                              EE895
     float temperature_offset; // Set temperature offset                                                         SCD30, SCD41
 
     // Pins, PWM
@@ -239,6 +238,7 @@ typedef struct
     uint8_t soap_mode;
     uint8_t device_desc[16];
     uint8_t aux_msg;
+    bool reinit_sensors_on_error;
 } global_config_t;
 
 #endif

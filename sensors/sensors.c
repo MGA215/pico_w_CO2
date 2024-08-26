@@ -506,11 +506,16 @@ static bool sensors_read(uint8_t sensor_index)
         if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_UNKNOWN_SENSOR && 
             sensors[sensor_index].state != ERROR_NO_MEAS) // Sensor not initialized
         {
-            if (++sensors[sensor_index].init_count > 2) break; // Maximum of 2 initialization attempts in one measurement cycle
-            if (!sensors_init(sensor_index)) continue; // Initialize sensor
-            sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
+            if (global_configuration.reinit_sensors_on_error || !sensors[sensor_index].config.verified) // If reinit is enabled or config is not verified do reinit
+            {
+                if (++sensors[sensor_index].init_count > 2) break; // Maximum of 2 initialization attempts in one measurement cycle
+                if (!sensors_init(sensor_index)) continue; // Initialize sensor
+                sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
+            }
+            else sensors[sensor_index].state = ERROR_NO_MEAS;
         }
-        if (!sensors[sensor_index].config.verified)
+
+        if (!sensors[sensor_index].config.verified) // If config not verified
         {
             for (int j = 0; j < 3; j++)
             {
@@ -718,13 +723,11 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
         {
             if (left->meas_period != right->meas_period ||
                 left->single_meas_mode != right->single_meas_mode ||
-                left->filter_coeff != right->filter_coeff ||
-                left->co2_offset != right->co2_offset)
+                left->filter_coeff != right->filter_coeff)
             {
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "meas_period: %u, %u", left->meas_period, right->meas_period);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "single_meas_mode: %u, %u", left->single_meas_mode, right->single_meas_mode);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "filter_coeff: %u, %u", left->filter_coeff, right->filter_coeff);
-                print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "co2_offset: %u, %u", left->co2_offset, right->co2_offset);
                 return false;
             }
             return true;
@@ -771,7 +774,6 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
                 left->enable_nRDY != right->enable_nRDY ||
                 left->invert_nRDY != right->invert_nRDY ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
                 left->enable_abc != right->enable_abc ||
                 left->abc_period != right->abc_period ||
                 left->abc_target_value != right->abc_target_value)
@@ -785,7 +787,6 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "enable_nRDY: %u, %u", left->enable_nRDY, right->enable_nRDY);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "invert_nRDY: %u, %u", left->invert_nRDY, right->invert_nRDY);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "enable_pressure_comp: %u, %u", left->enable_pressure_comp, right->enable_pressure_comp);
-                print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "pressure: %u, %u", left->pressure, right->pressure);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "enable_abc: %u, %u", left->enable_abc, right->enable_abc);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "abc_period: %u, %u", left->abc_period, right->abc_period);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNRISE, "abc_target_value: %u, %u", left->abc_target_value, right->abc_target_value);
@@ -804,7 +805,6 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
                 left->enable_nRDY != right->enable_nRDY ||
                 left->invert_nRDY != right->invert_nRDY ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
                 left->enable_abc != right->enable_abc ||
                 left->abc_period != right->abc_period ||
                 left->abc_target_value != right->abc_target_value)
@@ -818,7 +818,6 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "enable_nRDY: %u, %u", left->enable_nRDY, right->enable_nRDY);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "invert_nRDY: %u, %u", left->invert_nRDY, right->invert_nRDY);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "enable_pressure_comp: %u, %u", left->enable_pressure_comp, right->enable_pressure_comp);
-                print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "pressure: %u, %u", left->pressure, right->pressure);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "enable_abc: %u, %u", left->enable_abc, right->enable_abc);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "abc_period: %u, %u", left->abc_period, right->abc_period);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "abc_target_value: %u, %u", left->abc_target_value, right->abc_target_value);
