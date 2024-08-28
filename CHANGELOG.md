@@ -15,11 +15,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.0.7] - 2024-08-28
+
+### Added
+
+- Option to retry sending message if previous attempt resulted in client error callback
+
+### Changed
+
+- Closing connection on tcp server/client poll
+- Changed tcp server/client poll interval to 3 seconds
+- Changed tcp client timing to match exact sending interval
+
+### Removed
+
+- Removed pressure checking in measurement loop for SCD41
+- Removed option to close TCP client after data was sent
+
+### Fixed
+
 - SUNRISE and SUNLIGHT sensors meter control register not being set properly
 - Removed option to set CO2 offset for Sensor 0 via configuration
 - Added support for reinit on error toggle
 - fixed SUNRISE and SUNLIGHT sensor reset only on writing to EEPROM
 - fixed SUNRISE and SUNLIGHT sensor pressure configuration to be written after reset
+- Fixed bug causing no data to database being sent
 
 ## [1.0.6] - 2024-08-23
 

@@ -197,25 +197,25 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_READ_MODE:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Read mode");
-            uint16_t val = 0;
-            if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
-            if (scd41->config.enable_pressure_comp) // Pressure compensation enabled
-            {
-                ret = scd41_write_value(CMD_SET_PRESSURE, scd41->config.pressure); // Write pressure
-            }
-            else // Pressure compensation disabled
-            {
-                ret = scd41_write_value(CMD_SET_PRESSURE, 1013); // Write pressure
-            }
-            if (ret != 0) // On invalid write
-            {
-                scd41->co2 = NAN; // Set values to NaN
-                scd41->temperature = NAN;
-                scd41->humidity = NAN;
-                scd41->meas_state = MEAS_FINISHED; // Finished measurement
-                scd41->state = ret; // Set sensor state to return value
-                return;
-            }
+            // uint16_t val = 0;
+            // if ((ret = scd41_read(CMD_GET_PRESSURE, &val, 1)) != 0) return; // Read pressure
+            // if (scd41->config.enable_pressure_comp) // Pressure compensation enabled
+            // {
+            //     ret = scd41_write_value(CMD_SET_PRESSURE, scd41->config.pressure); // Write pressure
+            // }
+            // else // Pressure compensation disabled
+            // {
+            //     ret = scd41_write_value(CMD_SET_PRESSURE, 1013); // Write pressure
+            // }
+            // if (ret != 0) // On invalid write
+            // {
+            //     scd41->co2 = NAN; // Set values to NaN
+            //     scd41->temperature = NAN;
+            //     scd41->humidity = NAN;
+            //     scd41->meas_state = MEAS_FINISHED; // Finished measurement
+            //     scd41->state = ret; // Set sensor state to return value
+            //     return;
+            // }
         
             if (scd41->config.single_meas_mode) // If in single meas mode
             {

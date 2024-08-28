@@ -51,16 +51,16 @@
  */
 uint8_t debug = 6; // Global max debug level
 
-static uint8_t debug_main_init = 4;
-static uint8_t debug_main_loop = 4;
-static uint8_t debug_sensors = 4;
+static uint8_t debug_main_init = 3;
+static uint8_t debug_main_loop = 3;
+static uint8_t debug_sensors = 3;
 static uint8_t debug_soap = 3;
 static uint8_t debug_rtc = 3;
 static uint8_t debug_display = 0;
 static uint8_t debug_gfx = 0;
 static uint8_t debug_ram = 0;
-static uint8_t debug_service_comm = 4;
-static uint8_t debug_eeprom = 4;
+static uint8_t debug_service_comm = 5;
+static uint8_t debug_eeprom = 3;
 
 static uint8_t debug_mux = 3;
 static uint8_t debug_power = 3;
@@ -76,12 +76,12 @@ static uint8_t debug_cozir_lp3 = 3;
 static uint8_t debug_cm1107n = 3;
 
 uint8_t debug_wifi = 3;
-uint8_t debug_tcp_client = 3;
-uint8_t debug_tcp_server = 5;
+uint8_t debug_tcp_client = 4;
+uint8_t debug_tcp_server = 3;
 uint8_t debug_tcp_dns = 3;
 
 uint8_t debug_core0 = 6;
-uint8_t debug_core1 = 4;
+uint8_t debug_core1 = 5;
 
 void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const uint8_t* message, ...)
 {

@@ -33,6 +33,7 @@ static bool data_client_sending = false;
 static uint8_t message_index;
 static uint8_t message_sent_index;
 static bool sending = false;
+static bool retry_send_message = false;
 
 static bool enable_tcp_closing;
 
@@ -178,7 +179,7 @@ void wifi_main()
             continue;
         }
         wifi_wait_next_connect_time = nil_time;
-        tcp_client_init(); // Initialize TCP client
+        tcp_client_init(&retry_send_message); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server structs
 
         send_data_time = make_timeout_time_ms(global_configuration.soap_int * 2); // Send data after wifi_send_data_time_ms + initial offset
@@ -238,7 +239,7 @@ static void wifi_loop(void)
             
     if (!ip_found && time_reached(wait_dns)) // Check for dns timeout
     {
-        tcp_client_init();
+        tcp_client_init(&retry_send_message);
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns); // Reset timeout
     }
 
@@ -252,15 +253,15 @@ static void wifi_loop(void)
         {
             message_index = 0;
             message_sent_index = 255;
+            send_data_time = make_timeout_time_ms(global_configuration.soap_int); // Next message timeout
         }
-        send_data_time = make_timeout_time_ms(global_configuration.soap_int); // Next message timeout
 
         if ((data_client_sending || !tcp_client_is_running()) && message_sent_index != message_index) // If data should be being sent or client is not running (for initial condition) AND message with the same index was not sent
         {
-            data_client_sending = run_tcp_client(false, message_index); // Run TCP client FSM
+            data_client_sending = run_tcp_client(message_index); // Run TCP client FSM
         }
         if (!data_client_sending) message_sent_index = message_index; // Save last message index that has been sent if already sent
-        if (!data_client_sending && !tcp_client_is_running()) message_index++; // If no data being sent and client is not running
+        if (!data_client_sending && !tcp_client_is_running() && !retry_send_message) message_index++; // If no data being sent and client is not running and shouldn't retry message sending
         if ((global_configuration.aux_msg == 0x01 && message_index == 2) || 
             (global_configuration.aux_msg != 0x01 && message_index == 1)) sending = false; // Chech messages sent
     }

@@ -20,19 +20,19 @@
 /**
  * @brief Initializes the TCP structures and sets IP address
  * 
+ * @param retry_send Pointer to bool if message should be tried to be sent again
  * @return err_t Error code
  */
-err_t tcp_client_init(void);
+err_t tcp_client_init(bool* retry_send);
 
 /**
  * @brief Runs the TCP client, opens a socket, sends data and closes the socket
  * 
- * @param close_tcp If TCP socket should be closed after send
  * @param soap_index Index of message that should be sent
  * @return true if the client should be run immediately again
  * @return false if connection was closed or communication ended
  */
-bool run_tcp_client(bool close_tcp, uint8_t soap_index);
+bool run_tcp_client(uint8_t soap_index);
 
 /**
  * @brief Stops the TCP client

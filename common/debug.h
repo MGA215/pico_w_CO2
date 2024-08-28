@@ -14,7 +14,7 @@
 
 #include "pico/stdlib.h"
 
-#define DEBUG_TIME false
+#define DEBUG_TIME true
 
 typedef enum debug_severity
 {

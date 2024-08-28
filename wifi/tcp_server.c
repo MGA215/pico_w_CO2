@@ -9,7 +9,7 @@
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
 
-#define POLL_TIME_S 5
+#define POLL_TIME_S 3
 
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
@@ -361,8 +361,8 @@ static err_t tcp_server_remove_client(void* arg)
 
 static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) 
 {
-    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP server poll");
-    return ERR_OK;
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP server poll, closing connection");
+    return tcp_server_client_disconnected(arg, 0);
 }
 
 static void tcp_server_err(void *arg, err_t err) 

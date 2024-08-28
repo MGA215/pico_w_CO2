@@ -24,7 +24,7 @@
 #include "pico/cyw43_arch.h"
 
 #define BUF_SIZE 4096 + 1024
-#define POLL_TIME_S 5
+#define POLL_TIME_S 3
 
 #define DUMP_BYTES(A,B)
 
@@ -56,15 +56,16 @@ static TCP_CLIENT_T state;
 // Has data been sent
 static bool data_sent;
 
+// Pointer to bool if should try to send the same message again, is set by the error handler
+static bool* retry_send_message;
+
 // Length of sent data
 static uint16_t data_sent_len;
-
-// If TCP should close on the end of communication
-static bool should_tcp_close;
 
 // If an error has occured - to prevent infinite loop
 static bool error_flag;
 
+// Is data being sent
 static bool data_sending;
 
 
@@ -161,9 +162,8 @@ void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callba
 
 bool ip_found = false;
 
-bool run_tcp_client(bool close_tcp, uint8_t soap_index)
+bool run_tcp_client(uint8_t soap_index)
 {
-    should_tcp_close = close_tcp; // If TCP should be closed after the end of communication
     if (!&state) // No state exists
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP state not initialized");
@@ -181,6 +181,7 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index)
                 return false;
             }
             client_state = CONNECTING; // Switch state to connectiong
+            data_sending = false;
             return true;
         }
         case CONNECTING: // On connecting state
@@ -224,7 +225,7 @@ bool run_tcp_client(bool close_tcp, uint8_t soap_index)
                 cyw43_arch_lwip_end();
                 free(message);
             }
-            if (data_sent && close_tcp) {
+            if (data_sent) {
                 if (error_flag) // If error flag raised close socket
                 {
                     tcp_client_result(&state, 2); // Print error code 2 and close socket
@@ -244,8 +245,9 @@ bool tcp_client_is_running(void)
     return client_state ? true : false;
 }
 
-err_t tcp_client_init(void)
+err_t tcp_client_init(bool* retry_send)
 {
+    retry_send_message = retry_send;
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
     if (global_configuration.soap_mode == 0x02) // data to cloud
     {
@@ -316,8 +318,8 @@ static bool tcp_client_open(void* arg)
 
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
-    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "client poll");
-    return ERR_OK;
+    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Client poll, closing connection");
+    return tcp_client_result(arg, 0);
 }
 
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err)
@@ -357,9 +359,9 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sending finished, sent %u bytes", len);
     data_sent = true; // Data sent
-    if (should_tcp_close) tcp_client_result(arg, ERR_OK); // If TCP socket should close
     data_sent_len = len; // Copy data sent length
     data_sending = false;
+    *retry_send_message = false;
     return ERR_OK;
 }
 
@@ -424,8 +426,11 @@ static void tcp_client_err(void* arg, err_t err)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     state->connected = false; // Disconnected
+    data_sending = false;
+    data_sent = false;
     client_state = CONNECTION_CLOSED;
     error_flag = true; // Error has occured
+    *retry_send_message = true; // Should retry to send the message
     if (err != ERR_ABRT) // Connection not aborted, still fatal error
     {
         print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP error: %i", err);

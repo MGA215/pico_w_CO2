@@ -153,6 +153,9 @@ int loop(void)
 void update()
 {
     update_display_buffer = rtc_update(); // Update RTC & refresh display
+    #if DEBUG_TIME
+    update_display_buffer = true;
+    #endif
     read_inputs(); // Updates button inputs
     // printf("%i\n", debug);
     if (update_display_buffer)
@@ -330,6 +333,7 @@ void write_display(void)
     position.x = 21 - strlen(hwtime);
     position.y = 5;
     gfx_pack_write_text(&position, hwtime);
+    update_display_buffer = true;
     #endif
 }
 
