@@ -3,6 +3,8 @@
 #include "../sensor_config.h"
 #include "string.h"
 
+#define MIN_SENSOR_POWER_UP_TIME_S 3
+
 /**
  * @brief Checks for out of range values for given sensors
  * 
@@ -249,7 +251,7 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
 
 static inline int32_t serializer_check_values(sensor_config_t* config)
 {
-    if (config->sensor_power_up_time < 3) config->sensor_power_up_time = 3;
+    if (config->sensor_power_up_time < MIN_SENSOR_POWER_UP_TIME_S) config->sensor_power_up_time = MIN_SENSOR_POWER_UP_TIME_S;
     switch(config->sensor_type)
     {
         case EE895:

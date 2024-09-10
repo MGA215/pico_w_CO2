@@ -68,7 +68,7 @@ int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
     int32_t ret;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US * 3)) < 0) return ret; // Write address
     
-    busy_wait_ms(2);
+    busy_wait_ms(3);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read number of bytes from the address
     return SUCCESS;
 }
@@ -130,6 +130,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             if ((buf[0] & (0b1 << 7)) == 0) // Data is ready to be read
             {
                 cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read data
+                cdm7162->wake_time = make_timeout_time_ms(20); // Create small timeout
                 return;
             }
             if (cdm7162->timeout_iterator++ > 2) // If in timeout
@@ -139,7 +140,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
             }
-            cdm7162->wake_time = make_timeout_time_ms(1000); // Wait 500 ms until next status check
+            cdm7162->wake_time = make_timeout_time_ms(500); // Wait 500 ms until next status check
             print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Data not ready to be read");
             return;
         }

@@ -37,7 +37,12 @@ extern void tcp_server_run(void);
  */
 extern void tcp_server_stop(void);
 
-
+/**
+ * @brief Checks whether TCP server is running
+ * 
+ * @return uint8_t value representing server state
+ */
+extern uint8_t tcp_server_is_running(void);
 
 
 

@@ -22,7 +22,7 @@
 #define CMD_READ_DATA   0x01 // Response length 3 bytes
 #define CMD_ABC         0x10 
 #define CMD_FORCE_CAL   0x03
-#define CMD_SW_VERSION  0x1E // Response length 10 bytes
+#define CMD_FW_VERSION  0x1E // Response length 10 bytes
 #define CMD_SER_NUM     0x1F // Response length 10 bytes
 
 /**

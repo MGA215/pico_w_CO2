@@ -9,7 +9,7 @@
 #include "lwip/tcp.h"
 #include "pico/cyw43_arch.h"
 
-#define POLL_TIME_S 3
+#define POLL_TIME_S 30
 
 typedef struct TCP_SERVER_T_ {
     struct tcp_pcb *server_pcb;
@@ -24,7 +24,7 @@ typedef struct TCP_SERVER_T_ {
 
 typedef enum tcp_server_fsm {
     CONNECTION_CLOSED = 0,
-    CONNECTING = 1,
+    LISTENING = 1,
     CONNECTED = 2
 } tcp_server_fsm_e;
 
@@ -192,7 +192,6 @@ void tcp_server_run(void)
 static bool tcp_server_open(void* arg)
 {
     TCP_SERVER_T* state = (TCP_SERVER_T*)arg; // Get server state
-    server_state = CONNECTING; // Set state to connecting
     struct tcp_pcb* pcb = tcp_new_ip_type(IPADDR_TYPE_V4); // Set PCB to accept only IPv4
     if (!pcb) // Check pcb created
     {
@@ -222,6 +221,7 @@ static bool tcp_server_open(void* arg)
 
     tcp_arg(state->server_pcb, state); // set tcp arg variable
     tcp_accept(state->server_pcb, tcp_server_accept); // set tcp server accept callback fn
+    server_state = LISTENING; // Set state to listening
     return true;
 }
 
@@ -262,7 +262,6 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
         return tcp_server_client_disconnected(arg, 0); // close with 0
         // return ERR_OK;
     }
-    // print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_TCP_SERVER, "Message incoming");
     // this method is callback from lwIP, so cyw43_arch_lwip_begin is not required, however you
     // can use this method to cause an assertion in debug mode, if this method is called when
     // cyw43_arch_lwip_begin IS needed
@@ -354,7 +353,7 @@ static err_t tcp_server_remove_client(void* arg)
         }
         state->client_pcb = NULL;
     }
-    server_state = CONNECTING;
+    server_state = LISTENING;
     state->connected = false;
     return err;
 }
@@ -444,6 +443,10 @@ void tcp_server_stop(void)
     tcp_server_close(&state);
 }
 
+uint8_t tcp_server_is_running(void)
+{
+    return (uint8_t)server_state;
+}
 
 
 

@@ -269,7 +269,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->meas_state = MEAS_READ_VALUE; // Next step - read values
                 return;
             }
-            if (scd41->timeout_iterator++ > 50) // On timeout
+            if (scd41->timeout_iterator++ > 60) // On timeout
             {
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;

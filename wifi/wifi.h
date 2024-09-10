@@ -21,4 +21,6 @@
  */
 extern void wifi_main();
 
+extern bool wifi_is_running(void);
+
 #endif

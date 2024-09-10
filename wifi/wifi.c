@@ -27,7 +27,7 @@
 
 
 static bool wifi = false;
-static absolute_time_t send_data_time;
+absolute_time_t send_data_time;
 static absolute_time_t wait_dns;
 static bool data_client_sending = false;
 static uint8_t message_index;
@@ -233,6 +233,8 @@ static void wifi_loop(void)
     if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) != CYW43_LINK_UP) // Check wifi connection status
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Connection down");
+        tcp_client_stop(); // Stop TCP client
+        tcp_server_stop(); // Stop TCP server
         wifi = false; // WiFi failed
         return; 
     }
@@ -248,7 +250,7 @@ static void wifi_loop(void)
     if ((!service_mode && sending) && ip_found && global_configuration.soap_mode) // If should send data
     {
         sleep_ms(5);
-        print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Sending data to the server...");
+        print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Running TCP client...");
         if (time_reached(send_data_time))
         {
             message_index = 0;
@@ -266,6 +268,11 @@ static void wifi_loop(void)
             (global_configuration.aux_msg != 0x01 && message_index == 1)) sending = false; // Chech messages sent
     }
     tcp_server_run(); // Run TCP server
+}
+
+bool wifi_is_running(void)
+{
+    return wifi && cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP;
 }
 
 

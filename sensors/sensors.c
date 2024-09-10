@@ -35,7 +35,7 @@
 static uint8_t active_sensors;
 
 // Timer to start measurement
-static absolute_time_t sensor_start_measurement_time;
+absolute_time_t sensor_start_measurement_time;
 
 bool sensors_measurement_ready = false;
 bool sensors_was_measurement_read = false;

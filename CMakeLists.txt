@@ -71,6 +71,8 @@ add_subdirectory(service_comm)
 add_subdirectory(eeprom)
 add_subdirectory(uart)
 add_subdirectory(config)
+add_subdirectory(display)
+add_subdirectory(error_handler)
 
 target_compile_options(pico_w_CO2 PRIVATE "-g")
 
@@ -82,16 +84,14 @@ target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
-        hardware_i2c
-        pico-rtc
-        pico-gfx_pack
-        hardware_exception
         pico-soap
         pico_multicore
         pico-wifi
         pico-sensors
         pico-service_comm
         pico-config
+        pico-display
+        pico-error_handler
         )
 
         

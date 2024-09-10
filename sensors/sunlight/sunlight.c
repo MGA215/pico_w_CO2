@@ -310,7 +310,7 @@ void sunlight_get_value(sensor_t* sunlight)
             memcpy(&val, &buf[6], 2);
             sunlight->co2 = (float)ntoh16(val); // Set CO2 value
             memcpy(&val, &buf[8], 2);
-            sunlight->temperature = (float)ntoh16(val) / 100.0f; // Set temperature value
+            sunlight->temperature = (float)((int16_t)ntoh16(val)) / 100.0f; // Set temperature value
             if (sunlight->config.single_meas_mode) // If single measurement mode
             {
                 sunlight->wake_time = make_timeout_time_ms(20); // Timer 20 ms
@@ -449,10 +449,9 @@ static int sl_write_config(sensor_config_t* config)
 
         if ((ret = sunlight_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
     }
-    if (changed) // If configuration changed
-    {
-        sunlight_reset();
-    }
+
+    sunlight_reset();
+
     if (config->enable_pressure_comp) // If pressure compensation enabled write pressure from EEPROM
     {
         uint8_t buf[2];

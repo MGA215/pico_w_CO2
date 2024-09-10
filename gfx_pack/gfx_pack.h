@@ -80,4 +80,11 @@ extern bool gfx_pack_write_text(point_t* position, char* text);
  */
 extern void gfx_pack_clear_display(void);
 
+/**
+ * @brief Inverts colors in a row
+ * 
+ * @param row Row to invert the colors in
+ */
+extern void gfx_pack_invert_row_color(uint8_t row);
+
 #endif

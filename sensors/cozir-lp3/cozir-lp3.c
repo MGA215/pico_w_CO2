@@ -17,6 +17,8 @@
 #include "error_codes.h"
 #include "common/functions.h"
 #include "../power/power.h"
+#include "common/shared.h"
+
 #define COZIR_LP3_ADDR              0x41
 
 #define REG_MEAS_CONTROL            0x00
@@ -116,7 +118,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
             lp3_power(cozir_lp3, true);
             if (!cozir_lp3->config.power_continuous) cozir_lp3->wake_time = make_timeout_time_ms(cozir_lp3->config.sensor_power_up_time); // Time for power stabilization
-            cozir_lp3->meas_state = MEAS_READ_STATUS;
+            cozir_lp3->meas_state = MEAS_READ_VALUE; // Ignore read status - is implemented within read value
             return;
         }
         case MEAS_READ_STATUS:
@@ -151,7 +153,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
         case MEAS_READ_VALUE:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read value");
-            ret = cozir_lp3_read(REG_CO2, tempBuffer, 2);
+            ret = cozir_lp3_read(REG_CO2, tempBuffer, 3);
             if (ret != 0)
             {
                 cozir_lp3->co2 = NAN;
@@ -161,6 +163,30 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
                 cozir_lp3->state = ret;
                 return;
             }
+            if (tempBuffer[2] != 85)
+            {
+                cozir_lp3->state = COZIR_LP3_ERROR_SENSOR_GENERAL;
+                cozir_lp3->co2 = NAN;
+                cozir_lp3->humidity = NAN;
+                cozir_lp3->temperature = NAN;
+                cozir_lp3->meas_state = MEAS_FINISHED;
+                return;
+            }
+
+            // uint8_t buf[2]; // Testing CozIR filtering
+            // {
+            //     ret = cozir_lp3_read(REG_CO2_UNFILTERED, buf, 2);
+            //     if (ret != 0)
+            //     {
+            //         cozir_lp3->co2 = NAN;
+            //         cozir_lp3->humidity = NAN;
+            //         cozir_lp3->temperature = NAN;
+            //         cozir_lp3->meas_state = MEAS_FINISHED;
+            //         cozir_lp3->state = ret;
+            //         return;
+            //     }
+            // }
+
             if (cozir_lp3->timeout_iterator > 20)
             {
                 cozir_lp3->co2 = NAN;
@@ -176,9 +202,25 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
                 cozir_lp3->wake_time = make_timeout_time_ms(100);
                 return;
             }
+
+            // { // Testing CozIR filtering
+            //     if (buf[0] == 0xFF && buf[1] == 0xFF)
+            //     {
+            //         cozir_lp3->timeout_iterator++;
+            //         cozir_lp3->wake_time = make_timeout_time_ms(100);
+            //         return;
+            //     }
+            // }
+
             uint16_t val = 0;
             memcpy(&val, &tempBuffer[0], 2);
             cozir_lp3->co2 = (float)ntoh16(val);
+
+            // { // Testing CozIR filtering
+            //     val = 0;
+            //     memcpy(&val, &buf[0], 2);
+            //     cozir_unfiltered = (float)ntoh16(val);
+            // }
 
             cozir_lp3->meas_state = MEAS_FINISHED;
             cozir_lp3->state = SUCCESS;

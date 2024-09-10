@@ -70,12 +70,12 @@
 // SUNRISE Errors
 #define SUNRISE_ERROR_WRITE_RESP 314 // Error SUNRISE - write response is not valid
 #define SUNRISE_ERROR_DATA_READY_TIMEOUT 315 // Error SUNRISE - data not ready
+#define SUNRISE_ERROR_OUT_OF_RANGE 316 // Error SUNRISE - CO2, temperature or set pressure out of range
 #define SUNRISE_ERROR_FATAL 317 // Error SUNRISE - failed initialization
 #define SUNRISE_ERROR_I2C 318 // Error SUNRISE - invalid address access
 #define SUNRISE_ERROR_ALGORITHM 319 // Error SUNRISE - corrupted parameters detected
 #define SUNRISE_ERROR_CAL 320 // Error SUNRISE - calibration failed
 #define SUNRISE_ERROR_SELF_DIAG 321 // Error SUNRISE - internal failure
-#define SUNRISE_ERROR_OUT_OF_RANGE 322 // Error SUNRISE - CO2, temperature or set pressure out of range
 #define SUNRISE_ERROR_MEMORY 323 // Error SUNRISE - memory operation error
 #define SUNRISE_ERROR_LOW_INTERNAL_VOLTAGE 324 // Error SUNRISE - low internal regulated voltage
 #define SUNRISE_ERROR_MEASUREMENT_TIMEOUT 325 // Error SUNRISE - unable to complete measurement in time
@@ -87,12 +87,12 @@
 // SUNLIGHT Errors
 #define SUNLIGHT_ERROR_WRITE_RESP 314 // Error SUNLIGHT - write response is not valid
 #define SUNLIGHT_ERROR_DATA_READY_TIMEOUT 315 // Error SUNLIGHT - data not ready
+#define SUNLIGHT_ERROR_OUT_OF_RANGE 316 // Error SUNLIGHT - CO2, temperature or set pressure out of range
 #define SUNLIGHT_ERROR_FATAL 317 // Error SUNLIGHT - failed initialization
 #define SUNLIGHT_ERROR_I2C 318 // Error SUNLIGHT - invalid address access
 #define SUNLIGHT_ERROR_ALGORITHM 319 // Error SUNLIGHT - corrupted parameters detected
 #define SUNLIGHT_ERROR_CAL 320 // Error SUNLIGHT - calibration failed
 #define SUNLIGHT_ERROR_SELF_DIAG 321 // Error SUNLIGHT - internal failure
-#define SUNLIGHT_ERROR_OUT_OF_RANGE 322 // Error SUNLIGHT - CO2, temperature or set pressure out of range
 #define SUNLIGHT_ERROR_MEMORY 323 // Error SUNLIGHT - memory operation error
 #define SUNLIGHT_ERROR_LOW_INTERNAL_VOLTAGE 324 // Error SUNLIGHT - low internal regulated voltage
 #define SUNLIGHT_ERROR_MEASUREMENT_TIMEOUT 325 // Error SUNLIGHT - unable to complete measurement in time
@@ -116,9 +116,9 @@
 
 // CUBIC CM1107N
 #define CM1107N_ERROR_CRC 713 // Error CM1107N - Invalid CRC
+#define CM1107N_ERROR_OUT_OF_RANGE 716 // Error CM1107N - Measurement out of range
 #define CM1107N_ERROR_FATAL 717 // Error CM1107N - Sensor error
 #define CM1107N_ERROR_CAL 720 // Error CM1107N - Sensor not calibrated
-#define CM1107N_ERROR_OUT_OF_RANGE 722 // Error CM1107N - Measurement out of range
 #define CM1107N_ERROR_LIGHT_AGING 730 // Error CM1107N - Sensor light aging
 #define CM1107N_ERROR_DRIFT 731 // Error CM1107N - Sensor drifting
 #define CM1107N_ERROR_PREHEATING 732 // Error CM1107N - Sensor preheating

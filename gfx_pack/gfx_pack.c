@@ -222,9 +222,9 @@ bool gfx_pack_write_char(point_t* position, char c)
 {
     
     uint8_t* char_map = get_char_map(c); // Pixel map of the character
-    uint16_t start_row = position->y * GFX_PACK_CHAR_HEIGHT; // Start row in px
+    uint16_t start_row = position->y * GFX_PACK_CHAR_HEIGHT + 1; // Start row in px, added upper padding
     uint16_t start_byte_row = GFX_PACK_DISPLAY_WIDTH / 8 * start_row; // Starting byte of the row
-    uint16_t start_col = position->x * GFX_PACK_CHAR_WIDTH; // Start column in px
+    uint16_t start_col = position->x * GFX_PACK_CHAR_WIDTH + 1; // Start column in px, added left padding
     if ((position->x >= (GFX_PACK_DISPLAY_WIDTH / GFX_PACK_CHAR_WIDTH)) ||
         (position->y >= (GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT))) return false; // if character outside of drawable area return false
     uint16_t start_byte = start_byte_row + start_col / 8; // Start byte of the character
@@ -292,6 +292,18 @@ void gfx_pack_reset(void)
     sleep_ms(10);
     gpio_put(GFX_PACK_RESET_PIN, 1); // Reset pin high
     sleep_ms(10);
+}
+
+void gfx_pack_invert_row_color(uint8_t row)
+{
+    if (row >= 6) return;
+    uint16_t start_byte = GFX_PACK_DISPLAY_WIDTH / 8 * row * GFX_PACK_CHAR_HEIGHT; // Start byte of the row
+    uint16_t byte_count = (GFX_PACK_CHAR_HEIGHT - 1) * GFX_PACK_DISPLAY_WIDTH / 8; // Bytes per character row
+    for (int i = 0; i < byte_count; i++)
+    {
+        framebuffer[start_byte + i] ^= 255; // Invert color
+    }
+    return;
 }
 
 static inline uint8_t* get_char_map(char c)

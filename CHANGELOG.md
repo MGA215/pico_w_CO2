@@ -15,6 +15,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.1.0] - 2024-09-10
+
+### Added
+
+- Function to invert display color in a row
+- Full display support
+- Status section on the display
+- Exception handlers for both core 0 and core 1
+- Added variable for minimum sensor power up time
+- Added delay for CDM7162 between status read and measured value read
+
+### Changed
+
+- TCP server polling interval is changed to 30 seconds to avoid excessive TCP socket opening
+- SW version variables to FW version
+- Cleaned CMakeLists.txt files
+- SunRise & SunLight - removed condition for sw reset after configuration change - sensors will always reset on init
+- Changed CozIR-LP3 get_value function to use only one read for data & status
+
+### Removed
+
+- Closing TCP client on poll
+
+### Fixed
+
 ## [1.0.7] - 2024-08-28
 
 ### Added

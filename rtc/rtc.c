@@ -38,7 +38,7 @@ void rtc_init(void)
     gpio_pull_up(I2C_DEVICE_SDA);
     gpio_pull_up(I2C_DEVICE_SCL);
     // ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initialize DS3231 module
-    rtc_time = make_timeout_time_ms(rtc_read_interval_ms); // Read time in 250 ms
+    rtc_time = get_absolute_time(); // Read first time value
 }
 
 static int datetime2str(char *buf, uint8_t buf_size, const ds3231_datetime_t *dt)

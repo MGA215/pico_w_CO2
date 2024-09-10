@@ -6,7 +6,6 @@ target_include_directories(pico-gfx_pack
 
 target_link_libraries(pico-gfx_pack
   INTERFACE
-  hardware_i2c
   hardware_spi
   hardware_pwm
 )

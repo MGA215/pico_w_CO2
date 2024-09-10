@@ -311,7 +311,7 @@ void sunrise_get_value(sensor_t* sunrise)
             memcpy(&val, &buf[6], 2);
             sunrise->co2 = (float)ntoh16(val); // Set CO2 value
             memcpy(&val, &buf[8], 2);
-            sunrise->temperature = (float)ntoh16(val) / 100.0f; // Set temperature value
+            sunrise->temperature = (float)((int16_t)ntoh16(val)) / 100.0f; // Set temperature value
             if (sunrise->config.single_meas_mode) // If single measurement mode
             {
                 sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
@@ -456,10 +456,9 @@ static int sr_write_config(sensor_config_t* config)
         if ((ret = sunrise_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
         changed = true;
     }
-    if (changed) // If configuration changed
-    {
-        sunrise_reset();
-    }
+
+    sunrise_reset();
+    
     if (config->enable_pressure_comp) // If pressure compensation enabled write pressure from EEPROM
     {
         uint8_t buf[2];

@@ -68,6 +68,11 @@ static bool error_flag;
 // Is data being sent
 static bool data_sending;
 
+// Last message timestamp
+uint8_t last_message_time[32] = {0};
+
+uint8_t last_message_error = ERR_OK;
+
 
 /**
  * @brief Opens a TCP socket
@@ -215,7 +220,9 @@ bool run_tcp_client(uint8_t soap_index)
 
                 cyw43_arch_lwip_begin();
                 data_sent = false;
-                if ((err = tcp_client_send(&state, message)) != ERR_OK) // Send data
+                err = tcp_client_send(&state, message);
+                last_message_error = err;
+                if (err != ERR_OK) // Send data
                 {
                     cyw43_arch_lwip_end();
                     free(message);
@@ -318,8 +325,9 @@ static bool tcp_client_open(void* arg)
 
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
-    print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Client poll, closing connection");
-    return tcp_client_result(arg, 0);
+    // print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Client poll, closing connection");
+    return ERR_OK;
+    // return tcp_client_result(arg, 0);
 }
 
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err)
@@ -391,6 +399,7 @@ static err_t tcp_client_send(void* arg, uint8_t* data)
     }
     data_sending = true;
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sent");
+    memcpy(last_message_time, datetime_str, 30);
     return ERR_OK;
 }
 

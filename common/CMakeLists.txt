@@ -25,5 +25,4 @@ target_link_libraries(pico-common
   pico_stdlib
   hardware_i2c
   pico-service_comm
-  pico-ds3231
 )
