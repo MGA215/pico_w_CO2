@@ -226,8 +226,8 @@ void sensors_init_all()
     memset(ms5607.pressure_raw, 0x00, 3);
     memset(ms5607.temperature_raw, 0x00, 3);
     memset(ms5607.prom, 0x00, 16);
-    // ms5607_get_value(); // Perform MS5607 measurement
-    // if (ms5607.state != SUCCESS) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read MS5607: %i", ms5607.state);
+    ms5607_get_value(); // Perform MS5607 measurement
+    if (ms5607.state != SUCCESS) print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read MS5607: %i", ms5607.state);
     watchdog_update();
 
     // Initialize HYT271 values
@@ -439,29 +439,29 @@ void sensors_read_all(void)
     }
     if (!sensors_is_measurement_finished()) // If measurement running
     {
-        // if (ms5607.meas_state != MEAS_FINISHED)
-        // {
-        //     for (int i = 0; i < 2; i++) // Try pressure measurement twice
-        //     {
-        //         ms5607_get_value(); // Read pressure sensor
-        //         if (!ms5607.state) break; // On no error break
-        //         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read sensor: %i", ms5607.state);
-        //         ms5607.meas_state = i != 1 ? MEAS_STARTED : MEAS_FINISHED; // If on next iteration should try another pressure measurement
-        //         sleep_ms(2);
-        //     }
-        // }
+        if (ms5607.meas_state != MEAS_FINISHED)
+        {
+            for (int i = 0; i < 2; i++) // Try pressure measurement twice
+            {
+                ms5607_get_value(); // Read pressure sensor
+                if (!ms5607.state) break; // On no error break
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to read sensor: %i", ms5607.state);
+                ms5607.meas_state = i != 1 ? MEAS_STARTED : MEAS_FINISHED; // If on next iteration should try another pressure measurement
+                sleep_ms(2);
+            }
+        }
 
-        // if (time_reached(hyt271.wake_time)) // If should read HYT271
-        // {
-        //     for (int i = 0; i < 2; i++) // Try humidity measurement twice
-        //     {
-        //         hyt271_get_value(); // Read HYT sensor
-        //         if (!hyt271.state) break; // On no error break
-        //         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to read sensor: %i", hyt271.state);
-        //         if (++hyt271.err_count < 2) hyt271.meas_state = MEAS_STARTED; // If on next iteration should try another measurement
-        //         sleep_ms(2);
-        //     }
-        // }
+        if (time_reached(hyt271.wake_time)) // If should read HYT271
+        {
+            for (int i = 0; i < 2; i++) // Try humidity measurement twice
+            {
+                hyt271_get_value(); // Read HYT sensor
+                if (!hyt271.state) break; // On no error break
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to read sensor: %i", hyt271.state);
+                if (++hyt271.err_count < 2) hyt271.meas_state = MEAS_STARTED; // If on next iteration should try another measurement
+                sleep_ms(2);
+            }
+        }
 
         if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
         {
@@ -958,8 +958,8 @@ static bool sensors_mux_to_sensor(uint8_t sensor_index)
 
 bool sensors_is_measurement_finished(void)
 {
-    // if (ms5607.meas_state != MEAS_FINISHED) return false;
-    // if (hyt271.meas_state != MEAS_FINISHED || !is_at_the_end_of_time(hyt271.wake_time)) return false;
+    if (ms5607.meas_state != MEAS_FINISHED) return false;
+    if (hyt271.meas_state != MEAS_FINISHED || !is_at_the_end_of_time(hyt271.wake_time)) return false;
     for (int i = 0; i < 8; i++)
     {
         if (!sensors[i].config.sensor_active) continue;
