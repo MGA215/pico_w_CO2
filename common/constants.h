@@ -16,7 +16,7 @@
 // Software version
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 1
-#define FW_VERSION_PATCH 0
+#define FW_VERSION_PATCH 1
 #define FW_VERSION_BUILD 0
 
 // Number of max sensors connected to the board

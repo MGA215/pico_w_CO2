@@ -69,7 +69,7 @@ int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, CDM7162_ADDR, &addr, 1, true, I2C_TIMEOUT_US * 3)) < 0) return ret; // Write address
     
     busy_wait_ms(3);
-    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, I2C_TIMEOUT_US * 3)) < 0) return ret; // Read number of bytes from the address
+    if ((ret = i2c_read_timeout_us(I2C_SENSOR, CDM7162_ADDR, buf, num_bytes, false, 700000)) < 0) return ret; // Read number of bytes from the address
     return SUCCESS;
 }
 
@@ -89,7 +89,7 @@ int32_t cdm7162_write(uint8_t addr, uint8_t value)
 void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
-    uint8_t buf[2];
+    uint8_t buf[3];
     if (cdm7162->config.sensor_type != CDM7162) // Check for correct sensor type
     {
         cdm7162->meas_state = MEAS_FINISHED;
@@ -111,26 +111,20 @@ void cdm7162_get_value(sensor_t* cdm7162)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas started");
             cdm_power(cdm7162, true); // Power on
             if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_ms(cdm7162->config.sensor_power_up_time); // Time for power stabilization
-            cdm7162->meas_state = MEAS_READ_STATUS; // Next step - read status
+            cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read status
             if (cdm7162->state) cdm7162->state = ERROR_NO_MEAS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
-        case MEAS_READ_STATUS: // Reading status
+        case MEAS_READ_VALUE: // Reading measured value
         {
-            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Read status");
-            ret = cdm7162_read(REG_STATUS, &buf[0], 1); // Read status
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Read value");
+            ret = cdm7162_read(REG_STATUS, buf, 3); // Read measured CO2
             if (ret != 0) // On invalid read
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
-                cdm7162->state = ret; // Output return state
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
-                return;
-            }    
-            if ((buf[0] & (0b1 << 7)) == 0) // Data is ready to be read
-            {
-                cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read data
-                cdm7162->wake_time = make_timeout_time_ms(20); // Create small timeout
+                cdm7162->state = ret; // Output return state
                 return;
             }
             if (cdm7162->timeout_iterator++ > 2) // If in timeout
@@ -140,24 +134,16 @@ void cdm7162_get_value(sensor_t* cdm7162)
                 cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
             }
-            cdm7162->wake_time = make_timeout_time_ms(500); // Wait 500 ms until next status check
-            print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Data not ready to be read");
-            return;
-        }
-        case MEAS_READ_VALUE: // Reading measured value
-        {
-            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Read value");
-            ret = cdm7162_read(REG_CO2_L, buf, 2); // Read measured CO2
-            if (ret != 0) // On invalid read
+            if ((buf[0] & (0b1 << 7)) != 0) // Data not ready to be read
             {
-                cdm7162->co2 = NAN; // Set CO2 to unknown
-                cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
-                cdm7162->state = ret; // Output return state
+                cdm7162->wake_time = make_timeout_time_ms(500); // Wait 500 ms until next status check
+                print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Data not ready to be read");
                 return;
             }
+
             uint16_t val = 0; // Convert read CO2 to uint16_t
-            val |= buf[0] << 0;
-            val |= buf[1] << 8;
+            val |= buf[1] << 0;
+            val |= buf[2] << 8;
             if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // If value out of range
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown

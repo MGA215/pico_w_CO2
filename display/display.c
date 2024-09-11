@@ -186,11 +186,10 @@ static void boot_time(void)
 
 void display_update(bool force_update)
 {
-    update_display_buffer |= rtc_update();
-    display_buttons();
-    if (update_display_buffer || force_update || time_reached(process_update_time))
+    if (force_update || time_reached(process_update_time))
     {
-        update_display_buffer = false;
+        rtc_update();
+        display_buttons();
         write_display();
         gfx_pack_update();
         gfx_pack_set_backlight((uint8_t)((uint16_t)(display_brightness) * 255 / 100));
@@ -1039,6 +1038,11 @@ static void write_display(void)
                         sensors[display_sensor].config.temp_en, sensors[display_sensor].temperature,
                         sensors[display_sensor].config.pressure_en, sensors[display_sensor].pressure,
                         sensors[display_sensor].config.RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
+
+                snprintf(sensor_name, 24, "ERRORS: %i", sensors[display_sensor].err_total_counter);
+                position.x = 0;
+                position.y = 5;
+                gfx_pack_write_text(&position, sensor_name); // Write number of errors
             }
             else 
             {

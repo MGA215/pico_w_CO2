@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.1.1] - 2024-09-11
+
+### Added
+
+- External pressure compensation computation support
+- Sensor total error counter visible on sensor display screen
+
+### Changed
+
+- Changed CDM7162 read value to read state as well resulting in one less read needed per measaurement
+
+### Removed
+
+### Fixed
+
+- Fixed a bug with T/RH & P sensor not connected causing measurement to fully stop
+
 ## [1.1.0] - 2024-09-10
 
 ### Added

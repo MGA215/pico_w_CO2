@@ -121,35 +121,6 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             cozir_lp3->meas_state = MEAS_READ_VALUE; // Ignore read status - is implemented within read value
             return;
         }
-        case MEAS_READ_STATUS:
-        {
-            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read status");
-            ret = cozir_lp3_read(REG_SELF_TEST, tempBuffer, 1);
-            if (ret != 0)
-            {
-                cozir_lp3->co2 = NAN;
-                cozir_lp3->humidity = NAN;
-                cozir_lp3->temperature = NAN;
-                cozir_lp3->meas_state = MEAS_FINISHED;
-                cozir_lp3->state = ret;
-                return;
-            }
-            if (tempBuffer[0] == 85)
-            {
-                cozir_lp3->meas_state = MEAS_READ_VALUE;
-                cozir_lp3->wake_time = make_timeout_time_ms(25);
-                print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "No error detected");
-                return;
-            }
-            else {
-                cozir_lp3->state = COZIR_LP3_ERROR_SENSOR_GENERAL;
-                cozir_lp3->co2 = NAN;
-                cozir_lp3->humidity = NAN;
-                cozir_lp3->temperature = NAN;
-                cozir_lp3->meas_state = MEAS_FINISHED;
-                return;
-            }
-        }
         case MEAS_READ_VALUE:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Read value");
