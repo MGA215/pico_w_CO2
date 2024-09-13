@@ -54,8 +54,9 @@ extern int32_t ee895_init(sensor_t* ee895, sensor_config_t* config);
  * @brief Reads EE895 sensor configuration
  * 
  * @param config EE895 config structure the read configuration will be saved to
+ * @param single_measurement_mode if single measurement mode is active
  * @return int32_t Return code
  */
-extern int32_t ee895_read_config(sensor_config_t* config);
+extern int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 #endif

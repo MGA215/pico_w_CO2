@@ -242,10 +242,8 @@ int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&scd30->config, config, sizeof(sensor_config_t));
-    s30_power(scd30, true); // Power on
 
     ret = s30_write_config(config); // Write configuration to sensor
-    s30_power(scd30, false); // Power off
     if (!ret)
     {
         if (scd30->meas_state == MEAS_STARTED) scd30->wake_time = make_timeout_time_ms(3000);

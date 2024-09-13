@@ -211,10 +211,8 @@ int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != COZIR_LP3) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&cozir_lp3->config, config, sizeof(sensor_config_t));
-    lp3_power(cozir_lp3, true);
 
     ret = lp3_write_config(config);
-    lp3_power(cozir_lp3, false);
     if (!ret)
     {
         if (cozir_lp3->meas_state == MEAS_STARTED) cozir_lp3->wake_time = make_timeout_time_ms(3000);

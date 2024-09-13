@@ -182,7 +182,7 @@ void wifi_main()
         tcp_client_init(&retry_send_message); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server structs
 
-        send_data_time = make_timeout_time_ms(global_configuration.soap_int * 2); // Send data after wifi_send_data_time_ms + initial offset
+        send_data_time = make_timeout_time_ms(global_configuration.soap_int * 4 / 3); // Send data after wifi_send_data_time_ms + initial offset
         wait_dns = make_timeout_time_ms(wifi_wait_for_dns);
 
         while (wifi)

@@ -96,7 +96,7 @@ typedef struct sensor_config
     bool sensor_active; // Whether the sensor should be accessed or not
 
     uint8_t sensor_on_off; // When power disconnecting, get measured value (0x00 ... single value after sensor_power_up_time)
-    uint8_t sensor_power_up_time; // Time for the sensor to stabilize while power disconnecting before taking measurement, min 3 s
+    uint32_t sensor_power_up_time; // Time for the sensor to stabilize while power disconnecting before taking measurement, min 3 s
 
     // 
     bool verified; // Is configuration verified
@@ -123,6 +123,7 @@ typedef struct sensor
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
     uint32_t err_total_counter; // Counter of total errors during the run
     uint8_t err_iter_counter; // Counts 0 to 2, if value reaches 2 measurement is evaluated as error
+    bool initialized;
 } sensor_t;
 
 typedef struct ms5607

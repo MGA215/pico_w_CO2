@@ -350,15 +350,12 @@ int sunlight_init(sensor_t* sunlight, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != SUNLIGHT) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&sunlight->config, config, sizeof(sensor_config_t)); // Save config
-    sl_power(sunlight, true); // Power on
 
     if ((ret = sl_write_config(config)) != 0) // Write configuration
     {
-        sl_power(sunlight, false);
         return ret; 
     }
     
-    sl_power(sunlight, false); // Power off
     if (!ret)
     {
         if (sunlight->meas_state == MEAS_STARTED) sunlight->wake_time = make_timeout_time_ms(3000);

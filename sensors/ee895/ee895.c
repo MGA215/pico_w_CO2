@@ -261,6 +261,17 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_TRIGGER_SINGLE_MEAS:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Read status for trigger");
+            ret = ee_write(REG_MEAS_MODE, 1); // Write single measurement mode
+            if (ret != 0) // On invalid write
+            {
+                ee895->co2 = NAN; // Set values to NaN
+                ee895->temperature = NAN;
+                ee895->pressure = NAN;
+                ee895->meas_state = MEAS_FINISHED; // Finished measurement
+                ee895->state = ret; // Set sensor state to return value
+                return;
+            }
+
             ret = ee_read(REG_STATUS, 1, tempBuffer); // Read status register
             if (ret != 0) // On invalid read
             {
@@ -289,7 +300,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->timeout_iterator = 0; // Reset iterator
                 return;
             }
-            if (ee895->timeout_iterator++ > 20) // If timeout
+            if (ee895->timeout_iterator++ > 5) // If timeout
             {
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
@@ -298,7 +309,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            ee895->wake_time = make_timeout_time_ms(25); // Check next in 25 ms
+            ee895->wake_time = make_timeout_time_ms(5000); // Check next in 5000 ms
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -423,23 +434,19 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&ee895->config, config, sizeof(sensor_config_t));
-    ee_power(ee895, true); // Power on
 
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) // Read sensor name
     {
-        ee_power(ee895, false); // Power off
         return ret;
     }
     if (strcmp(fw_read_name, "EE895") != 0) // Check sensor name
     {
-        ee_power(ee895, false); // Power off
         return ERROR_UNKNOWN_SENSOR;
     }
 
     ret = ee_write_config(config); // Write configuration to sensor
 
-    ee_power(ee895, false); // Power off
     if (!ret)
     {
         if (ee895->meas_state == MEAS_STARTED) ee895->wake_time = make_timeout_time_ms(1000);
@@ -449,11 +456,12 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
     return ret;
 }
 
-int32_t ee895_read_config(sensor_config_t* config)
+int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint8_t buf[6] = {0};
     config->sensor_type = EE895;
+    config->single_meas_mode = single_measurement_mode;
 
     if ((ret = ee895_read_reg(REG_MEAS_INTERVAL, 3, buf)) != 0) return ret; // Read config
     memcpy(&config->meas_period, &buf[0], 2);
@@ -462,11 +470,6 @@ int32_t ee895_read_config(sensor_config_t* config)
     memcpy(&config->filter_coeff, &buf[2], 2);
     config->filter_coeff = ntoh16(config->filter_coeff); // Save measurement interval
 
-    if ((ret = ee895_read_reg(REG_MEAS_MODE, 1, buf)) != 0) return ret; // Read measurement mode
-    uint16_t val = 0;
-    val |= buf[0] << 8;
-    val |= buf[1] << 0;
-    config->single_meas_mode = (bool)ntoh16(val); // Save measurement mode
     return SUCCESS;
 }
 
@@ -476,7 +479,7 @@ static int32_t ee_write_config(sensor_config_t* config)
     uint8_t buf[6] = {0};
 
     sensor_config_t read_config;
-    if ((ret = ee895_read_config(&read_config)) != 0) return ret; // Read config
+    if ((ret = ee895_read_config(&read_config, config->single_meas_mode)) != 0) return ret; // Read config
 
     if (read_config.meas_period != config->meas_period) { // If measurement period changed
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing measurement period");
@@ -485,11 +488,6 @@ static int32_t ee_write_config(sensor_config_t* config)
     if (read_config.filter_coeff != config->filter_coeff) { // If filter coeff changed
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing filter coefficient");
         if ((ret = ee895_write_reg(REG_MEAS_FILTER, config->filter_coeff)) != 0) return ret;
-    }
-    if (read_config.single_meas_mode != config->single_meas_mode) // If measurement mode changed
-    {
-        print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "Config - Writing measurement mode");
-        if ((ret = ee895_write_reg(REG_MEAS_MODE, config->single_meas_mode)) != 0) return ret;
     }
     return SUCCESS;
 }

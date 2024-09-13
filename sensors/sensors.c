@@ -240,7 +240,7 @@ void sensors_init_all()
     memset(hyt271.temperature_raw, 0x00, 2);
 
     sensor_start_measurement_time = make_timeout_time_us(global_configuration.meas_int * 1000); // Set measurement start timer
-    set_power(false, false);
+    set_power(false, true);
 }
 
 static bool sensors_setup_sensor(uint8_t sensor_index)
@@ -517,21 +517,35 @@ static bool sensors_read(uint8_t sensor_index)
     {
         sleep_ms(10);
 
+        if (sensors[sensor_index].meas_state == MEAS_STARTED) // If sensor measurement just started
+        {
+            sensors_read_sensor_type(&sensors[sensor_index]); // Read sensor type
+            if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_NO_MEAS)
+            {
+                print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Cannot start measurement on sensor %i: %i", sensor_index, sensors[sensor_index].state);
+            }
+            return true;
+        }
+
         if (!sensors_mux_to_sensor(sensor_index)) continue; // Mux to sensor
         
         if (sensors[sensor_index].state && sensors[sensor_index].state != ERROR_UNKNOWN_SENSOR && 
             sensors[sensor_index].state != ERROR_NO_MEAS) // Sensor not initialized
         {
-            if (global_configuration.reinit_sensors_on_error || !sensors[sensor_index].config.verified) // If reinit is enabled or config is not verified do reinit
+            if (!sensors[sensor_index].config.verified || !sensors[sensor_index].initialized) // If reinit is enabled or config is not verified do reinit
             {
                 if (++sensors[sensor_index].init_count > 2) break; // Maximum of 2 initialization attempts in one measurement cycle
-                if (!sensors_init(sensor_index)) continue; // Initialize sensor
+                if (!sensors_init(sensor_index)) // Initialize sensor
+                {
+                    sensors[sensor_index].initialized = true;
+                    continue;
+                }
                 sensors[sensor_index].meas_state = MEAS_STARTED; // Start new measurement - initialize FSM
             }
             else sensors[sensor_index].state = ERROR_NO_MEAS;
         }
 
-        if (!sensors[sensor_index].config.verified) // If config not verified
+        if (!sensors[sensor_index].config.verified && sensors[sensor_index].initialized) // If config not verified and sensor initialized
         {
             for (int j = 0; j < 3; j++)
             {
@@ -553,6 +567,7 @@ static bool sensors_read(uint8_t sensor_index)
                 reset_i2c(); // Reset I2C
                 mux_reset(); // Reset MUX
                 sleep_ms(300);
+                if (global_configuration.reinit_sensors_on_error) sensors[sensor_index].initialized = false; // Cancel init
                 continue; // Reading failed, repeat measurement
             }
             if (sensors[sensor_index].meas_state == MEAS_FINISHED && sensors[sensor_index].state == SUCCESS && 
@@ -691,7 +706,7 @@ static int32_t sensors_read_config(sensor_config_t* configuration, uint8_t senso
     switch(sensors[sensor_index].sensor_type)
     {
         case EE895:
-            ret = ee895_read_config(configuration);
+            ret = ee895_read_config(configuration, sensors[sensor_index].config.single_meas_mode);
             break;
         case CDM7162:
             ret = cdm7162_read_config(configuration);
@@ -748,11 +763,9 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
         case EE895:
         {
             if (left->meas_period != right->meas_period ||
-                left->single_meas_mode != right->single_meas_mode ||
                 left->filter_coeff != right->filter_coeff)
             {
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "meas_period: %u, %u", left->meas_period, right->meas_period);
-                print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "single_meas_mode: %u, %u", left->single_meas_mode, right->single_meas_mode);
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_EE895, "filter_coeff: %u, %u", left->filter_coeff, right->filter_coeff);
                 return false;
             }
@@ -973,8 +986,8 @@ static void set_power(bool on, bool startup)
     uint8_t power_vector = 0;
     for (int i = 0; i < 8; i++)
     {
-        if (!sensors[sensors[i].power_index].config.sensor_active || (sensors[sensors[i].power_index].config.power_continuous && !startup)) continue; // Sensor inactive or sensor should be powered continuously
-        else if (sensors[sensors[i].power_index].config.power_global_control)
+        if (!sensors[sensors[i].power_index].config.sensor_active || (sensors[sensors[i].power_index].config.power_continuous && (!startup || !on))) continue; // Sensor inactive or sensor should be powered continuously
+        else if (sensors[sensors[i].power_index].config.power_global_control || startup) //  || (startup && !sensors[sensors[i].power_index].config.power_continuous)
         {
             power_vector |= (0b1 << sensors[i].power_index);
         }

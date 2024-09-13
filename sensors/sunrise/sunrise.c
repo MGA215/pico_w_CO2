@@ -352,7 +352,6 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
     if (config->sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&sunrise->config, config, sizeof(sensor_config_t));
 
-    sr_power(sunrise, true); // Power on
 
     uint8_t buf[16];
     if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
@@ -360,11 +359,9 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
 
     if ((ret = sr_write_config(config)) != 0) // Write configuration
     {
-        sr_power(sunrise, false); // Power off
         return ret;
     }
 
-    sr_power(sunrise, false); // Power off
     if (!ret)
     {
         if (sunrise->meas_state == MEAS_STARTED) sunrise->wake_time = make_timeout_time_ms(3000);

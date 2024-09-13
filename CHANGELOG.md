@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.1.2] - 2024-09-11
+
+### Added
+
+### Changed
+
+### Removed
+
+- Power control removed from sensor init to be global on startup
+
+### Fixed
+
+- Power switching now working
+
 ## [1.1.1] - 2024-09-11
 
 ### Added

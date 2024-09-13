@@ -224,10 +224,8 @@ int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != CM1107N) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&cm1107n->config, config, sizeof(sensor_config_t)); // Save config
-    cm_power(cm1107n, true); // Power on
-
+    
     ret = cm_write_config(config); // Write configuration to sensor
-    cm_power(cm1107n, false); // Power off
     if (!ret)
     {
         if (cm1107n->meas_state == MEAS_STARTED) cm1107n->wake_time = make_timeout_time_ms(3000);

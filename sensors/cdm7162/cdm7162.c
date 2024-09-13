@@ -171,11 +171,9 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     uint8_t buf;
     if (config->sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&cdm7162->config, config, sizeof(sensor_config_t)); // Save config
-    cdm_power(cdm7162, true); // Power on
 
     ret = cdm_write_config(config); // Write configuration to the sensor
     sleep_ms(100);
-    cdm_power(cdm7162, false); // Power off
     return ret;
 }
 

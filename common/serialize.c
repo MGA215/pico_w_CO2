@@ -3,7 +3,7 @@
 #include "../sensor_config.h"
 #include "string.h"
 
-#define MIN_SENSOR_POWER_UP_TIME_S 3
+#define MIN_SENSOR_POWER_UP_TIME_MS 3000
 
 /**
  * @brief Checks for out of range values for given sensors
@@ -117,8 +117,8 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
     config->sensor_IIC = (bool)((buf[2] & (0b1 << 5)) >> 5);
     config->ext_pressure_comp = (bool)((buf[2] & (0b1 << 6)) >> 6);
 
-    config->single_meas_mode = buf[3];
-    config->sensor_power_up_time = buf[4];
+    config->single_meas_mode = !config->power_continuous;
+    config->sensor_power_up_time = buf[4] * 1000;
 
     config->meas_period |= buf[0x10] << 0;
     config->meas_period |= buf[0x11] << 8;
@@ -251,7 +251,7 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
 
 static inline int32_t serializer_check_values(sensor_config_t* config)
 {
-    if (config->sensor_power_up_time < MIN_SENSOR_POWER_UP_TIME_S) config->sensor_power_up_time = MIN_SENSOR_POWER_UP_TIME_S;
+    if (config->sensor_power_up_time < MIN_SENSOR_POWER_UP_TIME_MS) config->sensor_power_up_time = MIN_SENSOR_POWER_UP_TIME_MS;
     switch(config->sensor_type)
     {
         case EE895:

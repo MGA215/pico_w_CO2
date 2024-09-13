@@ -320,10 +320,8 @@ int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
     int32_t ret;
     if (config->sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     memcpy(&scd41->config, config, sizeof(sensor_config_t));
-    s41_power(scd41, true); // Turn sensor power on
 
     ret = s41_write_config(config); // Write config to the sensor
-    s41_power(scd41, false); // Power off
     if (!ret)
     {
         if (scd41->meas_state == MEAS_STARTED) scd41->wake_time = make_timeout_time_ms(5000);
