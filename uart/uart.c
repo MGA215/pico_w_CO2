@@ -4,6 +4,7 @@
 #include "pico/printf.h"
 #include "cobs/cobslib.h"
 #include "string.h"
+#include "../service_comm/service_comm.h"
 
 #define UART_INST uart0
 #define UART_TX 0

@@ -246,6 +246,8 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
         }
     }
 
+    config->single_meas_mode = false; // ToDo
+
     return serializer_check_values(config);
 }
 

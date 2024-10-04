@@ -15,7 +15,9 @@
 #include "pico/stdlib.h"
 #include "constants.h"
 #include "pico/mutex.h"
-#include "../service_comm/service_comm.h"
+// #if FULL_BUILD
+// #include "../service_comm/service_comm.h"
+// #endif
 
 typedef enum sensor_type
 {
@@ -117,7 +119,7 @@ typedef struct sensor
     sensor_type_e sensor_type;
     uint8_t input_index; // Index of the input connector
     uint8_t power_index; // Index in the power vector
-    uint8_t state_reg[26]; //                                                                                   SUNRISE, SUNLIGHT
+    uint8_t state_reg[28]; //                                                                                   SUNRISE, SUNLIGHT
     uint8_t sensor_number; // Index of the sensor of a type
     uint8_t init_count; // Counter of initializations in single measurement cycle
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
@@ -168,7 +170,9 @@ typedef struct
     bool response_rdy;
     bool response_sent;
     uint16_t data_len;
+#ifdef __SERVICE_COMM_H__
     service_message_t message;
+#endif
     uint8_t err;
 } service_comm_data_t;
 

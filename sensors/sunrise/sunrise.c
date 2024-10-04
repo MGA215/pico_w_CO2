@@ -245,18 +245,16 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_TRIGGER_SINGLE_MEAS: // Writing measurement command
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Trigger measurement");
-            uint8_t buf[26] = {0};
-            if (memcmp(sunrise->state_reg, buf, 26)) // If last state was zeros (not set)
+            uint8_t buf[29] = {0};
+            buf[0] = 0x01; // Trigger single measurement
+            if (memcmp(sunrise->state_reg, &buf[1], 28)) // If last state was zeros (not set)
             {
-                uint8_t data = 0x01; // Prepare data
-                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, &data, 1); // Set measurement trigger
+                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, buf, 1); // Set measurement trigger
             }
             else // Last state exists
             {
-                uint8_t data[27];
-                data[0] = 0x01; // Prepare data
-                memcpy(&data[1], sunrise->state_reg, 26);
-                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, data, 27); // Set measurement trigger
+                memcpy(&buf[1], sunrise->state_reg, 28);
+                ret = sunrise_write(REG_START_SINGLE_MEAS_MIR, buf, 29); // Set measurement trigger
             }
             if (ret != 0) // On invalid read
             {
@@ -283,7 +281,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->state = ret; // Output return state
                 return;
             }
-            if (sunrise->timeout_iterator++ > (sunrise->config.meas_samples)) // If data not present for 4* the measurement time needed
+            if (sunrise->timeout_iterator++ > 4 * (sunrise->config.meas_samples)) // If data not present for 4* the measurement time needed
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
@@ -323,16 +321,16 @@ void sunrise_get_value(sensor_t* sunrise)
             }
             sunrise->state = SUCCESS; // Output SUCCESS state
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured CO2 value: %f", sunrise->co2);
-            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured RH value: %f", sunrise->humidity);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured T value: %f", sunrise->temperature);
             return;
         }
         case MEAS_READ_STATUS: // Reading status registers
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Read status");
-            ret = sunrise_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 26); // Read status registers
+            ret = sunrise_read(REG_ABC_TIME_MIR_H, sunrise->state_reg, 28); // Read status registers
             if (ret != 0) // On invalid read
             {
-                memset(sunrise->state_reg, 0x00, 26); // Clear last state registers
+                memset(sunrise->state_reg, 0x00, 28); // Clear last state registers
                 sunrise->state = ret; // Output return state
             }
             sunrise->meas_state = MEAS_FINISHED; // Measurement finished

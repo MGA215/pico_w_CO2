@@ -9,9 +9,15 @@ target_link_libraries(pico-display
   pico-common
   pico-gfx_pack
   pico-rtc
-  pico-wifi
-  pico-soap
-)
+  )
+  
+if (FULL_BUILD)
+  target_link_libraries(pico-display INTERFACE
+    pico-wifi
+    pico-soap
+    )
+endif()
+  
 
 target_sources(pico-display
   INTERFACE

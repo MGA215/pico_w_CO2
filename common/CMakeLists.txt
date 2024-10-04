@@ -24,5 +24,8 @@ target_link_libraries(pico-common
   INTERFACE
   pico_stdlib
   hardware_i2c
-  pico-service_comm
 )
+
+if (FULL_BUILD)
+  target_link_libraries(pico-common INTERFACE pico-service_comm)
+endif()

@@ -13,9 +13,9 @@
 #define __WIFI_C__
 
 #include "wifi.h"
+#include "tcp_server.h"
 #include "credentials.h"
 #include "tcp_client.h"
-#include "tcp_server.h"
 #include "common/shared.h"
 #include "error_codes.h"
 #include "common/debug.h"

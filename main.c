@@ -11,16 +11,19 @@
 
 #include "main.h"
 
+#if FULL_BUILD
+    #include "service_comm/service_comm.h"
+    #include "soap/soap.h"
+    #include "soap/soap_channels.h"
+    #include "wifi/wifi.h"
+#endif
+
 #include "config/config.h"
 #include "display/display.h"
 #include "error_handler/error_handler.h"
 #include "sensors/sensors.h"
-#include "service_comm/service_comm.h"
-#include "soap/soap.h"
-#include "wifi/wifi.h"
 
 #include "common/debug.h"
-#include "soap/soap_channels.h"
 
 #include "common/constants.h"
 #include "common/shared.h"
@@ -65,8 +68,9 @@ void core1_main(void)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Starting core 1...");
     error_handler_set_hardfault_core1();
-
+#ifdef __WIFI_H__
     wifi_main();
+#endif
 }
 
 int init(void)
@@ -101,11 +105,13 @@ int init(void)
     if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
     sensors_init_all(); // initialize sensors
 
+#if defined __SOAP_H__ && defined __SOAP_CHANNELS_H__
     soap_init(channels1); // Initialize SOAP channels
     soap_init_general(&channel00G, &hyt271.temperature, "Tamb", &hyt271.state, MEASURED_VALUE_T, 0, channels2);
     soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.state, MEASURED_VALUE_RH, 1, channels2);
     soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.state, MEASURED_VALUE_P, 2, channels2);
     soap_init_general(&channel03G, &cozir_unfiltered, "Sensor_60Raw", &sensors[6].state, MEASURED_VALUE_CO2, 3, channels2);
+#endif
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);
 
@@ -120,10 +126,12 @@ int loop(void)
         sensors_read_all(); // Read sensor values
         create_soap_messages(); // Create SOAP messages
     }
+#ifdef __SERVICE_COMM_H__
     if (config_data.command_rdy) // Check if service command is ready
     {
         service_comm_eng_process_command(); // Process service command
     }
+#endif
     update(); // Call update function as fast as possible
     check_svc_mode(); // Check for UART service mode state
     watchdog_update();
@@ -138,6 +146,7 @@ void update(void)
 
 void create_soap_messages(void)
 {
+#ifdef __SOAP_H__
     if (!sensors_measurement_ready || sensors_was_measurement_read) return; // Generate new message if new data available
     if (!soap_build(global_configuration.ser_num, channels1)) // Create SOAP message
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
@@ -146,6 +155,7 @@ void create_soap_messages(void)
         print_ser_output(SEVERITY_ERROR, SOURCE_SOAP, SOURCE_NO_SOURCE, "Failed to generate SOAP message");
     else print_ser_output(SEVERITY_INFO, SOURCE_SOAP, SOURCE_NO_SOURCE, "Generated SOAP message");
     sensors_was_measurement_read = true;
+#endif
     return;
 }
 

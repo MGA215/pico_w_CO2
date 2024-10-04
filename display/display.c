@@ -6,14 +6,17 @@
 #include "string.h"
 #include "pico/stdlib.h"
 #include "common/debug.h"
-#include "cyw43.h"
 #include "common/functions.h"
 #include "soap/soap_channels.h"
-#include "wifi/tcp_client.h"
-#include "wifi/tcp_server.h"
-#include "wifi/wifi.h"
 #include "malloc.h"
 #include "rtc/rtc.h"
+
+#if FULL_BUILD
+    #include "wifi/wifi.h"
+    #include "cyw43.h"
+    #include "wifi/tcp_client.h"
+    #include "wifi/tcp_server.h"
+#endif
 
 #define STATUS_ITEMS 12
 #define EE895_ITEMS 12
@@ -129,18 +132,26 @@ extern uint8_t debug_tcp_client;
 extern uint8_t debug_tcp_server;
 extern uint8_t debug_tcp_dns;
 
+#ifdef __TCP_CLIENT_H__
 // Time the last message was sent
 extern uint8_t last_message_time[32];
+
+// Error of the last message sent
+extern uint8_t last_message_error;
+#else
+uint8_t last_message_time[32] = {0};
+uint8_t last_message_error = 0;
+#endif
 
 // Time new measurement cycle should start
 extern absolute_time_t sensor_start_measurement_time;
 
-// Error of the last message sent
-extern uint8_t last_message_error;
-
+#ifdef __WIFI_H__
 // Time new message should be sent
 extern absolute_time_t send_data_time;
-
+#else
+absolute_time_t send_data_time;
+#endif
 
 static void display_buttons(void);
 static void display_on_button_a();
@@ -2144,12 +2155,17 @@ static void write_display(void)
                 {
                     case 0:
                     {
+#ifdef __WIFI_H__
                         snprintf(buf, 32, "WIFI: %s", wifi_is_running() ? "CONNECTED" : "NOT CONNECTED");
+#else
+                        snprintf(buf, 32, "WIFI: NOT CONNECTED");
+#endif
                         break;
                     }
                     case 1:
                     {
                         uint8_t server_state[12];
+#ifdef __TCP_SERVER_H__
                         switch(tcp_server_is_running())
                         {
                             case 0:
@@ -2174,11 +2190,18 @@ static void write_display(void)
                             }
                         }
                         snprintf(buf, 32, "TCP SERVER: %s", server_state);
+#else
+                        snprintf(buf, 32, "TCP_SERVER: STOPPED");
+#endif
                         break;
                     }
                     case 2:
                     {
+#ifdef __TCP_CLIENT_H__
                         snprintf(buf, 32, "TCP CLIENT: %s", tcp_client_is_running() ? "RUNNING" : "STOPPED");
+#else
+                        snprintf(buf, 32, "TCP CLIENT: STOPPED");
+#endif
                         break;
                     }
                     case 3:

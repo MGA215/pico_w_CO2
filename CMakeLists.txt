@@ -59,20 +59,25 @@ target_include_directories(pico_w_CO2 PRIVATE
 )
 
 set(PICO_DEOPTIMIZED_DEBUG 0 CACHE BOOL "Deoptimized debug")
+set(FULL_BUILD 1)
+add_compile_definitions(-DFULL_BUILD=${FULL_BUILD})
 
 add_subdirectory(rtc)
 add_subdirectory(gfx_pack)
-add_subdirectory(soap)
-add_subdirectory(wifi)
 add_subdirectory(sensors)
 add_subdirectory(common)
-add_subdirectory(cobs)
-add_subdirectory(service_comm)
 add_subdirectory(eeprom)
-add_subdirectory(uart)
 add_subdirectory(config)
 add_subdirectory(display)
 add_subdirectory(error_handler)
+
+if(FULL_BUILD)
+add_subdirectory(soap)
+add_subdirectory(wifi)
+add_subdirectory(cobs)
+add_subdirectory(uart)
+add_subdirectory(service_comm)
+endif()
 
 target_compile_options(pico_w_CO2 PRIVATE "-g")
 
@@ -84,15 +89,19 @@ target_sources(pico_w_CO2 INTERFACE ${CMAKE_CURRENT_LIST_DIR}/error_codes.h)
 
 # Add any user requested libraries
 target_link_libraries(pico_w_CO2 
-        pico-soap
         pico_multicore
-        pico-wifi
         pico-sensors
-        pico-service_comm
         pico-config
         pico-display
         pico-error_handler
         )
 
+if (FULL_BUILD)
+  target_link_libraries(pico_w_CO2
+  pico-soap
+  pico-service_comm
+  pico-wifi
+  )
+endif()
         
 pico_add_extra_outputs(pico_w_CO2)
