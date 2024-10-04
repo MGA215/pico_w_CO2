@@ -15,6 +15,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.1.3] - 2024-10-04
+
+### Added
+
+- Option to compile full or restricted build
+- Added internal pressure compensation for SunRise & SunLight using external pressure sensor
+- Added display screen for T/RH & P sensors
+
+### Changed
+
+### Removed
+
+### Fixed
+
+- Fixed a bug on display not showing pressure value for pressure compensation
+
 ## [1.1.2] - 2024-09-11
 
 ### Added

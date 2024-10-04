@@ -57,6 +57,8 @@ typedef enum display_sensors
     SENSOR_5_CONFIG = 16,
     SENSOR_6_CONFIG = 17,
     SENSOR_7_CONFIG = 18,
+    SENSOR_AUX_TRH = 30,
+    SENSOR_AUX_P = 31
 } display_sensors_e;
 
 // Display row being shown
@@ -293,12 +295,12 @@ static void display_on_button_a()
         case DISPLAY_NONE: return;
         case SENSORS:
         {
-            if (sensor <= SENSOR_7) // If showing sensor
+            if (sensor <= SENSOR_7 || sensor >= SENSOR_AUX_TRH) // If showing sensor
             {
                 sensor = SENSORS_NONE;
                 row = DISPLAY_NONE;
             }
-            else sensor -= 10; // Else show sensor
+            else if (sensor <= SENSOR_7_CONFIG) sensor -= 10; // Else show sensor
             break;
         }
         case DEBUG:
@@ -346,6 +348,8 @@ static void display_on_button_b()
         case SENSORS:
         {
             if (sensor <= SENSOR_7 && sensor != SENSORS_NONE) sensor = (sensor % 8) + 1;
+            else if (sensor == SENSOR_AUX_TRH) sensor = SENSOR_AUX_P;
+            else if (sensor == SENSOR_AUX_P) sensor = SENSOR_AUX_TRH;
             else 
             {
                 switch (sensors[sensor - 10 - 1].sensor_type)
@@ -560,6 +564,11 @@ static void display_on_button_c()
             if (row_select == 1 && debug > 0 && service_mode != SERVICE_MODE_UART) debug--;
             break;
         }
+        case SENSORS:
+        {
+            if (sensor >= SENSOR_AUX_TRH && sensor <= SENSOR_AUX_P) sensor = SENSOR_0;
+            break;
+        }
         case DEBUG:
         {
             switch (page_offset + row_select)
@@ -738,6 +747,11 @@ static void display_on_button_d()
         case DISPLAY_NONE:
         {
             if (row_select == 1 && debug < 6 && service_mode != SERVICE_MODE_UART) debug++;
+            break;
+        }
+        case SENSORS:
+        {
+            if (sensor <= SENSOR_7 && sensor != SENSORS_NONE) sensor = SENSOR_AUX_TRH;
             break;
         }
         case DEBUG:
@@ -1055,6 +1069,26 @@ static void write_display(void)
                 position.y = 5;
                 gfx_pack_write_text(&position, sensor_name); // Write number of errors
             }
+            else if (sensor == SENSOR_AUX_TRH)
+            {
+                uint8_t sensor_name[24];
+                strcpy(sensor_name, "T/RH sensor");
+                position.x = 0;
+                position.y = 1;
+                write_display_sensor(sensor_name, hyt271.state, false, 0, true, hyt271.temperature, false, 0, true, hyt271.humidity); // Write sensor readings to the display
+                snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_count);
+                position.x = 0;
+                position.y = 5;
+                gfx_pack_write_text(&position, sensor_name); // Write number of errors
+            }
+            else if (sensor == SENSOR_AUX_P)
+            {
+                uint8_t sensor_name[24];
+                strcpy(sensor_name, "P sensor");
+                position.x = 0;
+                position.y = 1;
+                write_display_sensor(sensor_name, ms5607.state, false, 0, true, ms5607.temperature, true, ms5607.pressure, false, 0); // Write sensor readings to the display
+            }
             else 
             {
                 uint8_t buf[32];
@@ -1196,7 +1230,7 @@ static void write_display(void)
                                 case 10:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);
@@ -1345,7 +1379,7 @@ static void write_display(void)
                                 case 15:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);
@@ -1475,7 +1509,7 @@ static void write_display(void)
                                 case 15:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);
@@ -1585,7 +1619,7 @@ static void write_display(void)
                                 case 11:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);
@@ -1674,7 +1708,7 @@ static void write_display(void)
                                 case 10:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);
@@ -1778,7 +1812,7 @@ static void write_display(void)
                                 case 11:
                                 {
                                     uint8_t buf2[16];
-                                    if (sensors[sensor_index].config.pressure_en)
+                                    if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
                                     snprintf(buf, 32, "PRESS_COMP: %s", buf2);

@@ -114,6 +114,8 @@
 #define REG_ABC_PRESSURE_H          0xDE
 #define REG_ABC_PRESSURE_L          0xDF
 
+extern ms5607_t ms5607;
+
 /**
  * @brief returns error code according to the error register value
  * 
@@ -228,6 +230,14 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->temperature = NAN; // Set temperature to unknown
                 sunlight->state = SUNLIGHT_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
+            }
+            if (sunlight->config.enable_pressure_comp && !ms5607.state) // Write pressure if enabled
+            {
+                uint8_t data[2];
+                sunlight->config.pressure = ms5607.pressure; // Copy pressure value
+                uint16_t val = ntoh16((uint16_t)(sunlight->config.pressure * 10));
+                memcpy(data, &val, 2);
+                sunlight_write(REG_AIR_PRESSURE_H, data, 2); // Write pressure from external probe
             }
             if (sunlight->config.single_meas_mode) // If in single measurement mode
             {

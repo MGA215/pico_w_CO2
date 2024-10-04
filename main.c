@@ -76,6 +76,13 @@ void core1_main(void)
 int init(void)
 {
     int32_t ret;
+
+    extern char __flash_binary_start;  // defined in linker script
+    extern char __flash_binary_end;    // defined in linker script
+    uintptr_t start = (uintptr_t) &__flash_binary_start;
+    uintptr_t end = (uintptr_t) &__flash_binary_end;
+    print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Binary starts at %08x and ends at %08x, size is %08x", start, end, end-start);
+
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
     error_handler_set_hardfault_core0(); // Set core 0 hardfault exception handler
     
