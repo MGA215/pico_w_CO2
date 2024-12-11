@@ -40,7 +40,7 @@
     #define COLOR_TRACE ""
 #endif
 
-/**DEBUG LEVELS
+/* DEBUG LEVELS
  * 0 ... DEBUG messages disabled
  * 1 ... display FATAL errors
  * 2 ... display ERROR and higher
