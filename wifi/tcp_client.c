@@ -28,7 +28,7 @@
 
 #define DUMP_BYTES(A,B)
 
-/// @brief TCP client structure
+// TCP client structure
 typedef struct TCP_CLIENT_T_ {
     struct tcp_pcb *tcp_pcb;
     ip_addr_t remote_addr;
@@ -40,7 +40,7 @@ typedef struct TCP_CLIENT_T_ {
     bool connected;
 } TCP_CLIENT_T;
 
-/// @brief TCP client FSM
+// TCP client FSM
 typedef enum tcp_client_fsm {
     CONNECTION_CLOSED = 0,
     CONNECTING = 1,
