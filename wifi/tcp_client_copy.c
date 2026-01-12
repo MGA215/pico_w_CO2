@@ -9,12 +9,12 @@
  * 
  */
 
-#ifndef __TCP_CLIENT_C__
-#define __TCP_CLIENT_C__
+#ifndef __TCP_CLIENT_COPY_C__
+#define __TCP_CLIENT_COPY_C__
 
 #include "credentials.h"
-#include "tcp_client.h"
-#include "http.h"
+#include "tcp_client_copy.h"
+#include "http_copy.h"
 #include "common/shared.h"
 #include "common/debug.h"
 
@@ -42,9 +42,15 @@ typedef struct TCP_CLIENT_T_ {
 
 /// @brief TCP client FSM
 typedef enum tcp_client_fsm {
-    CONNECTION_CLOSED = 0,
-    CONNECTING = 1,
-    CONNECTED = 2
+    STATE_CONNECTION_CLOSED = 0,
+    STATE_CONNECTION_OPEN_START = 1,
+    STATE_CONNECTION_OPENING = 2,
+    STATE_CONNECTION_OPENED = 3,
+    STATE_START_SEND = 4,
+    STATE_SEND_DATA = 5,
+    STATE_SENDING = 6,
+    STATE_SENT = 7,
+    STATE_CONNECTION_CLOSING = 8
 } tcp_client_fsm_e;
 
 // Client state
@@ -56,25 +62,25 @@ static TCP_CLIENT_T state;
 // Has data been sent
 static bool data_sent;
 
-// Pointer to bool if should try to send the same message again, is set by the error handler
-static bool* retry_send_message;
-
 // Length of sent data
 static uint16_t data_sent_len;
 
-// If an error has occured - to prevent infinite loop
-static bool error_flag;
-
-static bool mem_err;
-
-// Is data being sent
-static bool data_sending;
+// Should client start
+static bool client_start = false;
 
 // Last message timestamp
 uint8_t last_message_time[32] = {0};
 
+// Last error code
 uint8_t last_message_error = ERR_OK;
 
+bool ip_found = false;
+
+static uint8_t message_index = 0;
+
+static absolute_time_t tcp_client_open_timeout;
+static absolute_time_t tcp_client_send_timeout;
+static err_t last_error = ERR_OK;
 
 /**
  * @brief Opens a TCP socket
@@ -167,87 +173,123 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
  */
 void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callback_arg);
 
-bool ip_found = false;
 
-bool run_tcp_client(uint8_t soap_index)
+void tcp_state_machine(void)
 {
-    if (!&state) // No state exists
+    tcp_client_fsm_e new_state = client_state;
+    switch(client_state)
     {
-        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP state not initialized");
-        return false;
-    }
-    switch (client_state) // On connection state
-    {
-        case CONNECTION_CLOSED: // Connection closed
+        case STATE_CONNECTION_CLOSED: // Connection closed
         {
-            data_sent = false; // No data has been sent
-            error_flag = false; // No error present
-            mem_err = false;
-            if (!tcp_client_open(&state)) // try to open the connection
-            {
-                tcp_client_result(&state, -1); // Print error and try to close connection
-                return false;
-            }
-            client_state = CONNECTING; // Switch state to connectiong
-            data_sending = false;
-            return true;
+            if (client_start && global_configuration.soap_mode) new_state = STATE_CONNECTION_OPEN_START; // Start new session if requested and has an endpoint
+            break;
         }
-        case CONNECTING: // On connecting state
-            return true; // Wait for connected state
-        case CONNECTED: // On connected state
+        case STATE_CONNECTION_OPEN_START: // Start opening TCP connection
         {
-            err_t err;
-            if (!data_sending && !data_sent)
+            client_start = false; // Client is starting
+            last_error = ERR_OK; // Reset last error
+            if (!tcp_client_open(&state)) // Open new TCP socket
             {
-                uint8_t* message;
-                switch (global_configuration.soap_mode)
-                {
-                    case 0x01: // soap
+                print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to open TCP client");
+                if (last_error == ERR_OK) last_error = ERR_CLSD; // Might not be the best error
+                new_state = STATE_CONNECTION_CLOSING; // Close connection in case it was still running
+            }
+            tcp_client_open_timeout = make_timeout_time_ms(5000); // Make timeout 5 seconds for the connection to establish
+            new_state = STATE_CONNECTION_OPENING;
+            break;
+        }
+        case STATE_CONNECTION_OPENING: // Wait for the socket to connect
+        {
+            if (time_reached(tcp_client_open_timeout)) // Check if timeout has run out
+            {
+                print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to open TCP client - timeout");
+                new_state = STATE_CONNECTION_CLOSING; // Close connection
+                last_error = ERR_TIMEOUT; // Set last error as timeout
+            }
+            break;
+        }
+        case STATE_CONNECTION_OPENED: // Socket connected
+        {
+            tcp_client_open_timeout = at_the_end_of_time;
+            new_state = STATE_START_SEND;
+            break;
+        }
+        case STATE_START_SEND: // Create message with header
+        {
+            switch (global_configuration.soap_mode)
+            {
+                case 0x01: // soap
                     {
-                        message = create_http_header(global_configuration.soap_ip, false, global_configuration.soap_path, global_configuration.soap_port, 
-                            "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Safe add HTTP header to message
+                        create_http_header(global_configuration.soap_ip, false, global_configuration.soap_path, global_configuration.soap_port, 
+                            "http://tempuri.org/InsertMSxSample", soap_data[message_index].data, soap_data[message_index].data_len, &soap_data[message_index].data_mutex,
+                            state.buffer, state.buffer_len); // Safe add HTTP header to message
+                        new_state = STATE_SEND_DATA;
                         break;
                     }
                     case 0x02: // cloud
                     {
-                        message = create_http_header(global_configuration.cloud_ip, false, global_configuration.cloud_path, global_configuration.cloud_port, 
-                            "http://tempuri.org/InsertMSxSample", soap_data[soap_index].data, soap_data[soap_index].data_len, &soap_data[soap_index].data_mutex); // Safe add HTTP header to message
+                        create_http_header(global_configuration.cloud_ip, false, global_configuration.cloud_path, global_configuration.cloud_port, 
+                            "http://tempuri.org/InsertMSxSample", soap_data[message_index].data, soap_data[message_index].data_len, &soap_data[message_index].data_mutex,
+                            state.buffer, state.buffer_len); // Safe add HTTP header to message
+                        new_state = STATE_SEND_DATA;
                         break;
                     }
                     default:
                     {
-                        tcp_client_result(&state, ERR_ARG); // Cannot send message -> close client
-                        return false;
+                        last_error = ERR_ARG;
+                        new_state = STATE_CONNECTION_CLOSING;
+                        break;
                     }
-                }
-
-                cyw43_arch_lwip_begin();
-                data_sent = false;
-                err = tcp_client_send(&state, message);
-                last_message_error = err;
-                if (err != ERR_OK) // Send data
-                {
-                    cyw43_arch_lwip_end();
-                    free(message);
-                    tcp_client_result(&state, err); // Print error code and close socket
-                    return false;
-                }
-                cyw43_arch_lwip_end();
-                free(message);
             }
-            if (data_sent) {
-                if (error_flag) // If error flag raised close socket
-                {
-                    tcp_client_result(&state, 2); // Print error code 2 and close socket
-                    break;
-                }
-                tcp_client_result(&state, 0); // Close connection
+            break;
+        }
+        case STATE_SEND_DATA: // Send message
+        {
+            last_error = tcp_client_send(&state, state.buffer); // Send data
+            if (last_error) // On error
+            {
+                new_state = STATE_CONNECTION_CLOSING; // Close connection
+                break;
             }
-            else if (data_sent) data_sent = false;
-            return false;
+            new_state = STATE_SENDING;
+            tcp_client_send_timeout = make_timeout_time_ms(5000); // Make timeout 10 seconds for the data to be sent
+            break;
+        }
+        case STATE_SENDING: // Wait for the message to be sent
+        {
+            if (time_reached(tcp_client_send_timeout)) // Check if timeout has run out
+            {
+                print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data - timeout");
+                new_state = STATE_CONNECTION_CLOSING; // Close connection
+                last_error = ERR_TIMEOUT; // Set last error as timeout
+            }
+            break;
+        }
+        case STATE_SENT: // Data has been successfully received by the server
+        {
+            print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Successfully sent message %i at %s", message_index, datetime_str);
+            if (global_configuration.aux_msg) message_index = (message_index + 1) % 2; // Prepare for the next message
+            memcpy(last_message_time, datetime_str, 30); // Save last message sent datetime
+            new_state = STATE_CONNECTION_CLOSING; // Close client
+            break;
+        }
+        case STATE_CONNECTION_CLOSING:
+        {
+            tcp_client_result(&state, last_error); // Close client with last error
+            last_message_error = last_error; // Save last error
+            if (message_index == 1 && last_error == ERR_OK) client_start = true; // If should send aux message start the client once again
+            new_state = STATE_CONNECTION_CLOSED; // Close connection
+            break;
         }
     }
-    return false;
+    client_state = new_state;
+    return;
+}
+
+void tcp_run_client(void)
+{
+    client_start = true;
+    message_index = 0;
 }
 
 bool tcp_client_is_running(void)
@@ -257,7 +299,6 @@ bool tcp_client_is_running(void)
 
 err_t tcp_client_init(bool* retry_send)
 {
-    retry_send_message = retry_send;
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
     if (global_configuration.soap_mode == 0x02) // data to cloud
     {
@@ -281,7 +322,7 @@ err_t tcp_client_init(bool* retry_send)
         ip4addr_aton(global_configuration.soap_ip, &state.remote_addr); // Assign DB IP addr
         ip_found = true;
     }
-    client_state = CONNECTION_CLOSED; // Set connection state to closed
+    client_state = STATE_CONNECTION_CLOSED; // Set connection state to closed
     return ERR_OK;
 }
 
@@ -310,6 +351,8 @@ static bool tcp_client_open(void* arg)
     tcp_recv(state->tcp_pcb, tcp_client_recv); // Assign receive callback
     tcp_sent(state->tcp_pcb, tcp_client_sent); // Assign send callback
     tcp_err(state->tcp_pcb, tcp_client_err); // Assign error callback
+    tcp_nagle_disable(state->tcp_pcb); // disable nagle algorithm
+    state->tcp_pcb->flags |= TF_NODELAY;
 
     state->buffer_len = 0;
 
@@ -319,7 +362,7 @@ static bool tcp_client_open(void* arg)
     cyw43_arch_lwip_end();
     if (err) // If connection errored
     {
-        tcp_client_result(arg, err);
+        last_error = err;
         return false;
     }
 
@@ -328,14 +371,8 @@ static bool tcp_client_open(void* arg)
 
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
-    if (mem_err)
-    {
-
-        return ERR_OK;
-    }
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Client poll, closing connection");
     return tcp_client_result(arg, 0);
-    // return ERR_OK;
 }
 
 static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, err_t err)
@@ -367,6 +404,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
         pbuf_free(p);
         print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Freed pbuf");
     }
+    client_state = STATE_SENT; // Data has been sent, response received
     return ERR_OK;    
 }
 
@@ -376,8 +414,6 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sending finished, sent %u bytes", len);
     data_sent = true; // Data sent
     data_sent_len = len; // Copy data sent length
-    data_sending = false;
-    *retry_send_message = false;
     return ERR_OK;
 }
 
@@ -388,29 +424,30 @@ static err_t tcp_client_send(void* arg, uint8_t* data)
     if (debug >= SEVERITY_TRACE && debug_tcp_client >= SEVERITY_TRACE)
         printf("%s\n", data);
     sleep_ms(10);
+
     if (strlen(data) >= tcp_sndbuf(state->tcp_pcb)) // Check buffer size
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Trying to send too much data");
         return ERR_ARG;
     }
-    err_t err = tcp_write(state->tcp_pcb, data, strlen(data), TCP_WRITE_FLAG_COPY); // Prepare data to send
+
+    cyw43_arch_lwip_begin();
+    // if (last_error == ERR_MEM) sleep_ms(500);
+    err_t err = tcp_output(state->tcp_pcb);
+    err = tcp_write(state->tcp_pcb, data, strlen(data), 0); // Prepare data to send
     if (err != ERR_OK)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to write data to be sent: %i", err);
-        if (err == ERR_MEM)
-        {
-            mem_err = true;
-        }
+        cyw43_arch_lwip_end();
         return err;
     }
     err = tcp_output(state->tcp_pcb); // Send data
+    cyw43_arch_lwip_end();
     if (err != ERR_OK)
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
         return err;
     }
-    data_sending = true;
-    print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sent");
     memcpy(last_message_time, datetime_str, 30);
     return ERR_OK;
 }
@@ -423,7 +460,7 @@ static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP connection failed");
         return tcp_client_result(arg, err); // Close connection
     }
-    client_state = CONNECTED; // state connected
+    client_state = STATE_CONNECTION_OPENED; // state connected
     state->connected = true; 
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP connection established");
     return ERR_OK;
@@ -447,15 +484,12 @@ static void tcp_client_err(void* arg, err_t err)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     state->connected = false; // Disconnected
-    data_sending = false;
     data_sent = false;
-    client_state = CONNECTION_CLOSED;
-    error_flag = true; // Error has occured
-    *retry_send_message = true; // Should retry to send the message
+    client_state = STATE_CONNECTION_CLOSING;
+    last_error = err;
     if (err != ERR_ABRT) // Connection not aborted, still fatal error
     {
         print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_TCP_CLIENT, "TCP error: %i", err);
-        tcp_client_result(arg, err); // Close connection
     }
     else print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Connection aborted");
 }
@@ -481,7 +515,6 @@ static err_t tcp_client_close(void* arg)
         }
         state->tcp_pcb = NULL; // Destroy PCB
     }
-    client_state = CONNECTION_CLOSED;
     return err;
 }
 

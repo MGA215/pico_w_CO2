@@ -11,9 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added back close on poll for TCP client, changed poll time to 12 seconds
+- Reworked TCP client to full FSM
+
 ### Removed
 
 ### Fixed
+
+- UART debug messages being interrupted by another message
 
 ## [1.1.3] - 2024-10-04
 

@@ -10,6 +10,7 @@
 #define UART_TX 0
 #define UART_RX 1
 
+
 extern uint8_t buffer_sent[];
 extern uint8_t buffer_recv[];
 
@@ -24,7 +25,7 @@ void uart_service_init(void)
     gpio_set_function(UART_TX, GPIO_FUNC_UART);
     gpio_set_function(UART_RX, GPIO_FUNC_UART);
 
-    uart_init(UART_INST, 115200);
+    uart_init(UART_INST, PICO_DEFAULT_UART_BAUD_RATE);
 }
 
 void uart_service_read_command(void)

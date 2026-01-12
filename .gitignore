@@ -5,7 +5,7 @@ cmake-*
 build
 .DS_Store
 *.pdf
-notes.txt
+*notes.txt
 config*
 logs
 soap

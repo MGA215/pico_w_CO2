@@ -49,7 +49,7 @@
  * 5 ... display debug and higher
  * 6 ... display trace and higher
  */
-uint8_t debug = 3; // Global max debug level
+uint8_t debug = 5; // Global max debug level
 
 uint8_t debug_main_init = 3;
 uint8_t debug_main_loop = 3;
@@ -79,8 +79,8 @@ uint8_t debug_cozir_lp3 = 3;
 uint8_t debug_cm1107n = 3;
 
 
-uint8_t debug_wifi = 3;
-uint8_t debug_tcp_client = 3;
+uint8_t debug_wifi = 5;
+uint8_t debug_tcp_client = 5;
 uint8_t debug_tcp_server = 3;
 uint8_t debug_tcp_dns = 3;
 
@@ -356,6 +356,7 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
         va_end(va);
 
         float time_sec = (float)(to_us_since_boot(get_absolute_time()) / 1000) / 1000.0f;
+        uart_tx_wait_blocking(uart0);
         printf("%s[%12.3f] %s %s %s %s\n"RESET"", severity_color, time_sec, severity_str, source_str, subsource_str, buf);
     }
 }

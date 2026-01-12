@@ -9,19 +9,21 @@
  * 
  */
 
+
 #include "main.h"
 
 #if FULL_BUILD
     #include "service_comm/service_comm.h"
     #include "soap/soap.h"
     #include "soap/soap_channels.h"
-    #include "wifi/wifi.h"
+    #include "wifi/wifi_copy.h"
 #endif
 
 #include "config/config.h"
 #include "display/display.h"
 #include "error_handler/error_handler.h"
 #include "sensors/sensors.h"
+#include "uart/uart.h"
 
 #include "common/debug.h"
 
@@ -33,6 +35,7 @@
 #include "hardware/watchdog.h"
 #include "pico/multicore.h"
 #include "pico/mutex.h"
+
 
 
 __attribute__((optimize("O0")))
@@ -68,7 +71,7 @@ void core1_main(void)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Starting core 1...");
     error_handler_set_hardfault_core1();
-#ifdef __WIFI_H__
+#ifdef __WIFI_COPY_H__
     wifi_main();
 #endif
 }
@@ -117,7 +120,6 @@ int init(void)
     soap_init_general(&channel00G, &hyt271.temperature, "Tamb", &hyt271.state, MEASURED_VALUE_T, 0, channels2);
     soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.state, MEASURED_VALUE_RH, 1, channels2);
     soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.state, MEASURED_VALUE_P, 2, channels2);
-    soap_init_general(&channel03G, &cozir_unfiltered, "Sensor_60Raw", &sensors[6].state, MEASURED_VALUE_CO2, 3, channels2);
 #endif
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);
