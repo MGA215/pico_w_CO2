@@ -469,6 +469,7 @@ static int32_t sr_write_config(sensor_config_t* config)
         uint8_t buf[2];
         uint16_t val = ntoh16(config->pressure * 10);
         memcpy(buf, &val, 2);
+        sleep_ms(10);
         if ((ret = sunrise_write(REG_AIR_PRESSURE_H, buf, 2)) != 0) return ret;
         sleep_ms(10);
         uint8_t recv[2];

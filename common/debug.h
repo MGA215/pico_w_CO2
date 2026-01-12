@@ -64,6 +64,44 @@ extern uint8_t debug_tcp_client;
 extern uint8_t debug_tcp_server;
 extern uint8_t debug_tcp_dns;
 
+typedef struct debug_config
+{
+    uint8_t debug_main_init;
+    uint8_t debug_main_loop;
+    uint8_t debug_soap;
+    uint8_t debug_rtc;
+    uint8_t debug_eeprom;
+    uint8_t debug_display;
+    uint8_t debug_gfx;
+    uint8_t debug_ram;
+    uint8_t debug_service_comm;
+
+    uint8_t debug_sensors;
+
+    uint8_t debug_mux;
+    uint8_t debug_power;
+    uint8_t debug_ms5607;
+    uint8_t debug_hyt271;
+
+    uint8_t debug_ee895;
+    uint8_t debug_cdm7162;
+    uint8_t debug_sunrise;
+    uint8_t debug_sunlight;
+
+    uint8_t debug_scd30;
+    uint8_t debug_scd41;
+    uint8_t debug_cozir_lp3;
+    uint8_t debug_cm1107n;
+
+    uint8_t debug_wifi;
+    uint8_t debug_tcp_client;
+    uint8_t debug_tcp_server;
+    uint8_t debug_tcp_dns;
+} debug_configuration_t;
+
+extern debug_configuration_t* debug_configuration;
+
+
 /**
  * @brief Prints a debug message if corresponding DEBUG severity is enabled in constants.h
  * 

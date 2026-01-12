@@ -51,41 +51,80 @@
  */
 uint8_t debug = 5; // Global max debug level
 
-uint8_t debug_main_init = 3;
-uint8_t debug_main_loop = 3;
-uint8_t debug_soap = 3;
-uint8_t debug_rtc = 3;
-uint8_t debug_eeprom = 3;
-uint8_t debug_display = 3;
-uint8_t debug_gfx = 3;
-uint8_t debug_ram = 3;
-uint8_t debug_service_comm = 3;
+static debug_configuration_t config_normal =
+{
+    .debug_main_init = 3,
+    .debug_main_loop = 3,
+    .debug_soap = 3,
+    .debug_rtc = 3,
+    .debug_eeprom = 3,
+    .debug_display = 3,
+    .debug_gfx = 3,
+    .debug_ram = 3,
+    .debug_service_comm = 3,
 
-uint8_t debug_sensors = 3;
+    .debug_sensors = 3,
 
-uint8_t debug_mux = 3;
-uint8_t debug_power = 3;
-uint8_t debug_ms5607 = 3;
-uint8_t debug_hyt271 = 3;
+    .debug_mux = 3,
+    .debug_power = 3,
+    .debug_ms5607 = 3,
+    .debug_hyt271 = 3,
 
-uint8_t debug_ee895 = 3;
-uint8_t debug_cdm7162 = 3;
-uint8_t debug_sunrise = 3;
-uint8_t debug_sunlight = 3;
+    .debug_ee895 = 3,
+    .debug_cdm7162 = 3,
+    .debug_sunrise = 3,
+    .debug_sunlight = 3,
+    .debug_scd30 = 3,
+    .debug_scd41 = 3,
+    .debug_cozir_lp3 = 3,
+    .debug_cm1107n = 3,
 
-uint8_t debug_scd30 = 3;
-uint8_t debug_scd41 = 3;
-uint8_t debug_cozir_lp3 = 3;
-uint8_t debug_cm1107n = 3;
+    .debug_wifi = 5,
+    .debug_tcp_client = 5,
+    .debug_tcp_server = 3,
+    .debug_tcp_dns = 3,
+};
 
+static debug_configuration_t config_debug =
+{
+    .debug_main_init = 5,
+    .debug_main_loop = 5,
+    .debug_soap = 5,
+    .debug_rtc = 5,
+    .debug_eeprom = 5,
+    .debug_display = 5,
+    .debug_gfx = 5,
+    .debug_ram = 5,
+    .debug_service_comm = 5,
 
-uint8_t debug_wifi = 5;
-uint8_t debug_tcp_client = 5;
-uint8_t debug_tcp_server = 3;
-uint8_t debug_tcp_dns = 3;
+    .debug_sensors = 5,
+
+    .debug_mux = 5,
+    .debug_power = 5,
+    .debug_ms5607 = 5,
+    .debug_hyt271 = 5,
+
+    .debug_ee895 = 5,
+    .debug_cdm7162 = 5,
+    .debug_sunrise = 5,
+    .debug_sunlight = 5,
+    .debug_scd30 = 5,
+    .debug_scd41 = 5,
+    .debug_cozir_lp3 = 5,
+    .debug_cm1107n = 5,
+
+    .debug_wifi = 5,
+    .debug_tcp_client = 5,
+    .debug_tcp_server = 5,
+    .debug_tcp_dns = 5,
+};
+
+debug_configuration_t* debug_configuration = &config_debug;
+
 
 void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const uint8_t* message, ...)
 {
+    
     if (debug >= severity)
     {
         int32_t message_len = strlen(message);
@@ -102,107 +141,107 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 snprintf(source_str, 13, "            ");
                 break;
             case SOURCE_MAIN_INIT:
-                if (severity > debug_main_init && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_main_init && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MAIN-INIT] ");
                 break;
             case SOURCE_MAIN_LOOP:
-                if (severity > debug_main_loop && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_main_loop && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MAIN-LOOP] ");
                 break;
             case SOURCE_SENSORS:
-                if (severity > debug_sensors && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_sensors && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SENSORS]   ");
                 break;
             case SOURCE_SOAP:
-                if (severity > debug_soap && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_soap && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SOAP]      ");
                 break;
             case SOURCE_MUX:
-                if (severity > debug_mux && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_mux && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MUX]       ");
                 break;
             case SOURCE_DISPLAY:
-                if (severity > debug_display && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_display && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[DISPLAY]   ");
                 break;
             case SOURCE_RTC:
-                if (severity > debug_rtc && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_rtc && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[RTC]       ");
                 break;
             case SOURCE_GFX:
-                if (severity > debug_gfx && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_gfx && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[GFX]       ");
                 break;
             case SOURCE_RAM:
-                if (severity > debug_ram && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_ram && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[RAM]       ");
                 break;
             case SOURCE_SERVICE_COMM:
-                if (severity > debug_service_comm && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_service_comm && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SVC_COMM]  ");
                 break;
             case SOURCE_EEPROM:
-                if (severity > debug_eeprom && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_eeprom && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[EEPROM]    ");
                 break;
             case SOURCE_EE895:
-                if (severity > debug_ee895 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_ee895 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[EE895]     ");
                 break;
             case SOURCE_CDM7162:
-                if (severity > debug_cdm7162 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_cdm7162 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CDM7162]   ");
                 break;
             case SOURCE_SUNRISE:
-                if (severity > debug_sunrise && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_sunrise && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SUNRISE]   ");
                 break;
             case SOURCE_SUNLIGHT:
-                if (severity > debug_sunlight && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_sunlight && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SUNLIGHT]  ");
                 break;
             case SOURCE_SCD30:
-                if (severity > debug_scd30 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_scd30 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SCD30]     ");
                 break;
             case SOURCE_SCD41:
-                if (severity > debug_scd41 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_scd41 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[SCD41]     ");
                 break;
             case SOURCE_COZIR_LP3:
-                if (severity > debug_cozir_lp3 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_cozir_lp3 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CozIR-LP3] ");
                 break;
             case SOURCE_CM1107N:
-                if (severity > debug_cm1107n && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_cm1107n && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CM1107N]   ");
                 break;
             case SOURCE_POWER:
-                if (severity > debug_power && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_power && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[POWER]     ");
                 break;
             case SOURCE_MS5607:
-                if (severity > debug_ms5607 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_ms5607 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[MS5607]    ");
                 break;
             case SOURCE_HYT271:
-                if (severity > debug_hyt271 && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_hyt271 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[HYT271]    ");
                 break;
             case SOURCE_WIFI:
-                if (severity > debug_wifi && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_wifi && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[WiFi]      ");
                 break;
             case SOURCE_TCP_CLIENT:
-                if (severity > debug_tcp_client && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_tcp_client && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-Client]");
                 break;
             case SOURCE_TCP_SERVER:
-                if (severity > debug_tcp_server && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_tcp_server && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-Server]");
                 break;
             case SOURCE_TCP_DNS:
-                if (severity > debug_tcp_dns && subsource == SOURCE_NO_SOURCE) return;
+                if (severity > debug_configuration->debug_tcp_dns && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[TCP-DNS]   ");
                 break;
             default:
@@ -214,107 +253,107 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 snprintf(subsource_str, 13, "            ");
                 break;
             case SOURCE_MAIN_INIT:
-                if (severity > debug_main_init) return;
+                if (severity > debug_configuration->debug_main_init) return;
                 snprintf(subsource_str, 13, "[MAIN-INIT] ");
                 break;
             case SOURCE_MAIN_LOOP:
-                if (severity > debug_main_loop) return;
+                if (severity > debug_configuration->debug_main_loop) return;
                 snprintf(subsource_str, 13, "[MAIN-LOOP] ");
                 break;
             case SOURCE_SENSORS:
-                if (severity > debug_sensors) return;
+                if (severity > debug_configuration->debug_sensors) return;
                 snprintf(subsource_str, 13, "[SENSORS]   ");
                 break;
             case SOURCE_SOAP:
-                if (severity > debug_soap) return;
+                if (severity > debug_configuration->debug_soap) return;
                 snprintf(subsource_str, 13, "[SOAP]      ");
                 break;
             case SOURCE_MUX:
-                if (severity > debug_mux) return;
+                if (severity > debug_configuration->debug_mux) return;
                 snprintf(subsource_str, 13, "[MUX]       ");
                 break;
             case SOURCE_DISPLAY:
-                if (severity > debug_display) return;
+                if (severity > debug_configuration->debug_display) return;
                 snprintf(subsource_str, 13, "[DISPLAY]   ");
                 break;
             case SOURCE_RTC:
-                if (severity > debug_rtc) return;
+                if (severity > debug_configuration->debug_rtc) return;
                 snprintf(subsource_str, 13, "[RTC]       ");
                 break;
             case SOURCE_GFX:
-                if (severity > debug_gfx) return;
+                if (severity > debug_configuration->debug_gfx) return;
                 snprintf(subsource_str, 13, "[GFX]       ");
                 break;
             case SOURCE_RAM:
-                if (severity > debug_ram) return;
+                if (severity > debug_configuration->debug_ram) return;
                 snprintf(subsource_str, 13, "[RAM]       ");
                 break;
             case SOURCE_SERVICE_COMM:
-                if (severity > debug_service_comm) return;
+                if (severity > debug_configuration->debug_service_comm) return;
                 snprintf(subsource_str, 13, "[SVC_COMM]  ");
                 break;
             case SOURCE_EEPROM:
-                if (severity > debug_eeprom) return;
+                if (severity > debug_configuration->debug_eeprom) return;
                 snprintf(subsource_str, 13, "[EEPROM]    ");
                 break;
             case SOURCE_EE895:
-                if (severity > debug_ee895) return;
+                if (severity > debug_configuration->debug_ee895) return;
                 snprintf(subsource_str, 13, "[EE895]     ");
                 break;
             case SOURCE_CDM7162:
-                if (severity > debug_cdm7162) return;
+                if (severity > debug_configuration->debug_cdm7162) return;
                 snprintf(subsource_str, 13, "[CDM7162]   ");
                 break;
             case SOURCE_SUNRISE:
-                if (severity > debug_sunrise) return;
+                if (severity > debug_configuration->debug_sunrise) return;
                 snprintf(subsource_str, 13, "[SUNRISE]   ");
                 break;
             case SOURCE_SUNLIGHT:
-                if (severity > debug_sunlight) return;
+                if (severity > debug_configuration->debug_sunlight) return;
                 snprintf(subsource_str, 13, "[SUNLIGHT]  ");
                 break;
             case SOURCE_SCD30:
-                if (severity > debug_scd30) return;
+                if (severity > debug_configuration->debug_scd30) return;
                 snprintf(subsource_str, 13, "[SCD30]     ");
                 break;
             case SOURCE_SCD41:
-                if (severity > debug_scd41) return;
+                if (severity > debug_configuration->debug_scd41) return;
                 snprintf(subsource_str, 13, "[SCD41]     ");
                 break;
             case SOURCE_COZIR_LP3:
-                if (severity > debug_cozir_lp3) return;
+                if (severity > debug_configuration->debug_cozir_lp3) return;
                 snprintf(subsource_str, 13, "[CozIR-LP3] ");
                 break;
             case SOURCE_CM1107N:
-                if (severity > debug_cm1107n) return;
+                if (severity > debug_configuration->debug_cm1107n) return;
                 snprintf(subsource_str, 13, "[CM1107N]   ");
                 break;
             case SOURCE_POWER:
-                if (severity > debug_power) return;
+                if (severity > debug_configuration->debug_power) return;
                 snprintf(subsource_str, 13, "[POWER]     ");
                 break;
             case SOURCE_MS5607:
-                if (severity > debug_ms5607) return;
+                if (severity > debug_configuration->debug_ms5607) return;
                 snprintf(subsource_str, 13, "[MS5607]    ");
                 break;
             case SOURCE_HYT271:
-                if (severity > debug_hyt271) return;
+                if (severity > debug_configuration->debug_hyt271) return;
                 snprintf(subsource_str, 13, "[HYT271]    ");
                 break;
             case SOURCE_WIFI:
-                if (severity > debug_wifi) return;
+                if (severity > debug_configuration->debug_wifi) return;
                 snprintf(subsource_str, 13, "[WiFi]      ");
                 break;
             case SOURCE_TCP_CLIENT:
-                if (severity > debug_tcp_client) return;
+                if (severity > debug_configuration->debug_tcp_client) return;
                 snprintf(subsource_str, 13, "[TCP-Client]");
                 break;
             case SOURCE_TCP_SERVER:
-                if (severity > debug_tcp_server) return;
+                if (severity > debug_configuration->debug_tcp_server) return;
                 snprintf(subsource_str, 13, "[TCP-Server]");
                 break;
             case SOURCE_TCP_DNS:
-                if (severity > debug_tcp_dns) return;
+                if (severity > debug_configuration->debug_tcp_dns) return;
                 snprintf(subsource_str, 13, "[TCP-DNS]   ");
                 break;
             default:

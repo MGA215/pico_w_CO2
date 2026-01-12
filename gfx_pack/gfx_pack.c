@@ -289,9 +289,9 @@ bool gfx_pack_read_button(uint8_t GFX_PACK_BUTTON)
 void gfx_pack_reset(void)
 {
     gpio_put(GFX_PACK_RESET_PIN, 0); // Reset pin low
-    sleep_ms(10);
+    sleep_us(10);
     gpio_put(GFX_PACK_RESET_PIN, 1); // Reset pin high
-    sleep_ms(10);
+    sleep_us(10);
 }
 
 void gfx_pack_invert_row_color(uint8_t row)

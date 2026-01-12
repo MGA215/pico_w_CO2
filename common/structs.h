@@ -22,6 +22,7 @@
 typedef struct sensor_config sensor_config_t;
 typedef struct sensor sensor_t;
 
+#define SENSOR_TYPES 8
 typedef enum sensor_type
 {
     UNKNOWN = -1,

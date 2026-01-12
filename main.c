@@ -124,7 +124,6 @@ int32_t init(void)
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);
 
-    sleep_ms(10); // Init wait
     return SUCCESS;
 }
 

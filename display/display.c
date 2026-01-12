@@ -575,132 +575,132 @@ static void display_on_button_c()
             {
                 case 0:
                 {
-                    if (debug_main_init > 0 && service_mode != SERVICE_MODE_UART) debug_main_init--;
+                    if (debug_configuration->debug_main_init > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_main_init--;
                     break;
                 }
                 case 1:
                 {
-                    if (debug_main_loop > 0 && service_mode != SERVICE_MODE_UART) debug_main_loop--;
+                    if (debug_configuration->debug_main_loop > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_main_loop--;
                     break;
                 }
                 case 2:
                 {
-                    if (debug_sensors > 0 && service_mode != SERVICE_MODE_UART) debug_sensors--;
+                    if (debug_configuration->debug_sensors > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sensors--;
                     break;
                 }
                 case 3:
                 {
-                    if (debug_soap > 0 && service_mode != SERVICE_MODE_UART) debug_soap--;
+                    if (debug_configuration->debug_soap > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_soap--;
                     break;
                 }
                 case 4:
                 {
-                    if (debug_rtc > 0 && service_mode != SERVICE_MODE_UART) debug_rtc--;
+                    if (debug_configuration->debug_rtc > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_rtc--;
                     break;
                 }
                 case 5:
                 {
-                    if (debug_display > 0 && service_mode != SERVICE_MODE_UART) debug_display--;
+                    if (debug_configuration->debug_display > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_display--;
                     break;
                 }
                 case 6:
                 {
-                    if (debug_gfx > 0 && service_mode != SERVICE_MODE_UART) debug_gfx--;
+                    if (debug_configuration->debug_gfx > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_gfx--;
                     break;
                 }
                 case 7:
                 {
-                    if (debug_ram > 0 && service_mode != SERVICE_MODE_UART) debug_ram--;
+                    if (debug_configuration->debug_ram > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ram--;
                     break;
                 }
                 case 8:
                 {
-                    if (debug_service_comm > 0 && service_mode != SERVICE_MODE_UART) debug_service_comm--;
+                    if (debug_configuration->debug_service_comm > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_service_comm--;
                     break;
                 }
                 case 9:
                 {
-                    if (debug_eeprom > 0 && service_mode != SERVICE_MODE_UART) debug_eeprom--;
+                    if (debug_configuration->debug_eeprom > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_eeprom--;
                     break;
                 }
                 case 10:
                 {
-                    if (debug_mux > 0 && service_mode != SERVICE_MODE_UART) debug_mux--;
+                    if (debug_configuration->debug_mux > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_mux--;
                     break;
                 }
                 case 11:
                 {
-                    if (debug_power > 0 && service_mode != SERVICE_MODE_UART) debug_power--;
+                    if (debug_configuration->debug_power > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_power--;
                     break;
                 }
                 case 12:
                 {
-                    if (debug_ms5607 > 0 && service_mode != SERVICE_MODE_UART) debug_ms5607--;
+                    if (debug_configuration->debug_ms5607 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ms5607--;
                     break;
                 }
                 case 13:
                 {
-                    if (debug_hyt271 > 0 && service_mode != SERVICE_MODE_UART) debug_hyt271--;
+                    if (debug_configuration->debug_hyt271 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_hyt271--;
                     break;
                 }
                 case 14:
                 {
-                    if (debug_ee895 > 0 && service_mode != SERVICE_MODE_UART) debug_ee895--;
+                    if (debug_configuration->debug_ee895 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ee895--;
                     break;
                 }
                 case 15:
                 {
-                    if (debug_cdm7162 > 0 && service_mode != SERVICE_MODE_UART) debug_cdm7162--;
+                    if (debug_configuration->debug_cdm7162 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cdm7162--;
                     break;
                 }
                 case 16:
                 {
-                    if (debug_sunrise > 0 && service_mode != SERVICE_MODE_UART) debug_sunrise--;
+                    if (debug_configuration->debug_sunrise > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sunrise--;
                     break;
                 }
                 case 17:
                 {
-                    if (debug_sunlight > 0 && service_mode != SERVICE_MODE_UART) debug_sunlight--;
+                    if (debug_configuration->debug_sunlight > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sunlight--;
                     break;
                 }
                 case 18:
                 {
-                    if (debug_scd30 > 0 && service_mode != SERVICE_MODE_UART) debug_scd30--;
+                    if (debug_configuration->debug_scd30 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_scd30--;
                     break;
                 }
                 case 19:
                 {
-                    if (debug_scd41 > 0 && service_mode != SERVICE_MODE_UART) debug_scd41--;
+                    if (debug_configuration->debug_scd41 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_scd41--;
                     break;
                 }
                 case 20:
                 {
-                    if (debug_cozir_lp3 > 0 && service_mode != SERVICE_MODE_UART) debug_cozir_lp3--;
+                    if (debug_configuration->debug_cozir_lp3 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cozir_lp3--;
                     break;
                 }
                 case 21:
                 {
-                    if (debug_cm1107n > 0 && service_mode != SERVICE_MODE_UART) debug_cm1107n--;
+                    if (debug_configuration->debug_cm1107n > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cm1107n--;
                     break;
                 }
                 case 22:
                 {
-                    if (debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_wifi--;
+                    if (debug_configuration->debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi--;
                     break;
                 }
                 case 23:
                 {
-                    if (debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_tcp_client--;
+                    if (debug_configuration->debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client--;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_tcp_dns--;
+                    if (debug_configuration->debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns--;
                     break;
                 }
                 case 25:
                 {
-                    if (debug_tcp_server > 0 && service_mode != SERVICE_MODE_UART) debug_tcp_server--;
+                    if (debug_configuration->debug_tcp_server > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server--;
                     break;
                 }
                 default:
@@ -760,132 +760,132 @@ static void display_on_button_d()
             {
                 case 0:
                 {
-                    if (debug_main_init < 6 && service_mode != SERVICE_MODE_UART) debug_main_init++;
+                    if (debug_configuration->debug_main_init < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_main_init++;
                     break;
                 }
                 case 1:
                 {
-                    if (debug_main_loop < 6 && service_mode != SERVICE_MODE_UART) debug_main_loop++;
+                    if (debug_configuration->debug_main_loop < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_main_loop++;
                     break;
                 }
                 case 2:
                 {
-                    if (debug_sensors < 6 && service_mode != SERVICE_MODE_UART) debug_sensors++;
+                    if (debug_configuration->debug_sensors < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sensors++;
                     break;
                 }
                 case 3:
                 {
-                    if (debug_soap < 6 && service_mode != SERVICE_MODE_UART) debug_soap++;
+                    if (debug_configuration->debug_soap < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_soap++;
                     break;
                 }
                 case 4:
                 {
-                    if (debug_rtc < 6 && service_mode != SERVICE_MODE_UART) debug_rtc++;
+                    if (debug_configuration->debug_rtc < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_rtc++;
                     break;
                 }
                 case 5:
                 {
-                    if (debug_display < 6 && service_mode != SERVICE_MODE_UART) debug_display++;
+                    if (debug_configuration->debug_display < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_display++;
                     break;
                 }
                 case 6:
                 {
-                    if (debug_gfx < 6 && service_mode != SERVICE_MODE_UART) debug_gfx++;
+                    if (debug_configuration->debug_gfx < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_gfx++;
                     break;
                 }
                 case 7:
                 {
-                    if (debug_ram < 6 && service_mode != SERVICE_MODE_UART) debug_ram++;
+                    if (debug_configuration->debug_ram < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ram++;
                     break;
                 }
                 case 8:
                 {
-                    if (debug_service_comm < 6 && service_mode != SERVICE_MODE_UART) debug_service_comm++;
+                    if (debug_configuration->debug_service_comm < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_service_comm++;
                     break;
                 }
                 case 9:
                 {
-                    if (debug_eeprom < 6 && service_mode != SERVICE_MODE_UART) debug_eeprom++;
+                    if (debug_configuration->debug_eeprom < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_eeprom++;
                     break;
                 }
                 case 10:
                 {
-                    if (debug_mux < 6 && service_mode != SERVICE_MODE_UART) debug_mux++;
+                    if (debug_configuration->debug_mux < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_mux++;
                     break;
                 }
                 case 11:
                 {
-                    if (debug_power < 6 && service_mode != SERVICE_MODE_UART) debug_power++;
+                    if (debug_configuration->debug_power < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_power++;
                     break;
                 }
                 case 12:
                 {
-                    if (debug_ms5607 < 6 && service_mode != SERVICE_MODE_UART) debug_ms5607++;
+                    if (debug_configuration->debug_ms5607 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ms5607++;
                     break;
                 }
                 case 13:
                 {
-                    if (debug_hyt271 < 6 && service_mode != SERVICE_MODE_UART) debug_hyt271++;
+                    if (debug_configuration->debug_hyt271 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_hyt271++;
                     break;
                 }
                 case 14:
                 {
-                    if (debug_ee895 < 6 && service_mode != SERVICE_MODE_UART) debug_ee895++;
+                    if (debug_configuration->debug_ee895 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ee895++;
                     break;
                 }
                 case 15:
                 {
-                    if (debug_cdm7162 < 6 && service_mode != SERVICE_MODE_UART) debug_cdm7162++;
+                    if (debug_configuration->debug_cdm7162 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cdm7162++;
                     break;
                 }
                 case 16:
                 {
-                    if (debug_sunrise < 6 && service_mode != SERVICE_MODE_UART) debug_sunrise++;
+                    if (debug_configuration->debug_sunrise < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sunrise++;
                     break;
                 }
                 case 17:
                 {
-                    if (debug_sunlight < 6 && service_mode != SERVICE_MODE_UART) debug_sunlight++;
+                    if (debug_configuration->debug_sunlight < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_sunlight++;
                     break;
                 }
                 case 18:
                 {
-                    if (debug_scd30 < 6 && service_mode != SERVICE_MODE_UART) debug_scd30++;
+                    if (debug_configuration->debug_scd30 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_scd30++;
                     break;
                 }
                 case 19:
                 {
-                    if (debug_scd41 < 6 && service_mode != SERVICE_MODE_UART) debug_scd41++;
+                    if (debug_configuration->debug_scd41 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_scd41++;
                     break;
                 }
                 case 20:
                 {
-                    if (debug_cozir_lp3 < 6 && service_mode != SERVICE_MODE_UART) debug_cozir_lp3++;
+                    if (debug_configuration->debug_cozir_lp3 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cozir_lp3++;
                     break;
                 }
                 case 21:
                 {
-                    if (debug_cm1107n < 6 && service_mode != SERVICE_MODE_UART) debug_cm1107n++;
+                    if (debug_configuration->debug_cm1107n < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_cm1107n++;
                     break;
                 }
                 case 22:
                 {
-                    if (debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_wifi++;
+                    if (debug_configuration->debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi++;
                     break;
                 }
                 case 23:
                 {
-                    if (debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_tcp_client++;
+                    if (debug_configuration->debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client++;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_tcp_dns++;
+                    if (debug_configuration->debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns++;
                     break;
                 }
                 case 25:
                 {
-                    if (debug_tcp_server < 6 && service_mode != SERVICE_MODE_UART) debug_tcp_server++;
+                    if (debug_configuration->debug_tcp_server < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server++;
                     break;
                 }
                 default:
@@ -1953,136 +1953,137 @@ static void write_display(void)
             for (int i = 0; i < 5; i++)
             {
                 uint8_t buf[32];
+                
                 switch (page_offset + i)
                 {
                     case 0:
                     {
-                        snprintf(buf, 32, "DEBUG MAIN INIT: %i", debug_main_init);
+                        snprintf(buf, 32, "DEBUG MAIN INIT: %i", debug_configuration->debug_main_init);
                         break;
                     }
                     case 1:
                     {
-                        snprintf(buf, 32, "DEBUG MAIN LOOP: %i", debug_main_loop);
+                        snprintf(buf, 32, "DEBUG MAIN LOOP: %i", debug_configuration->debug_main_loop);
                         break;
                     }
                     case 2:
                     {
-                        snprintf(buf, 32, "DEBUG SENSORS: %i", debug_sensors);
+                        snprintf(buf, 32, "DEBUG SENSORS: %i", debug_configuration->debug_sensors);
                         break;
                     }
                     case 3:
                     {
-                        snprintf(buf, 32, "DEBUG SOAP: %i", debug_soap);
+                        snprintf(buf, 32, "DEBUG SOAP: %i", debug_configuration->debug_soap);
                         break;
                     }
                     case 4:
                     {
-                        snprintf(buf, 32, "DEBUG RTC: %i", debug_rtc);
+                        snprintf(buf, 32, "DEBUG RTC: %i", debug_configuration->debug_rtc);
                         break;
                     }
                     case 5:
                     {
-                        snprintf(buf, 32, "DEBUG DISPLAY: %i", debug_display);
+                        snprintf(buf, 32, "DEBUG DISPLAY: %i", debug_configuration->debug_display);
                         break;
                     }
                     case 6:
                     {
-                        snprintf(buf, 32, "DEBUG GFX: %i", debug_gfx);
+                        snprintf(buf, 32, "DEBUG GFX: %i", debug_configuration->debug_gfx);
                         break;
                     }
                     case 7:
                     {
-                        snprintf(buf, 32, "DEBUG RAM: %i", debug_ram);
+                        snprintf(buf, 32, "DEBUG RAM: %i", debug_configuration->debug_ram);
                         break;
                     }
                     case 8:
                     {
-                        snprintf(buf, 32, "DEBUG SERVICE COMM: %i", debug_service_comm);
+                        snprintf(buf, 32, "DEBUG SERVICE COMM: %i", debug_configuration->debug_service_comm);
                         break;
                     }
                     case 9:
                     {
-                        snprintf(buf, 32, "DEBUG EEPROM: %i", debug_eeprom);
+                        snprintf(buf, 32, "DEBUG EEPROM: %i", debug_configuration->debug_eeprom);
                         break;
                     }
                     case 10:
                     {
-                        snprintf(buf, 32, "DEBUG MUX: %i", debug_mux);
+                        snprintf(buf, 32, "DEBUG MUX: %i", debug_configuration->debug_mux);
                         break;
                     }
                     case 11:
                     {
-                        snprintf(buf, 32, "DEBUG POWER: %i", debug_power);
+                        snprintf(buf, 32, "DEBUG POWER: %i", debug_configuration->debug_power);
                         break;
                     }
                     case 12:
                     {
-                        snprintf(buf, 32, "DEBUG MS5607: %i", debug_ms5607);
+                        snprintf(buf, 32, "DEBUG MS5607: %i", debug_configuration->debug_ms5607);
                         break;
                     }
                     case 13:
                     {
-                        snprintf(buf, 32, "DEBUG HYT271: %i", debug_hyt271);
+                        snprintf(buf, 32, "DEBUG HYT271: %i", debug_configuration->debug_hyt271);
                         break;
                     }
                     case 14:
                     {
-                        snprintf(buf, 32, "DEBUG EE895: %i", debug_ee895);
+                        snprintf(buf, 32, "DEBUG EE895: %i", debug_configuration->debug_ee895);
                         break;
                     }
                     case 15:
                     {
-                        snprintf(buf, 32, "DEBUG CDM7162: %i", debug_cdm7162);
+                        snprintf(buf, 32, "DEBUG CDM7162: %i", debug_configuration->debug_cdm7162);
                         break;
                     }
                     case 16:
                     {
-                        snprintf(buf, 32, "DEBUG SUNRISE: %i", debug_sunrise);
+                        snprintf(buf, 32, "DEBUG SUNRISE: %i", debug_configuration->debug_sunrise);
                         break;
                     }
                     case 17:
                     {
-                        snprintf(buf, 32, "DEBUG SUNLIGHT: %i", debug_sunlight);
+                        snprintf(buf, 32, "DEBUG SUNLIGHT: %i", debug_configuration->debug_sunlight);
                         break;
                     }
                     case 18:
                     {
-                        snprintf(buf, 32, "DEBUG SCD30: %i", debug_scd30);
+                        snprintf(buf, 32, "DEBUG SCD30: %i", debug_configuration->debug_scd30);
                         break;
                     }
                     case 19:
                     {
-                        snprintf(buf, 32, "DEBUG SCD41: %i", debug_scd41);
+                        snprintf(buf, 32, "DEBUG SCD41: %i", debug_configuration->debug_scd41);
                         break;
                     }
                     case 20:
                     {
-                        snprintf(buf, 32, "DEBUG COZIR-LP3: %i", debug_cozir_lp3);
+                        snprintf(buf, 32, "DEBUG COZIR-LP3: %i", debug_configuration->debug_cozir_lp3);
                         break;
                     }
                     case 21:
                     {
-                        snprintf(buf, 32, "DEBUG CM1107N: %i", debug_cm1107n);
+                        snprintf(buf, 32, "DEBUG CM1107N: %i", debug_configuration->debug_cm1107n);
                         break;
                     }
                     case 22:
                     {
-                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_wifi);
+                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_configuration->debug_wifi);
                         break;
                     }
                     case 23:
                     {
-                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_tcp_client);
+                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_configuration->debug_tcp_client);
                         break;
                     }
                     case 24:
                     {
-                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_tcp_dns);
+                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_configuration->debug_tcp_dns);
                         break;
                     }
                     case 25:
                     {
-                        snprintf(buf, 32, "DEBUG TCP SERVER: %i", debug_tcp_server);
+                        snprintf(buf, 32, "DEBUG TCP SERVER: %i", debug_configuration->debug_tcp_server);
                         break;
                     }
                     default:

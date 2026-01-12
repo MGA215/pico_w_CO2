@@ -394,7 +394,7 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
                                                p->tot_len > buffer_left ? buffer_left : p->tot_len, 0);
         tcp_recved(tpcb, p->tot_len); // Buffer received
         print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Received:");
-        if (debug >= SEVERITY_TRACE && debug_tcp_client >= SEVERITY_TRACE)
+        if (debug >= SEVERITY_TRACE && debug_configuration->debug_tcp_client >= SEVERITY_TRACE)
             printf("%s\n", state->buffer);
 
     }
@@ -421,7 +421,7 @@ static err_t tcp_client_send(void* arg, uint8_t* data)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message:\n");
-    if (debug >= SEVERITY_TRACE && debug_tcp_client >= SEVERITY_TRACE)
+    if (debug >= SEVERITY_TRACE && debug_configuration->debug_tcp_client >= SEVERITY_TRACE)
         printf("%s\n", data);
     sleep_ms(10);
 
