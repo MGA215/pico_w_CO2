@@ -155,3 +155,18 @@ uint8_t reverse_bits_in_byte(uint8_t b)
    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
    return b;
 }
+
+bool common_is_measurement_running(sensor_t* sensor)
+{
+    return sensor->meas_state != MEAS_FINISHED;
+}
+
+void common_measurement_force_stop(sensor_t* sensor)
+{
+    sensor->meas_state = MEAS_FINISHED;
+}
+
+void common_measurement_start(sensor_t* sensor)
+{
+    sensor->meas_state = MEAS_STARTED;
+}

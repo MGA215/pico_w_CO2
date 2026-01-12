@@ -96,4 +96,27 @@ extern uint8_t dec2hex(uint8_t dec_val);
  */
 extern uint8_t reverse_bits_in_byte(uint8_t b);
 
+/**
+ * @brief Checks whether is measurement in progress on specified sensor
+ * 
+ * @param sensor Sensor to check
+ * @return true if measurement is still in progress
+ * @return false if measurement is finished
+ */
+extern bool common_is_measurement_running(sensor_t* sensor);
+
+/**
+ * @brief Force stops measurement on specified sensor
+ * 
+ * @param sensor Sensor to stop measurement on
+ */
+extern void common_measurement_force_stop(sensor_t* sensor);
+
+/**
+ * @brief Starts a new measurement on specified sensor
+ * 
+ * @param sensor Sensor to start measurement on
+ */
+extern void common_measurement_start(sensor_t* sensor);
+
 #endif
