@@ -468,11 +468,10 @@ static void sensors_start_measurement(void)
         for (int i = 0; i < 8; i++)
         {
             
-            if (common_is_measurement_running(&sensors[i]) || !is_at_the_end_of_time(sensors[i].wake_time)) 
+            if (common_is_measurement_running(&sensors[i])) 
             {
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Sensor %X blocking measurement", i);
                 common_measurement_force_stop(&sensors[i]);
-                sensors[i].wake_time = at_the_end_of_time;
                 sensors[i].state = ERROR_SENSOR_INIT_FAILED; // Cancel initialization
                 sensors[i].err_total_counter++;
             }
@@ -513,7 +512,7 @@ void sensors_read_all(void)
             }
         }
 
-        if (time_reached(sensors[sensor_index].wake_time) && sensors[sensor_index].config.sensor_active) // If sensor should react to a timer reached
+        if (common_should_sensor_operate(&sensors[sensor_index])) // If sensor should react to a timer reached
         {
             watchdog_update(); // Update watchdog - just in case
             if (!sensors_read(sensor_index)) // If reading failed
@@ -548,7 +547,6 @@ static bool sensors_check_start_measurement(void)
             if (sensors[i].state != ERROR_UNKNOWN_SENSOR) 
             {
                 common_measurement_start(&sensors[i]);
-                sensors[i].wake_time = get_absolute_time();
                 sensors[i].init_count = 0;
             }
         }       
@@ -607,14 +605,14 @@ static bool sensors_read(uint8_t sensor_index)
         }
 
         // post-read
-        if (!common_is_measurement_running(&sensors[sensor_index]) && sensors[sensor_index].state == SUCCESS && 
-            is_at_the_end_of_time(sensors[sensor_index].wake_time)) // Reading finished successfully
+        if (!common_is_measurement_running(&sensors[sensor_index]) && sensors[sensor_index].state == SUCCESS) // Reading finished successfully
         {
             print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Successfully read sensor %i", sensor_index);
             if (sensors[sensor_index].config.ext_pressure_comp && ms5607.pressure != NAN) // Compensate for pressure
             {
                 float val = sensors_sensor_compensate_pressure(sensors[sensor_index].co2, ms5607.pressure);
-                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Pressure compensation of sensor %i: %.0f -> %.0f", sensor_index, sensors[sensor_index].co2, val);
+                print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
+                    "Pressure compensation of sensor %i: %.0f -> %.0f", sensor_index, sensors[sensor_index].co2, val);
                 sensors[sensor_index].co2 = val;
             }
             else if (ms5607.pressure == NAN) // Pressure measurement failed
@@ -626,7 +624,6 @@ static bool sensors_read(uint8_t sensor_index)
 
         return true;
     }
-    sensor->wake_time = at_the_end_of_time; // Disable sensor timer
     common_measurement_force_stop(sensor); // Terminate measurement
     return false;
 }
@@ -940,7 +937,7 @@ bool sensors_is_measurement_finished(void)
     for (int i = 0; i < 8; i++)
     {
         if (!sensors[i].config.sensor_active) continue;
-        if (common_is_measurement_running(&sensors[i]) || !is_at_the_end_of_time(sensors[i].wake_time)) return false;
+        if (common_is_measurement_running(&sensors[i])) return false;
     }
     return true;
 }

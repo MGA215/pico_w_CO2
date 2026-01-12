@@ -119,4 +119,13 @@ extern void common_measurement_force_stop(sensor_t* sensor);
  */
 extern void common_measurement_start(sensor_t* sensor);
 
+/**
+ * @brief Whether sensor should operate (is active and should be awake)
+ * 
+ * @param sensor sensor
+ * @return true if sensor should operate
+ * @return false if sensor should not operate
+ */
+extern bool common_should_sensor_operate(sensor_t* sensor);
+
 #endif

@@ -170,5 +170,10 @@ void common_measurement_force_stop(sensor_t* sensor)
 void common_measurement_start(sensor_t* sensor)
 {
     sensor->meas_state = MEAS_STARTED;
-    sensor->wake_time = 0;
+    sensor->wake_time = get_absolute_time();
+}
+
+bool common_should_sensor_operate(sensor_t* sensor)
+{
+    return time_reached(sensor->wake_time) && sensor->config.sensor_active;
 }
