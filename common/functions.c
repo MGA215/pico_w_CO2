@@ -158,15 +158,17 @@ uint8_t reverse_bits_in_byte(uint8_t b)
 
 bool common_is_measurement_running(sensor_t* sensor)
 {
-    return sensor->meas_state != MEAS_FINISHED;
+    return sensor->meas_state != MEAS_FINISHED && is_at_the_end_of_time(sensor->wake_time);
 }
 
 void common_measurement_force_stop(sensor_t* sensor)
 {
     sensor->meas_state = MEAS_FINISHED;
+    sensor->wake_time = at_the_end_of_time;
 }
 
 void common_measurement_start(sensor_t* sensor)
 {
     sensor->meas_state = MEAS_STARTED;
+    sensor->wake_time = 0;
 }
