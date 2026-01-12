@@ -27,14 +27,14 @@ void core1_main(void);
  * 
  * @return int Value describing encountered error during initialization
  */
-int init(void);
+int32_t init(void);
 
 /**
  * @brief Main program loop
  * 
  * @return int Value describing encountered error during execution
  */
-int loop(void);
+int32_t loop(void);
 
 /**
  * @brief Updates all components

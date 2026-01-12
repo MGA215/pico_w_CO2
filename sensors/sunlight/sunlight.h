@@ -23,7 +23,7 @@
  * @param num_bytes Number of bytes to read
  * @return int Return code
  */
-extern int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
+extern int32_t sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
 
 /**
  * @brief Writes data to the SUNLIGHT sensor to specified address
@@ -33,7 +33,7 @@ extern int sunlight_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
  * @param len Length of the data
  * @return int Return code
  */
-extern int sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len);
+extern int32_t sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len);
 
 /**
  * @brief Reads measured values from the sensor
@@ -49,21 +49,22 @@ extern void sunlight_get_value(sensor_t* sunlight);
  * @param config Configuration of the SUNLIGHT sensor to be written
  * @return int Return code
  */
-extern int sunlight_init(sensor_t* sunlight, sensor_config_t* config);
+extern int32_t sunlight_init(sensor_t* sunlight, sensor_config_t* config);
 
 /**
  * @brief Reads SUNLIGHT sensor configuration
  * 
  * @param config SUNLIGHT config structure the read configuration will be saved to
+ * @param single_measurement_mode unused variable
  * @return int Return code
  */
-extern int sunlight_read_config(sensor_config_t* config);
+extern int32_t sunlight_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 /**
  * @brief Resets the sensor (soft reset)
  * 
  * @return int Return code
  */
-extern int sunlight_reset(void);
+extern int32_t sunlight_reset(void);
 
 #endif

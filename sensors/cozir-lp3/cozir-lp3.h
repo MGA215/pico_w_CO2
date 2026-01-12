@@ -55,8 +55,9 @@ extern int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config);
  * @brief Reads configuration from the CozIR-LP3 sensor
  * 
  * @param config Configuration structure the read configuration will be saved to
+ * @param single_measurement_mode unused variable
  * @return int32_t Return code
  */
-extern int32_t cozir_lp3_read_config(sensor_config_t* config);
+extern int32_t cozir_lp3_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 #endif

@@ -21,9 +21,9 @@
  * @param addr Register address to be read from
  * @param buf Data buffer
  * @param num_bytes Number of bytes to read
- * @return int Return code
+ * @return int32_t Return code
  */
-extern int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
+extern int32_t sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
 
 /**
  * @brief Writes data to the SUNRISE sensor to specified address
@@ -31,25 +31,25 @@ extern int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes);
  * @param addr Register address
  * @param buf Data to be sent
  * @param len Length of the data
- * @return int Return code
+ * @return int32_t Return code
  */
-extern int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len);
+extern int32_t sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len);
 
 /**
  * @brief Resets the sensor (soft reset)
  * 
- * @return int Return code
+ * @return int32_t Return code
  */
-extern int sunrise_reset(void);
+extern int32_t sunrise_reset(void);
 
 /**
  * @brief Initializes SUNRISE sensor
  * 
  * @param sunrise Output SUNRISE sensor structure
  * @param config Configuration of the SUNRISE sensor to be written
- * @return int Return code
+ * @return int32_t Return code
  */
-extern int sunrise_init(sensor_t* sunrise, sensor_config_t* config);
+extern int32_t sunrise_init(sensor_t* sunrise, sensor_config_t* config);
 
 /**
  * @brief Reads measured values from the sensor
@@ -62,8 +62,9 @@ extern void sunrise_get_value(sensor_t* sunrise);
  * @brief Reads SUNRISE sensor configuration
  * 
  * @param config SUNRISE config structure the read configuration will be saved to
- * @return int Return code
+ * @param single_measurement_mode unused variable
+ * @return int32_t Return code
  */
-extern int sunrise_read_config(sensor_config_t* config);
+extern int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 #endif

@@ -177,7 +177,7 @@ int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
     return ret;
 }
 
-int32_t cdm7162_read_config(sensor_config_t* config)
+int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint8_t buf[4] = {0xFF};
@@ -237,7 +237,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
     }
     sensor_config_t read_config;
     bool power_down = false;
-    if ((ret = cdm7162_read_config(&read_config)) != 0) return ret; // Read configuration
+    if ((ret = cdm7162_read_config(&read_config, false)) != 0) return ret; // Read configuration
     
     do {
         if ((ret = cdm7162_read(REG_STATUS, &buf, 1)) != 0) return ret; // Check for busy

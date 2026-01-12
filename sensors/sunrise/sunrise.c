@@ -121,17 +121,17 @@ extern ms5607_t ms5607;
  * @brief returns error code according to the error register value
  * 
  * @param error_reg error register
- * @return int returned error code
+ * @return int32_t returned error code
  */
-static inline int sr_get_error(uint16_t error_reg);
+static inline int32_t sr_get_error(uint16_t error_reg);
 
 /**
  * @brief Writes configuration to the sensor
  * 
  * @param config Configuration to be written
- * @return int Return code
+ * @return int32_t Return code
  */
-static int sr_write_config(sensor_config_t* config);
+static int32_t sr_write_config(sensor_config_t* config);
 
 /**
  * @brief Switches sensor power [on] if not controlled globally
@@ -142,7 +142,7 @@ static int sr_write_config(sensor_config_t* config);
 static inline void sr_power(sensor_t* sunrise, bool on);
 
 
-static inline int sr_get_error(uint16_t error_reg)
+static inline int32_t sr_get_error(uint16_t error_reg)
 {
     if (error_reg == 0) return SUCCESS;
     else if (error_reg & 0x0001) return SUNRISE_ERROR_FATAL;
@@ -159,7 +159,7 @@ static inline int sr_get_error(uint16_t error_reg)
     else return SUNRISE_ERROR_SENSOR_GENERAL;
 }
 
-int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
+int32_t sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
 {
     int32_t ret;
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SUNRISE_ADDR, &addr, 1, true, I2C_TIMEOUT_US)) < 0) return ret; // Write address to read from
@@ -170,7 +170,7 @@ int sunrise_read(uint8_t addr, uint8_t* buf, uint16_t num_bytes)
     return SUCCESS;
 }
 
-int sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
+int32_t sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
 {
     int32_t ret;
     uint8_t command_buffer[len + 1];
@@ -354,7 +354,7 @@ void sunrise_get_value(sensor_t* sunrise)
     }
 }
 
-int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
+int32_t sunrise_init(sensor_t* sunrise, sensor_config_t* config)
 {
     int32_t ret;
     if (config->sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
@@ -378,7 +378,7 @@ int sunrise_init(sensor_t* sunrise, sensor_config_t* config)
     return SUCCESS;
 }
 
-int sunrise_read_config(sensor_config_t* config)
+int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint8_t buf[13] = {0};
@@ -407,12 +407,12 @@ int sunrise_read_config(sensor_config_t* config)
     return SUCCESS;
 }
 
-static int sr_write_config(sensor_config_t* config)
+static int32_t sr_write_config(sensor_config_t* config)
 {
     bool changed = false;
     int32_t ret;
     sensor_config_t read_config;
-    if ((ret = sunrise_read_config(&read_config)) != 0) return ret; // Read SUNRISE config
+    if ((ret = sunrise_read_config(&read_config, false)) != 0) return ret; // Read SUNRISE config
 
     if (read_config.enable_nRDY != config->enable_nRDY ||
         read_config.enable_abc != config->enable_abc ||
@@ -488,7 +488,7 @@ static inline void sr_power(sensor_t* sunrise, bool on)
     }
 }
 
-int sunrise_reset(void)
+int32_t sunrise_reset(void)
 {
     int32_t ret;
     uint8_t data = 0xFF;

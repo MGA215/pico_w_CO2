@@ -30,6 +30,8 @@
 #include "hardware/watchdog.h"
 
 #define SENSOR_TYPES 8
+#define EEPROM_SENSOR_ADDR_START 0x00000300
+#define EEPROM_SENSOR_CONFIG_LEN 0x100
 
 // Vector of sensors with assigned configuration
 static uint8_t active_sensors;
@@ -57,7 +59,7 @@ static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t
  * @return true if sensor structure set up with no errors
  * @return false if an error has occured (invalid sensor type)
  */
-static bool sensors_setup_sensor(uint8_t sensor_index);
+static bool sensors_init_sensor_struct(uint8_t sensor_index);
 
 /**
  * @brief Initializes single sensor
@@ -166,12 +168,13 @@ static float sensors_sensor_compensate_pressure(float co2_value, float pressure)
 static void sensors_read_config_from_eeprom(sensor_config_t* out_config, uint8_t sensor_index)
 {
     int32_t ret;
-    uint8_t buffer[0x100];
-    ret = eeprom_read(0x00000300 + 0x100 * sensor_index, buffer, 0x100); // Read config from EEPROM
+    uint8_t buffer[EEPROM_SENSOR_CONFIG_LEN];
+    ret = eeprom_read(EEPROM_SENSOR_ADDR_START + EEPROM_SENSOR_CONFIG_LEN * sensor_index, 
+                        buffer, EEPROM_SENSOR_CONFIG_LEN); // Read config from EEPROM
     if (ret) // Reading failed
     {
         print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_EEPROM, "Failed to read configuration from EEPROM, resetting device...");
-        watchdog_enable(1, 1);
+        watchdog_enable(1, 1); // reset
         sleep_ms(10);
         return;
     }
@@ -188,7 +191,7 @@ void sensors_init_all()
 {
     for (int i = 0; i < 8; i++) // Initialize default structures
     {
-        sensors_setup_sensor(i);
+        sensors_init_sensor_struct(i);
     }
 
     init_sensor_i2c(); // Initialize sensor I2C
@@ -198,7 +201,6 @@ void sensors_init_all()
     set_5v();
     set_power(true, true);
 
-    active_sensors = 0;
     watchdog_update();
     sleep_ms(1000); // Sensor power up time (mainly because of CM1107N)
     watchdog_update();
@@ -243,7 +245,7 @@ void sensors_init_all()
     set_power(false, true);
 }
 
-static bool sensors_setup_sensor(uint8_t sensor_index)
+static bool sensors_init_sensor_struct(uint8_t sensor_index)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Setting up structure %i", sensor_index);
 
@@ -268,6 +270,56 @@ static bool sensors_setup_sensor(uint8_t sensor_index)
     sensors[sensor_index].sensor_number = config.sensor_ord; // Set sensor type index
     sensors[sensor_index].err_total_counter = 0;
     sensors[sensor_index].config.sensor_active = true;
+
+    switch (sensors[sensor_index].sensor_type) // assign functions
+    {
+        case EE895:
+            sensors[sensor_index].config.sensor_init = ee895_init;
+            sensors[sensor_index].config.sensor_get_value = ee895_get_value;
+            sensors[sensor_index].config.sensor_read_config = ee895_read_config;
+            break;
+        case CDM7162:
+            sensors[sensor_index].config.sensor_init = cdm7162_init;
+            sensors[sensor_index].config.sensor_get_value = cdm7162_get_value;
+            sensors[sensor_index].config.sensor_read_config = cdm7162_read_config;
+            break;
+        case SUNRISE:
+            sensors[sensor_index].config.sensor_init = sunrise_init;
+            sensors[sensor_index].config.sensor_get_value = sunrise_get_value;
+            sensors[sensor_index].config.sensor_read_config = sunrise_read_config;
+            break;
+        case SUNLIGHT:
+            sensors[sensor_index].config.sensor_init = sunlight_init;
+            sensors[sensor_index].config.sensor_get_value = sunlight_get_value;
+            sensors[sensor_index].config.sensor_read_config = sunlight_read_config;
+            break;
+        case SCD30:
+            sensors[sensor_index].config.sensor_init = scd30_init;
+            sensors[sensor_index].config.sensor_get_value = scd30_get_value;
+            sensors[sensor_index].config.sensor_read_config = scd30_read_config;
+            break;
+        case SCD41:
+            sensors[sensor_index].config.sensor_init = scd41_init;
+            sensors[sensor_index].config.sensor_get_value = scd41_get_value;
+            sensors[sensor_index].config.sensor_read_config = scd41_read_config;
+            break;
+        case COZIR_LP3:
+            sensors[sensor_index].config.sensor_init = cozir_lp3_init;
+            sensors[sensor_index].config.sensor_get_value = cozir_lp3_get_value;
+            sensors[sensor_index].config.sensor_read_config = cozir_lp3_read_config;
+            break;
+        case CM1107N:
+            sensors[sensor_index].config.sensor_init = cm1107n_init;
+            sensors[sensor_index].config.sensor_get_value = cm1107n_get_value;
+            sensors[sensor_index].config.sensor_read_config = cm1107n_read_config;
+            break;
+        default:
+            sensors[sensor_index].config.sensor_init = NULL;
+            sensors[sensor_index].config.sensor_get_value = NULL;
+            sensors[sensor_index].config.sensor_read_config = NULL;
+            break;
+    }
+
     return true;
 }
 
@@ -329,56 +381,18 @@ static int32_t sensors_init_sensor_type(sensor_t* sensor, sensor_config_t* confi
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
                      "Init sensor to type %x%x...", sensor->sensor_type, sensor->sensor_number);
     
-    switch (sensor->sensor_type) // For sensor type
+    if (sensor->config.sensor_init != NULL) // initialize sensor
     {
-        case EE895:
-        {
-            ret = ee895_init(sensor, configuration); // Initialize EE895 sensor
-            break;
-        }
-        case CDM7162:
-        {
-            ret = cdm7162_init(sensor, configuration); // Initialize CDM7162 sensor
-            break;
-        }
-        case SUNRISE:
-        {
-            ret = sunrise_init(sensor, configuration); // Initialize SUNRISE sensor
-            break;
-        }
-        case SUNLIGHT:
-        {
-            ret = sunlight_init(sensor, configuration); // Initialize SUNLIGHT sensor
-            break;
-        }
-        case SCD30:
-        {
-            ret = scd30_init(sensor, configuration); // Initialize SCD30 sensor
-            break;
-        }
-        case SCD41:
-        {
-            ret = scd41_init(sensor, configuration); // Initialize SCD41 sensor
-            break;
-        }
-        case COZIR_LP3:
-        {
-            ret = cozir_lp3_init(sensor, configuration); // Initialize CozIR-LP3 sensor
-            break;
-        }
-        case CM1107N:
-        {
-            ret = cm1107n_init(sensor, configuration); // Initialize CM1107N sensor
-            break;
-        }
-        default:
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-                             "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
-            sensor->state = ERROR_UNKNOWN_SENSOR;
-            return ERROR_UNKNOWN_SENSOR;
-        }
+        ret = sensor->config.sensor_init(sensor, configuration);
     }
+    else 
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
+                         "Unknown sensor %x?, init abort", sensor->sensor_type); // No type match - unknown sensor
+            sensor->state = ERROR_UNKNOWN_SENSOR;
+        return ERROR_UNKNOWN_SENSOR;
+    }
+
     return ret;
 }
 
@@ -605,55 +619,16 @@ static void sensors_read_sensor_type(sensor_t* sensor)
     }
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
         "Reading sensor type %x%x...", sensor->sensor_type, sensor->sensor_number);
-    switch (sensor->sensor_type) // Get value based on sensor type
+
+    if (sensor->config.sensor_get_value != NULL) // read measured value
     {
-        case EE895:
-        {
-            ee895_get_value(sensor); // Read EE895 values
-            break;
-        }
-        case CDM7162:
-        {
-            cdm7162_get_value(sensor); // Read CDM7162 values
-            break;
-        }
-        case SUNRISE:
-        {
-            sunrise_get_value(sensor); // Read SUNRISE values
-            break;
-        }
-        case SUNLIGHT:
-        {
-            sunlight_get_value(sensor); // Read SUNLIGHT values
-            break;
-        }
-        case SCD30:
-        {
-            scd30_get_value(sensor); // Read SCD30 values
-            break;
-        }
-        case SCD41:
-        {
-            scd41_get_value(sensor); // Read SCD41 values
-            break;
-        }
-        case COZIR_LP3:
-        {
-            cozir_lp3_get_value(sensor); // Read CozIR-LP3 values
-            break;
-        }
-        case CM1107N:
-        {
-            cm1107n_get_value(sensor); // Read CM1107N values
-            break;
-        }
-        default:
-        {
+        sensor->config.sensor_get_value(sensor);
+    }
+    else 
+    {
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
                 "Unknown sensor %x?, read abort", sensor->sensor_type); // No type match - unknown sensor
             sensor->state = ERROR_UNKNOWN_SENSOR;
-            break;
-        }
     }
 }
 
@@ -666,25 +641,6 @@ static bool sensors_verify_read_config(uint8_t sensor_index)
     if (!sensors_compare_config(&sensors[sensor_index].config, &config) && !ret) // Compare config with the one set
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Configuration %i mismatch", sensor_index);
-        // if (config.sensor_type != UNKNOWN) // Sensor actually has a configuration
-        // {
-        //     config.co2_en = sensors[sensor_index].config.co2_en; // Copy sensor configuration that is not saved to the sensor itself
-        //     config.temp_en = sensors[sensor_index].config.temp_en;
-        //     config.RH_en = sensors[sensor_index].config.RH_en;
-        //     config.pressure_en = sensors[sensor_index].config.pressure_en;
-        //     config.ext_pressure_comp = sensors[sensor_index].config.ext_pressure_comp;
-        //     config.power_12V = sensors[sensor_index].config.power_12V;
-        //     config.power_5V = sensors[sensor_index].config.power_5V;
-        //     config.power_continuous = sensors[sensor_index].config.power_continuous;
-        //     config.power_global_control = sensors[sensor_index].config.power_global_control;
-        //     config.sensor_active = sensors[sensor_index].config.sensor_active;
-        //     config.sensor_IIC = sensors[sensor_index].config.sensor_IIC;
-        //     config.sensor_on_off = sensors[sensor_index].config.sensor_on_off;
-        //     config.sensor_ord = sensors[sensor_index].config.sensor_ord;
-        //     config.sensor_power_up_time = sensors[sensor_index].config.sensor_power_up_time;
-        //     config.sensor_type = sensors[sensor_index].config.sensor_type;            
-        //     memcpy(&sensors[sensor_index].config, &config, sizeof(sensor_config_t)); // Update configuration
-        // }
         return false;
     }
     else if (!ret)
@@ -703,37 +659,17 @@ static int32_t sensors_read_config(sensor_config_t* configuration, uint8_t senso
     if (sensors[sensor_index].state == ERROR_SENSOR_INIT_FAILED || sensors[sensor_index].state == ERROR_SENSOR_NOT_INITIALIZED) 
         return ERROR_SENSOR_NOT_INITIALIZED; // Check if sensor actually initialized
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading configuration %i...", sensor_index);
-    switch(sensors[sensor_index].sensor_type)
+
+    if (sensors[sensor_index].config.sensor_read_config != NULL) // read sensor configuration
     {
-        case EE895:
-            ret = ee895_read_config(configuration, sensors[sensor_index].config.single_meas_mode);
-            break;
-        case CDM7162:
-            ret = cdm7162_read_config(configuration);
-            break;
-        case SUNRISE:
-            ret = sunrise_read_config(configuration);
-            break;
-        case SUNLIGHT:
-            ret = sunlight_read_config(configuration);
-            break;
-        case SCD30:
-            ret = scd30_read_config(configuration);
-            break;
-        case SCD41:
-            ret = scd41_read_config(configuration, sensors[sensor_index].config.single_meas_mode);
-            break;
-        case COZIR_LP3:
-            ret = cozir_lp3_read_config(configuration);
-            break;
-        case CM1107N:
-            ret = cm1107n_read_config(configuration);
-            break;
-        default:
-            ret = ERROR_UNKNOWN_SENSOR;
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Unknown sensor %i, read config abort...", sensor_index);
-            return ret;
+        ret = sensors[sensor_index].config.sensor_read_config(configuration, sensors[sensor_index].config.single_meas_mode);
     }
+    else 
+    {
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Unknown sensor %i, read config abort...", sensor_index);
+        return ERROR_UNKNOWN_SENSOR;
+    }
+
     if (ret) // Error during config reading
     {
         memset(configuration, 0x00, sizeof(sensor_config_t)); // Clear config

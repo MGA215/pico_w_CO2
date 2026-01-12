@@ -61,9 +61,10 @@ extern int32_t scd30_init(sensor_t* scd30, sensor_config_t* config);
 /**
  * @brief Reads configuration from the SCD30 sensor
  * 
- * @param config Config structure the read configuration will be saved to
+ * @param config Config structure the read configuration will be saved t
+ * @param single_measurement_mode unused variable
  * @return int32_t Return code
  */
-extern int32_t scd30_read_config(sensor_config_t* config);
+extern int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 #endif

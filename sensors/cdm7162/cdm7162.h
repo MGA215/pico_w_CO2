@@ -54,9 +54,10 @@ extern int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config);
  * @brief Reads CDM7162 sensor config
  * 
  * @param config CDM7162 config structure the read configuration will be saved to
+ * @param single_measurement_mode common variable, not used
  * @return int32_t Return code
  */
-extern int32_t cdm7162_read_config(sensor_config_t* config);
+extern int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 /**
  * @brief Resets the sensor

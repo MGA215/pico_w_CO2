@@ -62,8 +62,9 @@ extern int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config);
  * @brief Reads configuration from the CM1107N sensor
  * 
  * @param config Configuration structure the read configuration will be saved to
+ * @param single_measurement_mode unused variable
  * @return int32_t Return code
  */
-extern int32_t cm1107n_read_config(sensor_config_t* config);
+extern int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mode);
 
 #endif

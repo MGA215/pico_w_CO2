@@ -19,6 +19,9 @@
 // #include "../service_comm/service_comm.h"
 // #endif
 
+typedef struct sensor_config sensor_config_t;
+typedef struct sensor sensor_t;
+
 typedef enum sensor_type
 {
     UNKNOWN = -1,
@@ -42,7 +45,7 @@ typedef enum meas_state_fsm
     MEAS_TRIGGER_SINGLE_MEAS = 5
 } meas_state_e;
 
-typedef struct sensor_config
+struct sensor_config
 {
     // Measurement
     uint16_t meas_period; // Set measurement period in s (default 15 for EE895)                                 EE895, SUNRISE, SUNLIGHT, SCD30
@@ -102,9 +105,17 @@ typedef struct sensor_config
 
     // 
     bool verified; // Is configuration verified
-} sensor_config_t;
 
-typedef struct sensor
+    // Functions
+    int32_t (*sensor_read_raw)(uint16_t addr, uint8_t* buf, uint16_t len); // read in raw mode, NYI
+    int32_t (*sensor_write_raw)(uint16_t addr, uint8_t* buf, uint16_t len); // write in raw mode, NYI
+    void (*sensor_get_value)(sensor_t* sensor); // Get measured value
+    int32_t (*sensor_init)(sensor_t* sensor, sensor_config_t* config); // Initialize sensor
+    int32_t (*sensor_read_config)(sensor_config_t* config, bool single_measurement); // Read sensor configuration
+
+};
+
+struct sensor
 {
     float co2;
     float temperature;
@@ -126,7 +137,7 @@ typedef struct sensor
     uint32_t err_total_counter; // Counter of total errors during the run
     uint8_t err_iter_counter; // Counts 0 to 2, if value reaches 2 measurement is evaluated as error
     bool initialized;
-} sensor_t;
+};
 
 typedef struct ms5607
 {

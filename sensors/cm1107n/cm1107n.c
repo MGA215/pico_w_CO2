@@ -29,9 +29,9 @@
  * @brief returns error code according to the error register value
  * 
  * @param error_reg error register
- * @return int returned error code 
+ * @return int32_t returned error code 
  */
-static inline int cm_get_error(uint8_t error_reg);
+static inline int32_t cm_get_error(uint8_t error_reg);
 
 /**
  * @brief Writes configuration to the sensor
@@ -50,7 +50,7 @@ static int32_t cm_write_config(sensor_config_t* config);
 static inline void cm_power(sensor_t* cm1107n, bool on);
 
 
-static inline int cm_get_error(uint8_t error_reg)
+static inline int32_t cm_get_error(uint8_t error_reg)
 {
     if (error_reg & (0b1 << 0)) return CM1107N_ERROR_PREHEATING;
     if (error_reg & (0b1 << 1)) return CM1107N_ERROR_FATAL;
@@ -234,7 +234,7 @@ int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config)
     return ret;
 }
 
-int32_t cm1107n_read_config(sensor_config_t* config)
+int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint8_t buf[6];
@@ -254,7 +254,7 @@ int32_t cm_write_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[6];
     sensor_config_t read_config;
-    if ((ret = cm1107n_read_config(&read_config)) != 0) return ret; // Read current sensor configuration
+    if ((ret = cm1107n_read_config(&read_config, false)) != 0) return ret; // Read current sensor configuration
 
     if (read_config.enable_abc != config->enable_abc ||
         // config->enable_abc && (

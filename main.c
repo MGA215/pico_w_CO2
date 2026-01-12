@@ -76,7 +76,7 @@ void core1_main(void)
 #endif
 }
 
-int init(void)
+int32_t init(void)
 {
     int32_t ret;
 
@@ -128,7 +128,7 @@ int init(void)
     return SUCCESS;
 }
 
-int loop(void)
+int32_t loop(void)
 {
     if (!service_mode)
     {

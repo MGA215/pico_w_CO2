@@ -121,7 +121,7 @@ void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t
 
 float round_precision(float value, uint8_t precision)
 {
-    int charsNeeded = 1 + snprintf(NULL, 0, "%.*f", precision, value);
+    int32_t charsNeeded = 1 + snprintf(NULL, 0, "%.*f", precision, value);
     char *buffer = malloc(charsNeeded);
     snprintf(buffer, charsNeeded, "%.*f", precision, value);
     float result = atof(buffer);

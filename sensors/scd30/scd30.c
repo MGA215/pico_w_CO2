@@ -252,7 +252,7 @@ int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
     return ret;
 }
 
-int32_t scd30_read_config(sensor_config_t* config)
+int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint16_t val;
@@ -283,7 +283,7 @@ static int32_t s30_write_config(sensor_config_t* config)
     int32_t ret;
     uint16_t val;
     sensor_config_t read_config;
-    if ((ret = scd30_read_config(&read_config)) != 0) return ret; // Read config
+    if ((ret = scd30_read_config(&read_config, false)) != 0) return ret; // Read config
 
     
 

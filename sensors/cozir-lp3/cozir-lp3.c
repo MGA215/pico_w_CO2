@@ -221,7 +221,7 @@ int32_t cozir_lp3_init(sensor_t* cozir_lp3, sensor_config_t* config)
     return ret;
 }
 
-int32_t cozir_lp3_read_config(sensor_config_t* config)
+int32_t cozir_lp3_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint8_t buf[2];
@@ -266,7 +266,7 @@ static int32_t lp3_write_config(sensor_config_t* config)
     int32_t ret;
     uint8_t buf[2];
     sensor_config_t read_config;
-    if ((ret = cozir_lp3_read_config(&read_config)) != 0) return ret;
+    if ((ret = cozir_lp3_read_config(&read_config, false)) != 0) return ret;
     
     if (config->filter_coeff != read_config.filter_coeff)
     {
