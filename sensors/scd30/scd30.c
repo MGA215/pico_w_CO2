@@ -32,6 +32,12 @@
 #define CMD_FW_VERSION          0xD100
 #define CMD_SOFT_RESET          0xD304
 
+sensor_functions_t scd30_functions = {
+    .sensor_get_value = scd30_get_value,
+    .sensor_init = scd30_init,
+    .sensor_read_config = scd30_read_config
+};
+
 /**
  * @brief Computes CRC for specified buffer
  * 
@@ -138,7 +144,7 @@ void scd30_get_value(sensor_t* scd30)
     if (scd30->config.sensor_type != SCD30) // Check for correct sensor type
     {
         scd30->meas_state = MEAS_FINISHED;
-        scd30->state = ERROR_UNKNOWN_SENSOR;
+        scd30->internal_error_state = ERROR_UNKNOWN_SENSOR;
         scd30->co2 = NAN;
         scd30->humidity = NAN;
         scd30->temperature = NAN;
@@ -160,7 +166,7 @@ void scd30_get_value(sensor_t* scd30)
             if (!scd30->config.power_continuous) scd30->wake_time = make_timeout_time_ms(scd30->config.sensor_power_up_time); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             scd30->timeout_iterator = 0; // Initialize read status timeout iterator
-            if (scd30->state) scd30->state = ERROR_NO_MEAS;
+            if (scd30->internal_error_state) scd30->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -173,7 +179,7 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
-                scd30->state = ret; // Set sensor state to return value
+                scd30->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             if (tempBuffer == 1) // On data ready
@@ -186,7 +192,7 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->co2 = NAN; // Set values to NaN
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
-                scd30->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd30->internal_error_state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
@@ -203,7 +209,7 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->co2 = NAN; // Set values to NaN
                 scd30->temperature = NAN;
                 scd30->humidity = NAN;
-                scd30->state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd30->internal_error_state = SCD30_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
@@ -223,7 +229,7 @@ void scd30_get_value(sensor_t* scd30)
             scd30->humidity = byte2float((val));
 
             scd30->meas_state = MEAS_FINISHED; // Finished measurement
-            scd30->state = SUCCESS; // Set state
+            scd30->internal_error_state = SUCCESS; // Set state
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured CO2 value: %f", scd30->co2);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured temperature value: %f", scd30->temperature);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Measured RH value: %f", scd30->humidity);
@@ -237,18 +243,18 @@ void scd30_get_value(sensor_t* scd30)
     }
 }
 
-int32_t scd30_init(sensor_t* scd30, sensor_config_t* config)
+int32_t scd30_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&scd30->config, config, sizeof(sensor_config_t));
+    if (sensor->config.sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
-    ret = s30_write_config(config); // Write configuration to sensor
+    ret = s30_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
     {
-        if (scd30->meas_state == MEAS_STARTED) scd30->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
-    else scd30->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
+    sensor->internal_error_state = ret;
     return ret;
 }
 

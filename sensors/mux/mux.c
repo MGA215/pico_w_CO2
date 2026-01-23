@@ -21,7 +21,8 @@ int32_t mux_enable_sensor(uint8_t sensor_index)
     int32_t ret;
     if (sensor_index >= 8) return ERROR_MUX_INVALID_INDEX;
     uint8_t mux_vector = 0b1 << sensor_index;
-    if ((ret = i2c_write_timeout_us(I2C_SENSOR, MUX_ADDR, &mux_vector, 1, false, I2C_TIMEOUT_US * 3)) < 0) return ret;
+    ret = i2c_write_timeout_us(I2C_SENSOR, MUX_ADDR, &mux_vector, 1, false, I2C_TIMEOUT_US * 3);
+    if (ret < 0) return ret;
     return SUCCESS;
 }
 

@@ -22,20 +22,12 @@ extern bool sensors_was_measurement_read;
  * @brief Initializes all sensors
  * 
  */
-extern void sensors_init_all();
+extern void sensors_init();
 
 /**
  * @brief Tries to read sensors, should be called in a loop
  * 
  */
-extern void sensors_read_all(void);
-
-/**
- * @brief Whether measurement has finished
- * 
- * @return true if measurement finished
- * @return false if measurement not finished
- */
-extern bool sensors_is_measurement_finished(void);
+extern void sensors_run(void);
 
 #endif

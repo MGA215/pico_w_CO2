@@ -114,7 +114,13 @@
 #define REG_ABC_PRESSURE_H          0xDE
 #define REG_ABC_PRESSURE_L          0xDF
 
-extern ms5607_t ms5607;
+extern sensor_t ms5607;
+
+sensor_functions_t sunlight_functions = {
+    .sensor_get_value = sunlight_get_value,
+    .sensor_init = sunlight_init,
+    .sensor_read_config = sunlight_read_config
+};
 
 /**
  * @brief returns error code according to the error register value
@@ -186,7 +192,7 @@ void sunlight_get_value(sensor_t* sunlight)
     if (sunlight->config.sensor_type != SUNLIGHT) // Check for correct sensor type
     {
         sunlight->meas_state = MEAS_FINISHED;
-        sunlight->state = ERROR_UNKNOWN_SENSOR;
+        sunlight->internal_error_state = ERROR_UNKNOWN_SENSOR;
         sunlight->co2 = NAN;
         sunlight->temperature = NAN;
         return;
@@ -207,7 +213,7 @@ void sunlight_get_value(sensor_t* sunlight)
             if (!sunlight->config.power_continuous) sunlight->wake_time = make_timeout_time_ms(sunlight->config.sensor_power_up_time); // Time for power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunlight->timeout_iterator = 0; // Initialize iterator value
-            if (sunlight->state) sunlight->state = ERROR_NO_MEAS;
+            if (sunlight->internal_error_state) sunlight->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -220,7 +226,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = ret; // Output return state
+                sunlight->internal_error_state = ret; // Output return state
                 return;
             }
             if (!((sunlight->config.single_meas_mode && data == 0x01) || (!sunlight->config.single_meas_mode && data == 0x00))) // If wrong mode set
@@ -228,17 +234,17 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = SUNLIGHT_ERROR_WRONG_MODE; // Output Wrong mode error state
+                sunlight->internal_error_state = SUNLIGHT_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
             }
-            if (sunlight->config.enable_pressure_comp && !ms5607.state) // Write pressure if enabled
-            {
-                uint8_t data[2];
-                sunlight->config.pressure = ms5607.pressure; // Copy pressure value
-                uint16_t val = ntoh16((uint16_t)(sunlight->config.pressure * 10));
-                memcpy(data, &val, 2);
-                sunlight_write(REG_AIR_PRESSURE_H, data, 2); // Write pressure from external probe
-            }
+            // if (sunlight->config.enable_pressure_comp && !ms5607.state) // Write pressure if enabled
+            // {
+            //     uint8_t data[2];
+            //     sunlight->config.pressure = ms5607.pressure; // Copy pressure value
+            //     uint16_t val = ntoh16((uint16_t)(sunlight->config.pressure * 10));
+            //     memcpy(data, &val, 2);
+            //     sunlight_write(REG_AIR_PRESSURE_H, data, 2); // Write pressure from external probe
+            // }
             if (sunlight->config.single_meas_mode) // If in single measurement mode
             {
                 sunlight->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
@@ -272,7 +278,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = ret; // Output return state
+                sunlight->internal_error_state = ret; // Output return state
                 return;
             }
             sunlight->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
@@ -289,7 +295,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = ret; // Output return state
+                sunlight->internal_error_state = ret; // Output return state
                 return;
             }
             if (sunlight->timeout_iterator++ > (4 * sunlight->config.meas_samples)) // If data not present for 4* the measurement time needed
@@ -297,7 +303,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = SUNLIGHT_ERROR_DATA_READY_TIMEOUT; // Output timeout error state
+                sunlight->internal_error_state = SUNLIGHT_ERROR_DATA_READY_TIMEOUT; // Output timeout error state
                 return;
             }
             uint16_t err_buf;
@@ -308,7 +314,7 @@ void sunlight_get_value(sensor_t* sunlight)
                 sunlight->meas_state = MEAS_FINISHED; // Measurement finished
                 sunlight->co2 = INT16_MAX; // Set CO2 to unknown
                 sunlight->temperature = NAN; // Set temperature to unknown
-                sunlight->state = ret; // Output return state
+                sunlight->internal_error_state = ret; // Output return state
                 return;
             }
             else if (ret == SUNLIGHT_ERROR_DATA_READY_TIMEOUT) // On data not ready
@@ -332,7 +338,7 @@ void sunlight_get_value(sensor_t* sunlight)
             }
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Measured CO2 value: %f", sunlight->co2);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Measured RH value: %f", sunlight->humidity);
-            sunlight->state = SUCCESS; // Output SUCCESS state
+            sunlight->internal_error_state = SUCCESS; // Output SUCCESS state
             return;
         }
         case MEAS_READ_STATUS: // Reading status registers
@@ -342,7 +348,7 @@ void sunlight_get_value(sensor_t* sunlight)
             if (ret != 0) // On invalid read
             {
                 memset(sunlight->state_reg, 0x00, 26); // Clear last state registers
-                sunlight->state = ret; // Output return state
+                sunlight->internal_error_state = ret; // Output return state
             }
             sunlight->meas_state = MEAS_FINISHED; // Measurement finished
             return;
@@ -355,22 +361,21 @@ void sunlight_get_value(sensor_t* sunlight)
     }
 }
 
-int32_t sunlight_init(sensor_t* sunlight, sensor_config_t* config)
+int32_t sunlight_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != SUNLIGHT) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&sunlight->config, config, sizeof(sensor_config_t)); // Save config
+    if (sensor->config.sensor_type != SUNLIGHT) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
-    if ((ret = sl_write_config(config)) != 0) // Write configuration
+    if ((ret = sl_write_config(&(sensor->config))) != 0) // Write configuration
     {
         return ret; 
     }
     
     if (!ret)
     {
-        if (sunlight->meas_state == MEAS_STARTED) sunlight->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
-    else sunlight->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
     return SUCCESS;
 }
 

@@ -115,7 +115,13 @@
 #define REG_ABC_PRESSURE_H          0xDE
 #define REG_ABC_PRESSURE_L          0xDF
 
-extern ms5607_t ms5607;
+extern sensor_t ms5607;
+
+sensor_functions_t sunrise_functions = {
+    .sensor_get_value = sunrise_get_value,
+    .sensor_init = sunrise_init,
+    .sensor_read_config = sunrise_read_config
+};
 
 /**
  * @brief returns error code according to the error register value
@@ -187,7 +193,7 @@ void sunrise_get_value(sensor_t* sunrise)
     if (sunrise->config.sensor_type != SUNRISE) // Check for correct sensor type
     {
         sunrise->meas_state = MEAS_FINISHED;
-        sunrise->state = ERROR_UNKNOWN_SENSOR;
+        sunrise->internal_error_state = ERROR_UNKNOWN_SENSOR;
         sunrise->co2 = NAN;
         sunrise->temperature = NAN;
         return;
@@ -208,7 +214,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (!sunrise->config.power_continuous) sunrise->wake_time = make_timeout_time_ms(sunrise->config.sensor_power_up_time); // Time for power stabilization
             sunrise->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunrise->timeout_iterator = 0; // Initialize iterator value
-            if (sunrise->state) sunrise->state = ERROR_NO_MEAS;
+            if (sunrise->internal_error_state) sunrise->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -221,7 +227,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = ret; // Output return state
+                sunrise->internal_error_state = ret; // Output return state
                 return;
             }
             if (!((sunrise->config.single_meas_mode && data == 0x01) || (!sunrise->config.single_meas_mode && data == 0x00))) // If wrong mode set
@@ -229,17 +235,17 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = SUNRISE_ERROR_WRONG_MODE; // Output Wrong mode error state
+                sunrise->internal_error_state = SUNRISE_ERROR_WRONG_MODE; // Output Wrong mode error state
                 return;
             }
-            if (sunrise->config.enable_pressure_comp && !ms5607.state) // Write pressure if enabled
-            {
-                uint8_t data[2];
-                sunrise->config.pressure = ms5607.pressure; // Copy pressure value
-                uint16_t val = ntoh16((uint16_t)(sunrise->config.pressure * 10));
-                memcpy(data, &val, 2);
-                sunrise_write(REG_AIR_PRESSURE_H, data, 2); // Write pressure from external probe
-            }
+            // if (sunrise->config.enable_pressure_comp && !ms5607.state) // Write pressure if enabled
+            // {
+            //     uint8_t data[2];
+            //     sunrise->config.pressure = ms5607.pressure; // Copy pressure value
+            //     uint16_t val = ntoh16((uint16_t)(sunrise->config.pressure * 10));
+            //     memcpy(data, &val, 2);
+            //     sunrise_write(REG_AIR_PRESSURE_H, data, 2); // Write pressure from external probe
+            // }
             if (sunrise->config.single_meas_mode) // If in single measurement mode
             {
                 sunrise->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
@@ -271,7 +277,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = ret; // Output return state
+                sunrise->internal_error_state = ret; // Output return state
                 return;
             }
             sunrise->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
@@ -288,7 +294,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = ret; // Output return state
+                sunrise->internal_error_state = ret; // Output return state
                 return;
             }
             if (sunrise->timeout_iterator++ > 4 * (sunrise->config.meas_samples)) // If data not present for 4* the measurement time needed
@@ -296,7 +302,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = SUNRISE_ERROR_DATA_READY_TIMEOUT;
+                sunrise->internal_error_state = SUNRISE_ERROR_DATA_READY_TIMEOUT;
                 return;
             }
             uint16_t err_buf;
@@ -307,7 +313,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
                 sunrise->co2 = NAN; // Set CO2 to unknown
                 sunrise->temperature = NAN; // Set temperature to unknown
-                sunrise->state = ret; // Output return state
+                sunrise->internal_error_state = ret; // Output return state
                 return;
             }
             else if (ret == SUNRISE_ERROR_DATA_READY_TIMEOUT) // On data not ready
@@ -329,7 +335,7 @@ void sunrise_get_value(sensor_t* sunrise)
             {
                 sunrise->meas_state = MEAS_FINISHED; // Measurement finished
             }
-            sunrise->state = SUCCESS; // Output SUCCESS state
+            sunrise->internal_error_state = SUCCESS; // Output SUCCESS state
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured CO2 value: %f", sunrise->co2);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Measured T value: %f", sunrise->temperature);
             return;
@@ -341,7 +347,7 @@ void sunrise_get_value(sensor_t* sunrise)
             if (ret != 0) // On invalid read
             {
                 memset(sunrise->state_reg, 0x00, 28); // Clear last state registers
-                sunrise->state = ret; // Output return state
+                sunrise->internal_error_state = ret; // Output return state
             }
             sunrise->meas_state = MEAS_FINISHED; // Measurement finished
             return;
@@ -354,27 +360,26 @@ void sunrise_get_value(sensor_t* sunrise)
     }
 }
 
-int32_t sunrise_init(sensor_t* sunrise, sensor_config_t* config)
+int32_t sunrise_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&sunrise->config, config, sizeof(sensor_config_t));
+    if (sensor->config.sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
 
     uint8_t buf[16];
     if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
     if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
 
-    if ((ret = sr_write_config(config)) != 0) // Write configuration
+    if ((ret = sr_write_config(&(sensor->config))) != 0) // Write configuration
     {
         return ret;
     }
 
     if (!ret)
     {
-        if (sunrise->meas_state == MEAS_STARTED) sunrise->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
-    else sunrise->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
     return SUCCESS;
 }
 

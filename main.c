@@ -103,7 +103,7 @@ int32_t init(void)
 
     check_svc_mode();
 
-    multicore_launch_core1(core1_main); // Launch second core
+    // multicore_launch_core1(core1_main); // Launch second core
     
     watchdog_enable(3000, true); // 3 sec watchdog
 
@@ -113,13 +113,14 @@ int32_t init(void)
     }
 
     if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
-    sensors_init_all(); // initialize sensors
+    // sensors_init_all(); // initialize sensors
+    sensors_init();
 
 #if defined __SOAP_H__ && defined __SOAP_CHANNELS_H__
     soap_init(channels1); // Initialize SOAP channels
-    soap_init_general(&channel00G, &hyt271.temperature, "Tamb", &hyt271.state, MEASURED_VALUE_T, 0, channels2);
-    soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.state, MEASURED_VALUE_RH, 1, channels2);
-    soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.state, MEASURED_VALUE_P, 2, channels2);
+    soap_init_general(&channel00G, &hyt271.temperature, "Tamb", &hyt271.error_state, MEASURED_VALUE_T, 0, channels2);
+    soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.error_state, MEASURED_VALUE_RH, 1, channels2);
+    soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.error_state, MEASURED_VALUE_P, 2, channels2);
 #endif
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);
@@ -131,7 +132,8 @@ int32_t loop(void)
 {
     if (!service_mode)
     {
-        sensors_read_all(); // Read sensor values
+        // sensors_read_all(); // Read sensor values
+        sensors_run();
         create_soap_messages(); // Create SOAP messages
     }
 #ifdef __SERVICE_COMM_H__

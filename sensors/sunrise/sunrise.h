@@ -49,7 +49,7 @@ extern int32_t sunrise_reset(void);
  * @param config Configuration of the SUNRISE sensor to be written
  * @return int32_t Return code
  */
-extern int32_t sunrise_init(sensor_t* sunrise, sensor_config_t* config);
+extern int32_t sunrise_init(sensor_t* sensor);
 
 /**
  * @brief Reads measured values from the sensor
@@ -66,5 +66,7 @@ extern void sunrise_get_value(sensor_t* sunrise);
  * @return int32_t Return code
  */
 extern int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mode);
+
+extern sensor_functions_t sunrise_functions;
 
 #endif

@@ -101,14 +101,16 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->temperature = 0.0f;
     sensor->meas_state = MEAS_FINISHED;
     sensor->measurement_iterator = 0;
-    sensor->state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor->sensor_state = NOT_INITIALIZED;
+    sensor->error_state = ERROR_SENSOR_NOT_INITIALIZED;
+    sensor->internal_error_state = STATE_OK;
     sensor->timeout_iterator = 0;
     sensor->wake_time = at_the_end_of_time;
     sensor->config.sensor_active = false;
     sensor->index = input_index;
     sensor->sensor_number = 0;
     sensor->err_iter_counter = 0;
-    sensor->initialized = false;
+    sensor->start_new_measurement = false;
     get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
     memset(sensor->state_reg, 0x00, 26);
 }

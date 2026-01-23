@@ -22,7 +22,7 @@
 typedef struct sensor_config sensor_config_t;
 typedef struct sensor sensor_t;
 
-#define SENSOR_TYPES 8
+#define SENSOR_TYPES 10
 typedef enum sensor_type
 {
     UNKNOWN = -1,
@@ -33,8 +33,18 @@ typedef enum sensor_type
     SCD30 = 4,
     SCD41 = 5,
     COZIR_LP3 = 6,
-    CM1107N = 7
+    CM1107N = 7,
+    MS5607 = 8,
+    HYT271 = 9
 } sensor_type_e;
+
+typedef enum sensor_state
+{
+    SENSOR_OK = 0,
+    NOT_INITIALIZED = 1,
+    INITIALIZED = 2,
+    VERIFIED_NO_MEAS = 3,
+} sensor_state_e;
 
 typedef enum meas_state_fsm
 {
@@ -110,11 +120,14 @@ struct sensor_config
     // Functions
     int32_t (*sensor_read_raw)(uint16_t addr, uint8_t* buf, uint16_t len); // read in raw mode, NYI
     int32_t (*sensor_write_raw)(uint16_t addr, uint8_t* buf, uint16_t len); // write in raw mode, NYI
-    void (*sensor_get_value)(sensor_t* sensor); // Get measured value
-    int32_t (*sensor_init)(sensor_t* sensor, sensor_config_t* config); // Initialize sensor
-    int32_t (*sensor_read_config)(sensor_config_t* config, bool single_measurement); // Read sensor configuration
-
 };
+
+typedef struct sensor_functions
+{
+    void (*sensor_get_value)(sensor_t* sensor); // Get measured value
+    int32_t (*sensor_init)(sensor_t* sensor); // Initialize sensor
+    int32_t (*sensor_read_config)(sensor_config_t* config, bool single_measurement); // Read sensor configuration
+} sensor_functions_t;
 
 struct sensor
 {
@@ -122,7 +135,9 @@ struct sensor
     float temperature;
     float pressure;
     float humidity;
-    int32_t state;
+    sensor_state_e sensor_state;
+    int32_t error_state;
+    int32_t internal_error_state;
     int32_t timeout_iterator;
     uint8_t measurement_iterator;
     meas_state_e meas_state;
@@ -131,37 +146,41 @@ struct sensor
     sensor_type_e sensor_type;
     uint8_t input_index; // Index of the input connector
     uint8_t power_index; // Index in the power vector
-    uint8_t state_reg[28]; //                                                                                   SUNRISE, SUNLIGHT
+    uint8_t state_reg[28]; //                                                                                   SUNRISE, SUNLIGHT, MS5607
     uint8_t sensor_number; // Index of the sensor of a type
     uint8_t init_count; // Counter of initializations in single measurement cycle
     uint8_t index; // Index of the sensor on the input - not converted to input indices that are moved around
     uint32_t err_total_counter; // Counter of total errors during the run
     uint8_t err_iter_counter; // Counts 0 to 2, if value reaches 2 measurement is evaluated as error
-    bool initialized;
-};
-
-typedef struct ms5607
-{
-    uint16_t prom[16];
-    float pressure;
-    float temperature;
+    bool start_new_measurement;
+    sensor_functions_t* functions; // Common interface for sensor communication
     uint8_t pressure_raw[3];
     uint8_t temperature_raw[3];
-    meas_state_e meas_state;
-    int32_t state;
-} ms5607_t;
+    uint8_t humidity_raw[3];
+};
 
-typedef struct hyt271
-{
-    float temperature;
-    float humidity;
-    uint8_t temperature_raw[2];
-    uint8_t humidity_raw[2];
-    int32_t state;
-    meas_state_e meas_state;
-    absolute_time_t wake_time;
-    uint8_t err_count;
-} hyt271_t;
+// typedef struct ms5607
+// {
+//     uint16_t prom[16];
+//     float pressure;
+//     float temperature;
+//     uint8_t pressure_raw[3];
+//     uint8_t temperature_raw[3];
+//     meas_state_e meas_state;
+//     int32_t error_state;
+// } ms5607_t;
+
+// typedef struct hyt271
+// {
+//     float temperature;
+//     float humidity;
+//     uint8_t temperature_raw[2];
+//     uint8_t humidity_raw[2];
+//     int32_t error_state;
+//     meas_state_e meas_state;
+//     absolute_time_t wake_time;
+//     uint8_t err_count;
+// } hyt271_t;
 
 typedef struct soap_data
 {
@@ -250,7 +269,7 @@ typedef struct
     uint8_t cloud_ip[32];
     uint8_t cloud_path[32];
     uint16_t cloud_port;
-    uint32_t meas_int;
+    uint32_t meas_int_ms;
     uint32_t soap_int;
     uint8_t soap_mode;
     uint8_t device_desc[16];

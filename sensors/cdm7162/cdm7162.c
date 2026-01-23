@@ -62,6 +62,12 @@ static inline void cdm_power(sensor_t* cdm7162, bool on);
  */
 static int32_t cdm_deinit(void); // DO NOT USE - Writes to EEPROM
 
+sensor_functions_t cdm7162_functions = {
+    .sensor_get_value = cdm7162_get_value,
+    .sensor_init = cdm7162_init,
+    .sensor_read_config = cdm7162_read_config
+};
+
 
 int32_t cdm7162_read(uint8_t addr, uint8_t* buf, uint8_t num_bytes)
 {
@@ -93,7 +99,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
     if (cdm7162->config.sensor_type != CDM7162) // Check for correct sensor type
     {
         cdm7162->meas_state = MEAS_FINISHED;
-        cdm7162->state = ERROR_UNKNOWN_SENSOR;
+        cdm7162->internal_error_state = ERROR_UNKNOWN_SENSOR;
         cdm7162->co2 = NAN;
         return;
     } 
@@ -112,7 +118,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             cdm_power(cdm7162, true); // Power on
             if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_ms(cdm7162->config.sensor_power_up_time); // Time for power stabilization
             cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read status
-            if (cdm7162->state) cdm7162->state = ERROR_NO_MEAS;
+            if (cdm7162->internal_error_state) cdm7162->internal_error_state = ERROR_NO_MEAS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
@@ -124,14 +130,14 @@ void cdm7162_get_value(sensor_t* cdm7162)
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
-                cdm7162->state = ret; // Output return state
+                cdm7162->internal_error_state = ret; // Output return state
                 return;
             }
             if (cdm7162->timeout_iterator++ > 2) // If in timeout
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
-                cdm7162->state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
+                cdm7162->internal_error_state = CDM7162_ERROR_DATA_READY_TIMEOUT; // Output TIMEOUT state
                 return;
             }
             if ((buf[0] & (0b1 << 7)) != 0) // Data not ready to be read
@@ -148,12 +154,12 @@ void cdm7162_get_value(sensor_t* cdm7162)
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
-                cdm7162->state = CDM7162_ERROR_RANGE; // Output RANGE ERROR state
+                cdm7162->internal_error_state = CDM7162_ERROR_RANGE; // Output RANGE ERROR state
                 return;
             }
             cdm7162->co2 = val; // Save measured CO2
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Measured CO2 value: %f", cdm7162->co2);
-            cdm7162->state = SUCCESS; // Output SUCCESS state
+            cdm7162->internal_error_state = SUCCESS; // Output SUCCESS state
             cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
             return;
         }
@@ -165,14 +171,13 @@ void cdm7162_get_value(sensor_t* cdm7162)
     }
 }
 
-int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config)
+int32_t cdm7162_init(sensor_t* sensor)
 {
     int32_t ret;
     uint8_t buf;
-    if (config->sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&cdm7162->config, config, sizeof(sensor_config_t)); // Save config
+    if (sensor->config.sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
-    ret = cdm_write_config(config); // Write configuration to the sensor
+    ret = cdm_write_config(&(sensor->config)); // Write configuration to the sensor
     sleep_ms(100);
     return ret;
 }

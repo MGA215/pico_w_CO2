@@ -147,7 +147,7 @@ void ms5607_get_value(void)
         // Read PROM repeat
         for (i = 0; i < PROM_READ_REPEAT; i++) 
         {
-            if ((ret = ms5607_get_prom_const(ms5607.prom, 8)) == 0) break; // Read PROM
+            if ((ret = ms5607_get_prom_const(ms5607.state_reg, 8)) == 0) break; // Read PROM
         }
         if (i == PROM_READ_REPEAT) // Reading PROM failed
         {
@@ -155,7 +155,7 @@ void ms5607_get_value(void)
             ms5607.temperature = NAN;
             memset(ms5607.pressure_raw, 0x00, 3);
             memset(ms5607.temperature_raw, 0x00, 3);
-            ms5607.state = ret;
+            ms5607.internal_error_state = ret;
             ms5607.meas_state = MEAS_FINISHED;
             return;
         }
@@ -170,7 +170,7 @@ void ms5607_get_value(void)
         memset(ms5607.pressure_raw, 0x00, 3);
         memset(ms5607.temperature_raw, 0x00, 3);
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to convert pressure");
-        ms5607.state = ret;
+        ms5607.internal_error_state = ret;
         ms5607.meas_state = MEAS_FINISHED;
         return;
     }
@@ -183,17 +183,17 @@ void ms5607_get_value(void)
         ms5607.temperature = NAN;
         memset(ms5607.temperature_raw, 0x00, 3);
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to convert temperature");
-        ms5607.state = ret;
+        ms5607.internal_error_state = ret;
         ms5607.meas_state = MEAS_FINISHED;
         return;
     }
     d2 = ms5607.temperature_raw[0] * 65536 + ms5607.temperature_raw[1] * 256 + ms5607.temperature_raw[2];
 
     // 1st order calculation
-    td   = d2 - ((double)ms5607.prom[5]) * 256.0;
-    temp = 2000.0 + (td * ((double)ms5607.prom[6])) / 8388608.0;
-    off  = ((double)ms5607.prom[2]) * 131072.0 + (((double)ms5607.prom[4]) * td) / 64.0;
-    sens = ((double)ms5607.prom[1]) * 65536.0  + (((double)ms5607.prom[3]) * td) / 128.0;
+    td   = d2 - ((double)ms5607.state_reg[5]) * 256.0;
+    temp = 2000.0 + (td * ((double)ms5607.state_reg[6])) / 8388608.0;
+    off  = ((double)ms5607.state_reg[2]) * 131072.0 + (((double)ms5607.state_reg[4]) * td) / 64.0;
+    sens = ((double)ms5607.state_reg[1]) * 65536.0  + (((double)ms5607.state_reg[3]) * td) / 128.0;
 
     // 2nd order calculation
     t2    = 0.0;
@@ -220,14 +220,14 @@ void ms5607_get_value(void)
     if ((press < MS_PRESS_MIN) || (temp < MS_TEMP_MIN)) {
         ms5607.pressure = NAN; // Reset variables
         ms5607.temperature = NAN;
-        ms5607.state = MS5607_ERROR_VALUE_LOW;
+        ms5607.internal_error_state = MS5607_ERROR_VALUE_LOW;
         ms5607.meas_state = MEAS_FINISHED;
         return;
     }
     if ((press > MS_PRESS_MAX) || (temp > MS_TEMP_MAX)) {
         ms5607.pressure = NAN; // Reset variables
         ms5607.temperature = NAN;
-        ms5607.state = MS5607_ERROR_VALUE_HIGH;
+        ms5607.internal_error_state = MS5607_ERROR_VALUE_HIGH;
         ms5607.meas_state = MEAS_FINISHED;
         return;
     }
@@ -235,7 +235,7 @@ void ms5607_get_value(void)
     ms5607.pressure = (float)press;
     ms5607.temperature = (float)temp;
     ms5607.meas_state = MEAS_FINISHED;
-    ms5607.state = SUCCESS;
+    ms5607.internal_error_state = SUCCESS;
 
     return;
 }

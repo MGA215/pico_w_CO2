@@ -25,6 +25,12 @@
 #define CMD_FW_VERSION  0x1E // Response length 10 bytes
 #define CMD_SER_NUM     0x1F // Response length 10 bytes
 
+sensor_functions_t cm1107n_functions = {
+    .sensor_get_value = cm1107n_get_value,
+    .sensor_init = cm1107n_init,
+    .sensor_read_config = cm1107n_read_config
+};
+
 /**
  * @brief returns error code according to the error register value
  * 
@@ -124,7 +130,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
     if (cm1107n->config.sensor_type != CM1107N) // Check for correct sensor type
     {
         cm1107n->meas_state = MEAS_FINISHED;
-        cm1107n->state = ERROR_UNKNOWN_SENSOR;
+        cm1107n->internal_error_state = ERROR_UNKNOWN_SENSOR;
         cm1107n->co2 = NAN;
         return;
     } 
@@ -142,7 +148,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas started");
             cm_power(cm1107n, true); // Power on
             if (!cm1107n->config.power_continuous) cm1107n->wake_time = make_timeout_time_ms(cm1107n->config.sensor_power_up_time); // Time for power stabilization
-            if (cm1107n->state) cm1107n->state = ERROR_NO_MEAS;
+            if (cm1107n->internal_error_state) cm1107n->internal_error_state = ERROR_NO_MEAS;
             cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next FSM state - trigger measurement
             cm1107n->timeout_iterator = 0;
             return;
@@ -155,7 +161,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             {
                 cm1107n->co2 = NAN; // Set read value to NAN
                 cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                cm1107n->state = ret; // Set state to ret value
+                cm1107n->internal_error_state = ret; // Set state to ret value
                 return;
             }
             cm1107n->wake_time = make_timeout_time_ms(2000); // Check after 2 seconds if measuement finished (should be 1 second)
@@ -170,7 +176,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             {
                 cm1107n->co2 = NAN; // Set read value to NAN
                 cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                cm1107n->state = ret; // Set state to ret value
+                cm1107n->internal_error_state = ret; // Set state to ret value
                 return;
             }
             if (tempBuffer[2] != 0x00) // Check for sensor errors
@@ -181,7 +187,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                     if (++(cm1107n->timeout_iterator) > 4) // 4 second preheating timeout
                     {
                         cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                        cm1107n->state = CM1107N_ERROR_PREHEATING; // Set state to preheating error
+                        cm1107n->internal_error_state = CM1107N_ERROR_PREHEATING; // Set state to preheating error
                         cm1107n->co2 = NAN; // Set read value to NAN
                         return;
                     }
@@ -193,13 +199,13 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 if (ret == CM1107N_ERROR_OUT_OF_RANGE)
                 {
                     cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                    cm1107n->state = ERROR_NO_MEAS; // Invalid measurement has been performed
+                    cm1107n->internal_error_state = ERROR_NO_MEAS; // Invalid measurement has been performed
                     cm1107n->co2 = NAN; // Set read value to NAN
                     return;
                 }
                 cm1107n->co2 = NAN; // Set read value to NAN
                 cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                cm1107n->state = ret; // Set state to read error
+                cm1107n->internal_error_state = ret; // Set state to read error
                 return;
             }
             uint16_t co2 = 0; // Convert read CO2 value
@@ -207,7 +213,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             co2 |= tempBuffer[1] << 0;
             cm1107n->co2 = (float)co2;
             cm1107n->meas_state = MEAS_FINISHED; // Set next state to measurement finished
-            cm1107n->state = SUCCESS; // Set state to SUCCESS
+            cm1107n->internal_error_state = SUCCESS; // Set state to SUCCESS
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Measured CO2 value: %f", cm1107n->co2);
             return;
         }
@@ -219,18 +225,17 @@ void cm1107n_get_value(sensor_t* cm1107n)
     }
 }
 
-int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config)
+int32_t cm1107n_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != CM1107N) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&cm1107n->config, config, sizeof(sensor_config_t)); // Save config
+    if (sensor->config.sensor_type != CM1107N) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
     
-    ret = cm_write_config(config); // Write configuration to sensor
+    ret = cm_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
     {
-        if (cm1107n->meas_state == MEAS_STARTED) cm1107n->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
-    else cm1107n->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
     return ret;
 }
 
@@ -249,7 +254,7 @@ int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mod
     return SUCCESS;
 }
 
-int32_t cm_write_config(sensor_config_t* config)
+static int32_t cm_write_config(sensor_config_t* config)
 {
     int32_t ret;
     uint8_t buf[6];
@@ -276,7 +281,7 @@ int32_t cm_write_config(sensor_config_t* config)
     return SUCCESS;
 }
 
-void cm_power(sensor_t* cm1107n, bool on)
+static void cm_power(sensor_t* cm1107n, bool on)
 {
     if (!cm1107n->config.power_global_control && !cm1107n->config.power_continuous) // If power not controlled globally
     {

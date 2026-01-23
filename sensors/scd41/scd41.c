@@ -53,6 +53,12 @@
 
 #define SCD41_ADDR 0x62
 
+sensor_functions_t scd41_functions = {
+    .sensor_get_value = scd41_get_value,
+    .sensor_init = scd41_init,
+    .sensor_read_config = scd41_read_config
+};
+
 /**
  * @brief Computes CRC for specified buffer
  * 
@@ -168,7 +174,7 @@ void scd41_get_value(sensor_t* scd41)
     if (scd41->config.sensor_type != SCD41) // Check for correct sensor type
     {
         scd41->meas_state = MEAS_FINISHED;
-        scd41->state = ERROR_UNKNOWN_SENSOR;
+        scd41->internal_error_state = ERROR_UNKNOWN_SENSOR;
         scd41->co2 = NAN;
         scd41->humidity = NAN;
         scd41->temperature = NAN;
@@ -189,7 +195,7 @@ void scd41_get_value(sensor_t* scd41)
             s41_power(scd41, true); // Power off
             if (!scd41->config.power_continuous) scd41->wake_time = make_timeout_time_ms(scd41->config.sensor_power_up_time); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
-            if (scd41->state) scd41->state = ERROR_NO_MEAS;
+            if (scd41->internal_error_state) scd41->internal_error_state = ERROR_NO_MEAS;
             scd41->timeout_iterator = 0; // Initialize read status timeout iterator
             scd41->measurement_iterator = 0; // Initialize read single measurement iterator
             return;
@@ -239,7 +245,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
-                scd41->state = ret; // Set sensor state to return value
+                scd41->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
@@ -256,7 +262,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
-                scd41->state = ret; // Set sensor state to return value
+                scd41->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             if ((tempBuffer & 0x7FF) == 0x06) // On data ready - might cause troubles later (should be equal to 0, might be config not saved problem??)
@@ -274,7 +280,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd41->internal_error_state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_SCD41, "Read status failed, abort...");
                 return;
@@ -292,7 +298,7 @@ void scd41_get_value(sensor_t* scd41)
                 scd41->co2 = NAN; // Set values to NaN
                 scd41->temperature = NAN;
                 scd41->humidity = NAN;
-                scd41->state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                scd41->internal_error_state = SCD41_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 scd41->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
@@ -301,7 +307,7 @@ void scd41_get_value(sensor_t* scd41)
             scd41->humidity = 100 * (float)buf[2] / UINT16_MAX; // Convert humidity to float
 
             scd41->meas_state = MEAS_FINISHED; // Finished measurement
-            scd41->state = SUCCESS; // Set state
+            scd41->internal_error_state = SUCCESS; // Set state
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Measured CO2 value: %f", scd41->co2);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Measured temperature value: %f", scd41->temperature);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Measured RH value: %f", scd41->humidity);
@@ -315,18 +321,17 @@ void scd41_get_value(sensor_t* scd41)
     }
 }
 
-int32_t scd41_init(sensor_t* scd41, sensor_config_t* config)
+int32_t scd41_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&scd41->config, config, sizeof(sensor_config_t));
+    if (sensor->config.sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
-    ret = s41_write_config(config); // Write config to the sensor
+    ret = s41_write_config(&(sensor->config)); // Write config to the sensor
     if (!ret)
     {
-        if (scd41->meas_state == MEAS_STARTED) scd41->wake_time = make_timeout_time_ms(5000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(5000);
     }
-    else scd41->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
     sleep_ms(100);
     return ret;
 }

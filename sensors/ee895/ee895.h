@@ -15,6 +15,8 @@
 #include "pico/stdlib.h"
 #include "common/structs.h"
 
+
+
 /**
  * @brief Reads number of registers from the EE895 with timing; must manually turn power on/off
  * 
@@ -48,7 +50,7 @@ extern void ee895_get_value(sensor_t* ee895);
  * @param config Configuration of the EE895 sensor to be written
  * @return int32_t Return code
  */
-extern int32_t ee895_init(sensor_t* ee895, sensor_config_t* config);
+extern int32_t ee895_init(sensor_t* sensor);
 
 /**
  * @brief Reads EE895 sensor configuration
@@ -58,5 +60,7 @@ extern int32_t ee895_init(sensor_t* ee895, sensor_config_t* config);
  * @return int32_t Return code
  */
 extern int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode);
+
+extern sensor_functions_t ee895_functions;
 
 #endif

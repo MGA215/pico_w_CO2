@@ -49,7 +49,7 @@ extern void sunlight_get_value(sensor_t* sunlight);
  * @param config Configuration of the SUNLIGHT sensor to be written
  * @return int Return code
  */
-extern int32_t sunlight_init(sensor_t* sunlight, sensor_config_t* config);
+extern int32_t sunlight_init(sensor_t* sensor);
 
 /**
  * @brief Reads SUNLIGHT sensor configuration
@@ -66,5 +66,7 @@ extern int32_t sunlight_read_config(sensor_config_t* config, bool single_measure
  * @return int Return code
  */
 extern int32_t sunlight_reset(void);
+
+extern sensor_functions_t sunlight_functions;
 
 #endif

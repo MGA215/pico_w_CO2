@@ -56,7 +56,7 @@ extern void scd30_get_value(sensor_t* scd30);
  * @param config Configuration to write
  * @return int32_t Return code
  */
-extern int32_t scd30_init(sensor_t* scd30, sensor_config_t* config);
+extern int32_t scd30_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the SCD30 sensor
@@ -66,5 +66,7 @@ extern int32_t scd30_init(sensor_t* scd30, sensor_config_t* config);
  * @return int32_t Return code
  */
 extern int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode);
+
+extern sensor_functions_t scd30_functions;
 
 #endif

@@ -56,7 +56,7 @@ extern void cm1107n_get_value(sensor_t* cm1107n);
  * @param config Configuration to write
  * @return int32_t Return code
  */
-extern int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config);
+extern int32_t cm1107n_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the CM1107N sensor
@@ -66,5 +66,7 @@ extern int32_t cm1107n_init(sensor_t* cm1107n, sensor_config_t* config);
  * @return int32_t Return code
  */
 extern int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mode);
+
+extern sensor_functions_t cm1107n_functions;
 
 #endif

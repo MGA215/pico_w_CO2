@@ -27,7 +27,7 @@ void hyt271_get_value()
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to write measurement start: %i", ret);
                 hyt271.meas_state = MEAS_FINISHED; // On error reset values
-                hyt271.state = ret;
+                hyt271.internal_error_state = ret;
                 hyt271.humidity = NAN;
                 hyt271.temperature = NAN;
                 memset(hyt271.humidity_raw, 0x00, 2);
@@ -35,7 +35,7 @@ void hyt271_get_value()
                 return;
             }
             hyt271.meas_state = MEAS_READ_VALUE; // Next state - read value
-            hyt271.state = SUCCESS;
+            hyt271.internal_error_state = SUCCESS;
             hyt271.wake_time = make_timeout_time_ms(200);
             return;
         }
@@ -46,7 +46,7 @@ void hyt271_get_value()
             {
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_HYT271, "Failed to read measurement data: %i", ret);
                 hyt271.meas_state = MEAS_FINISHED; // On error reset values
-                hyt271.state = ret;
+                hyt271.internal_error_state = ret;
                 hyt271.humidity = NAN;
                 hyt271.temperature = NAN;
                 memset(hyt271.humidity_raw, 0x00, 2);
@@ -57,7 +57,7 @@ void hyt271_get_value()
             if ((tmp_buffer[0] & 0xC0) != 0) // Check status bits
             {
                 hyt271.meas_state = MEAS_FINISHED; // On error reset values
-                hyt271.state = HYT271_ERROR_GENERAL;
+                hyt271.internal_error_state = HYT271_ERROR_GENERAL;
                 hyt271.humidity = NAN;
                 hyt271.temperature = NAN;
                 memset(hyt271.humidity_raw, 0x00, 2);
@@ -74,7 +74,7 @@ void hyt271_get_value()
             hyt271.humidity = (float)(tmp_buffer[0] * 256 + tmp_buffer[1]) * (100.0 / 16383.0);
             hyt271.temperature = ((float)(((tmp_buffer[2] * 256 + tmp_buffer[3]) >> 2)) * (165.0 / 16383.0)) - 40.0;
 
-            hyt271.state = SUCCESS;
+            hyt271.internal_error_state = SUCCESS;
             hyt271.meas_state = MEAS_FINISHED;
             return;
         }

@@ -13,7 +13,8 @@
 #define __ERROR_CODES_H__
 
 #define SUCCESS 0
-// PICO Errors
+
+// PICO Errors - sensor internal
 #define PICO_ERROR_TIMEOUT -1 // Error PICO - timeout limit has been reached
 #define PICO_ERROR_GENERIC -2 // Error PICO - Generic error (might be sensor disconnected)
 #define PICO_ERROR_NO_DATA -3 // Error PICO - No data
@@ -28,11 +29,19 @@
 #define ERROR_STDIO_INIT -11 // Error initializing STDIO
 #define ERROR_TIMER_SENSORS_INIT -12 // Error initializing sensor timer
 #define ERROR_SENSOR_NOT_INITIALIZED -13 // Error sensor is not initialized
-#define ERROR_SENSOR_INIT_FAILED -14 // Error sensor initialization failed
+// #define ERROR_SENSOR_INIT_FAILED -14 // Error sensor initialization failed
 #define ERROR_NO_MEAS -15 // Error No measurement has been performed yet
 #define ERROR_UNKNOWN_SENSOR -16 // Error Sensor identification failed - unknown sensor
 #define ERROR_CONFIG_INIT -17 // Error Failed to read configuration from EEPROM
 #define ERROR_CONFIG_VERIFICATION_FAILED -18 // Error Failed to verify sensor configuration
+
+// Main sensor errors
+#define STATE_OK 0
+#define ERROR_SENSOR_UNKNOWN_SENSOR -1 // Unknown sensor
+#define ERROR_SENSOR_INIT_FAILED -2 // Sensor initialization failed
+#define ERROR_SENSOR_CONFIG_PARSING_FAILED -3 // Sensor configuration parsing failed
+#define ERROR_SENSOR_CONFIG_VERIFICATION_FAILED -4 // Sensor configuration verification failed
+#define ERROR_SENSOR_READING_FAILED -5 // Sensor measurement reading failed
 
 // Serialization errors
 #define ERROR_SERIALIZATION_BUFFER_LEN -21 // Error - serialization buffer is too short
@@ -160,6 +169,8 @@
 #define P_ERR_UNCMD 137 // Unknown command
 #define P_ERR_REJECTED 138 // Command cannot be executed
 #define P_ERR_ACC_SERVICE 189 // Cannot enter service mode
+
+
 
 
 

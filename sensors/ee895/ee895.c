@@ -66,6 +66,12 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
+sensor_functions_t ee895_functions = {
+    .sensor_get_value = ee895_get_value,
+    .sensor_init = ee895_init,
+    .sensor_read_config = ee895_read_config
+};
+
 /**
  * @brief Computes Modbus CRC for specified buffer
  * 
@@ -229,7 +235,7 @@ void ee895_get_value(sensor_t* ee895)
     if (ee895->config.sensor_type != EE895) // Check for correct sensor type
     {
         ee895->meas_state = MEAS_FINISHED;
-        ee895->state = ERROR_UNKNOWN_SENSOR;
+        ee895->internal_error_state = ERROR_UNKNOWN_SENSOR;
         ee895->co2 = NAN;
         ee895->pressure = NAN;
         ee895->temperature = NAN;
@@ -255,7 +261,7 @@ void ee895_get_value(sensor_t* ee895)
             }
             else ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
             ee895->timeout_iterator = 0; // Initialize read status timeout iterator
-            if (ee895->state) ee895->state = ERROR_NO_MEAS;
+            if (ee895->internal_error_state) ee895->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
@@ -268,7 +274,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
 
@@ -279,7 +285,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             if (tempBuffer[1] & 0x02) // On trigger ready
@@ -292,7 +298,7 @@ void ee895_get_value(sensor_t* ee895)
                     ee895->temperature = NAN;
                     ee895->pressure = NAN;
                     ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                    ee895->state = ret; // Set sensor state to return value
+                    ee895->internal_error_state = ret; // Set sensor state to return value
                     return;
                 }
                 ee895->wake_time = make_timeout_time_ms(300); // Wait for the measurement
@@ -305,7 +311,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
-                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                ee895->internal_error_state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
@@ -322,7 +328,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             if (tempBuffer[1] & 0x01) // On data ready
@@ -335,7 +341,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->temperature = NAN;
                 ee895->pressure = NAN;
-                ee895->state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                ee895->internal_error_state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
@@ -352,7 +358,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->pressure = NAN;
                 ee895->co2 = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Measurement finished
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             // *( (uint32_t*)&tempBuffer[0]) = ntoh32(*( (uint32_t*)&tempBuffer[0])); // Fix read value to uint32
@@ -368,7 +374,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->pressure = NAN;
                 ee895->co2 = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                ee895->state = EE895_ERROR_RANGE; // Set state
+                ee895->internal_error_state = EE895_ERROR_RANGE; // Set state
                 return;
             }
             ee895->temperature = val; // Assign value
@@ -379,7 +385,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->pressure = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Measurement finished
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             // *( (uint32_t*)&tempBuffer[0]) = ntoh32(*( (uint32_t*)&tempBuffer[0])); // Fix read value to uint32_t
@@ -394,7 +400,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->co2 = NAN; // Set values to NaN
                 ee895->pressure = NAN;
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
-                ee895->state = EE895_ERROR_RANGE; // Set state
+                ee895->internal_error_state = EE895_ERROR_RANGE; // Set state
                 return;
             }
             ee895->co2 = val; // Assign value
@@ -404,7 +410,7 @@ void ee895_get_value(sensor_t* ee895)
             {
                 ee895->pressure = NAN; // Set value to NaN
                 ee895->meas_state = MEAS_FINISHED; // Measurement finished
-                ee895->state = ret; // Set sensor state to return value
+                ee895->internal_error_state = ret; // Set sensor state to return value
                 return;
             }
             tempval = 0; // Fix read value to uint32_t
@@ -415,7 +421,7 @@ void ee895_get_value(sensor_t* ee895)
             val = byte2float(ntoh32(tempval)); // Convert read value to float
             ee895->pressure = val; // Assign value
             ee895->meas_state = MEAS_FINISHED; // Finished measurement
-            ee895->state = SUCCESS; // Set state
+            ee895->internal_error_state = SUCCESS; // Set state
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured CO2 value: %f", ee895->co2);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured temperature value: %f", ee895->temperature);
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Measured pressure value: %f", ee895->pressure);
@@ -429,11 +435,10 @@ void ee895_get_value(sensor_t* ee895)
     }
 }
 
-int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
+int32_t ee895_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (config->sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
-    memcpy(&ee895->config, config, sizeof(sensor_config_t));
+    if (sensor->config.sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
 
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) // Read sensor name
@@ -445,13 +450,13 @@ int32_t ee895_init(sensor_t* ee895, sensor_config_t* config)
         return ERROR_UNKNOWN_SENSOR;
     }
 
-    ret = ee_write_config(config); // Write configuration to sensor
+    ret = ee_write_config(&(sensor->config)); // Write configuration to sensor
 
     if (!ret)
     {
-        if (ee895->meas_state == MEAS_STARTED) ee895->wake_time = make_timeout_time_ms(1000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(1000);
     }
-    else ee895->meas_state = MEAS_FINISHED;
+    else sensor->meas_state = MEAS_FINISHED;
 
     return ret;
 }

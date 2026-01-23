@@ -56,7 +56,7 @@ extern void scd41_get_value(sensor_t* scd41);
  * @param config Configuration to write
  * @return int32_t Return code
  */
-extern int32_t scd41_init(sensor_t* scd41, sensor_config_t* config);
+extern int32_t scd41_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the SCD41 sensor
@@ -71,5 +71,7 @@ extern int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
  * 
  */
 extern void scd41_reset(void);
+
+extern sensor_functions_t scd41_functions;
 
 #endif

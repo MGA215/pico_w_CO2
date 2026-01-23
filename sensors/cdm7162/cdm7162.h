@@ -48,7 +48,7 @@ extern void cdm7162_get_value(sensor_t* cdm7162);
  * @param config Configuration of the CDM7162 sensor to be written
  * @return int32_t Return code
  */
-extern int32_t cdm7162_init(sensor_t* cdm7162, sensor_config_t* config);
+extern int32_t cdm7162_init(sensor_t* sensor);
 
 /**
  * @brief Reads CDM7162 sensor config
@@ -65,5 +65,7 @@ extern int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurem
  * @return int32_t Return code
  */
 extern int32_t cdm7162_reset(void);
+
+extern sensor_functions_t cdm7162_functions;
 
 #endif

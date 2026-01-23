@@ -1058,7 +1058,7 @@ static void write_display(void)
                     snprintf(sensor_name, 18, "ERR_NO_SENSOR %i", display_sensor); // Write error no sensor to display
                     gfx_pack_write_text(&position, sensor_name);
                 }
-                else write_display_sensor(sensor_name, sensors[display_sensor].state, 
+                else write_display_sensor(sensor_name, sensors[display_sensor].error_state, 
                         sensors[display_sensor].config.co2_en, sensors[display_sensor].co2,
                         sensors[display_sensor].config.temp_en, sensors[display_sensor].temperature,
                         sensors[display_sensor].config.pressure_en, sensors[display_sensor].pressure,
@@ -1075,7 +1075,7 @@ static void write_display(void)
                 strcpy(sensor_name, "T/RH sensor");
                 position.x = 0;
                 position.y = 1;
-                write_display_sensor(sensor_name, hyt271.state, false, 0, true, hyt271.temperature, false, 0, true, hyt271.humidity); // Write sensor readings to the display
+                write_display_sensor(sensor_name, hyt271.error_state, false, 0, true, hyt271.temperature, false, 0, true, hyt271.humidity); // Write sensor readings to the display
                 snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_count);
                 position.x = 0;
                 position.y = 5;
@@ -1087,7 +1087,7 @@ static void write_display(void)
                 strcpy(sensor_name, "P sensor");
                 position.x = 0;
                 position.y = 1;
-                write_display_sensor(sensor_name, ms5607.state, false, 0, true, ms5607.temperature, true, ms5607.pressure, false, 0); // Write sensor readings to the display
+                write_display_sensor(sensor_name, ms5607.error_state, false, 0, true, ms5607.temperature, true, ms5607.pressure, false, 0); // Write sensor readings to the display
             }
             else 
             {
@@ -2127,7 +2127,7 @@ static void write_display(void)
                     }
                     case 4:
                     {
-                        snprintf(buf, 32, "MEAS INT: %u s", global_configuration.meas_int / 1000);
+                        snprintf(buf, 32, "MEAS INT: %u s", global_configuration.meas_int_ms / 1000);
                         break;
                     }
                     case 5:

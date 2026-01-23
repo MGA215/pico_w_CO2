@@ -18,8 +18,8 @@
 extern global_config_t global_configuration;
 
 extern sensor_t sensors[8];
-extern ms5607_t ms5607;
-extern hyt271_t hyt271;
+extern sensor_t ms5607;
+extern sensor_t hyt271;
 
 extern soap_data_t soap_data[2];
 
