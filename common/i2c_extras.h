@@ -25,4 +25,10 @@ extern void reset_i2c(void);
  */
 extern void init_sensor_i2c(void);
 
+/**
+ * @brief Initializes device I2C bus
+ * 
+ */
+extern void init_device_i2c(void);
+
 #endif

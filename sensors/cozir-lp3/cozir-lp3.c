@@ -99,10 +99,10 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
 {
     int32_t ret;
     uint8_t tempBuffer[5];
-    if (cozir_lp3->config.sensor_type != COZIR_LP3) // Check for correct sensor type
+    if (cozir_lp3->sensor_type != COZIR_LP3) // Check for correct sensor type
     {
         cozir_lp3->meas_state = MEAS_FINISHED;
-        cozir_lp3->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        cozir_lp3->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         cozir_lp3->co2 = NAN;
         cozir_lp3->humidity = NAN;
         cozir_lp3->temperature = NAN;
@@ -115,13 +115,14 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas finished");
             lp3_power(cozir_lp3, false); // Power off
             cozir_lp3->wake_time = at_the_end_of_time; // Disable timer
-            if (cozir_lp3->internal_error_state) cozir_lp3->internal_error_state = ERROR_NO_MEAS;
+            // if (cozir_lp3->internal_error_state) cozir_lp3->internal_error_state = ERROR_NO_MEAS;
             cozir_lp3->timeout_iterator = 0; // Initialize iterator
             return;
         }
         case MEAS_STARTED:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
+            cozir_lp3->internal_error_state = PICO_OK;
             lp3_power(cozir_lp3, true);
             if (!cozir_lp3->config.power_continuous) cozir_lp3->wake_time = make_timeout_time_ms(cozir_lp3->config.sensor_power_up_time); // Time for power stabilization
             cozir_lp3->meas_state = MEAS_READ_VALUE; // Ignore read status - is implemented within read value
@@ -212,10 +213,14 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
     }
 }
 
-int32_t cozir_lp3_init(sensor_t* sensor)
+void cozir_lp3_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != COZIR_LP3) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != COZIR_LP3) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
     ret = lp3_write_config(&(sensor->config));
     if (!ret)
@@ -223,7 +228,8 @@ int32_t cozir_lp3_init(sensor_t* sensor)
         if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
     else sensor->meas_state = MEAS_FINISHED;
-    return ret;
+    sensor->internal_error_state = ret;
+    return;
 }
 
 int32_t cozir_lp3_read_config(sensor_config_t* config, bool single_measurement_mode)

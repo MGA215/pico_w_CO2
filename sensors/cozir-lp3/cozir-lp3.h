@@ -45,11 +45,9 @@ extern void cozir_lp3_get_value(sensor_t* cozir_lp3);
 /**
  * @brief Initializes the CozIR-LP3 sensor and writes configuration to it
  * 
- * @param cozir_lp3 Sensor structure
- * @param config Configuration to write
- * @return int32_t Return code
+ * @param sensor Sensor structure
  */
-extern int32_t cozir_lp3_init(sensor_t* sensor);
+extern void cozir_lp3_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the CozIR-LP3 sensor

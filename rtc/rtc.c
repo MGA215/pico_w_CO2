@@ -32,11 +32,6 @@ void rtc_init(void)
     rtc.i2c_sda_pin = I2C_DEVICE_SDA;
     rtc.i2c_scl_pin = I2C_DEVICE_SCL;
 
-    i2c_init(I2C_DEVICE, I2C_DEVICE_FERQ);
-    gpio_set_function(I2C_DEVICE_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_DEVICE_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_DEVICE_SDA);
-    gpio_pull_up(I2C_DEVICE_SCL);
     // ds3231_init(I2C_DEVICE, I2C_DEVICE_SDA, I2C_DEVICE_SCL, &rtc); // Initialize DS3231 module
     rtc_time = get_absolute_time(); // Read first time value
 }

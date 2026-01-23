@@ -46,11 +46,9 @@ extern void ee895_get_value(sensor_t* ee895);
 /**
  * @brief Initializes the EE895 sensor
  * 
- * @param ee895 output EE895 sensor structure
- * @param config Configuration of the EE895 sensor to be written
- * @return int32_t Return code
+ * @param sensor EE895 sensor structure
  */
-extern int32_t ee895_init(sensor_t* sensor);
+extern void ee895_init(sensor_t* sensor);
 
 /**
  * @brief Reads EE895 sensor configuration

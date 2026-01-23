@@ -13,6 +13,7 @@
 #define __MS5607_H__
 
 #include "pico/stdlib.h"
+#include "common/structs.h"
 
 // pressure & temperature range from the sensor
 #define MS_PRESS_MIN          10.0
@@ -47,6 +48,8 @@ extern int32_t ms5607_get_adc_val(int32_t channel, uint8_t* buffer, uint8_t buff
  * Exit code is saved to ms5607.state
  * 
  */
-extern void ms5607_get_value(void);
+extern void ms5607_get_value(sensor_t* sensor);
+
+extern sensor_functions_t ms5607_functions;
 
 #endif

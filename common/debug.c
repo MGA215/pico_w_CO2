@@ -49,7 +49,7 @@
  * 5 ... display debug and higher
  * 6 ... display trace and higher
  */
-uint8_t debug = 5; // Global max debug level
+uint8_t debug = 6; // Global max debug level
 
 static debug_configuration_t config_normal =
 {

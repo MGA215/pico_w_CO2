@@ -1076,7 +1076,7 @@ static void write_display(void)
                 position.x = 0;
                 position.y = 1;
                 write_display_sensor(sensor_name, hyt271.error_state, false, 0, true, hyt271.temperature, false, 0, true, hyt271.humidity); // Write sensor readings to the display
-                snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_count);
+                snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_total_counter);
                 position.x = 0;
                 position.y = 5;
                 gfx_pack_write_text(&position, sensor_name); // Write number of errors

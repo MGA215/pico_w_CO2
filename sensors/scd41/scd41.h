@@ -53,10 +53,8 @@ extern void scd41_get_value(sensor_t* scd41);
  * @brief Initializes the sensor and writes configuration to it
  * 
  * @param scd41 Sensor structure
- * @param config Configuration to write
- * @return int32_t Return code
  */
-extern int32_t scd41_init(sensor_t* sensor);
+extern void scd41_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the SCD41 sensor

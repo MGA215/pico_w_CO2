@@ -3,7 +3,7 @@
 #include "common/constants.h"
 #include "common/debug.h"
 #include "error_codes.h"
-#include "common/shared.h"
+#include "common/structs.h"
 #include "string.h"
 #include "math.h"
 
@@ -20,6 +20,12 @@
 #define PROM_READ_REPEAT      3
 
 static uint8_t prom_read = 0;
+
+sensor_functions_t ms5607_functions = {
+    .sensor_get_value = ms5607_get_value,
+    .sensor_init = NULL,
+    .sensor_read_config = NULL
+};
 
 /**
  * @brief Calculates the CRC4 value for the MS5607
@@ -129,17 +135,19 @@ int32_t ms5607_get_adc_val(int32_t channel, uint8_t* buffer, uint8_t buffer_leng
     return SUCCESS;
 }
 
-void ms5607_get_value(void)
+void ms5607_get_value(sensor_t* sensor)
 {
-    if (ms5607.meas_state != MEAS_STARTED)
+    if (sensor->meas_state != MEAS_STARTED)
     {
-        ms5607.meas_state = MEAS_FINISHED;
+        sensor->meas_state = MEAS_FINISHED;
+        sensor->wake_time = at_the_end_of_time;
         return;
     }
     int32_t i, ret;
     uint32_t d1, d2;
     uint8_t temp_buffer[3];
     double temp, press, off, sens, off2, sens2, td, t2;
+    sensor->internal_error_state = PICO_OK;
 
     // Read PROM if not already read
     if (prom_read == 0) 
@@ -147,53 +155,56 @@ void ms5607_get_value(void)
         // Read PROM repeat
         for (i = 0; i < PROM_READ_REPEAT; i++) 
         {
-            if ((ret = ms5607_get_prom_const(ms5607.state_reg, 8)) == 0) break; // Read PROM
+            if ((ret = ms5607_get_prom_const(sensor->prom_buffer, 8)) == 0) break; // Read PROM
         }
         if (i == PROM_READ_REPEAT) // Reading PROM failed
         {
-            ms5607.pressure = NAN; // Reset all variables
-            ms5607.temperature = NAN;
-            memset(ms5607.pressure_raw, 0x00, 3);
-            memset(ms5607.temperature_raw, 0x00, 3);
-            ms5607.internal_error_state = ret;
-            ms5607.meas_state = MEAS_FINISHED;
+            sensor->pressure = NAN; // Reset all variables
+            sensor->temperature = NAN;
+            memset(sensor->pressure_raw, 0x00, 3);
+            memset(sensor->temperature_raw, 0x00, 3);
+            sensor->internal_error_state = ret;
+            sensor->wake_time = at_the_end_of_time;
+            sensor->meas_state = MEAS_FINISHED;
             return;
         }
         prom_read = 1; // PROM read successfully
     }
 
     // Convert pressure
-    if ((ret = ms5607_get_adc_val(0, ms5607.pressure_raw, 3)) != 0) 
+    if ((ret = ms5607_get_adc_val(0, sensor->pressure_raw, 3)) != 0) 
     {
-        ms5607.pressure = NAN; // Reset all variables
-        ms5607.temperature = NAN;
-        memset(ms5607.pressure_raw, 0x00, 3);
-        memset(ms5607.temperature_raw, 0x00, 3);
+        sensor->pressure = NAN; // Reset all variables
+        sensor->temperature = NAN;
+        memset(sensor->pressure_raw, 0x00, 3);
+        memset(sensor->temperature_raw, 0x00, 3);
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to convert pressure");
-        ms5607.internal_error_state = ret;
-        ms5607.meas_state = MEAS_FINISHED;
+        sensor->internal_error_state = ret;
+        sensor->wake_time = at_the_end_of_time;
+        sensor->meas_state = MEAS_FINISHED;
         return;
     }
-    d1 = ms5607.pressure_raw[0] * 65536 + ms5607.pressure_raw[1] * 256 + ms5607.pressure_raw[2];
+    d1 = sensor->pressure_raw[0] * 65536 + sensor->pressure_raw[1] * 256 + sensor->pressure_raw[2];
 
     // Convert temperature
-    if ((ret = ms5607_get_adc_val(1, ms5607.temperature_raw, 3)) != 0) 
+    if ((ret = ms5607_get_adc_val(1, sensor->temperature_raw, 3)) != 0) 
     {
-        ms5607.pressure = NAN; // Reset variables
-        ms5607.temperature = NAN;
-        memset(ms5607.temperature_raw, 0x00, 3);
+        sensor->pressure = NAN; // Reset variables
+        sensor->temperature = NAN;
+        memset(sensor->temperature_raw, 0x00, 3);
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_MS5607, "Failed to convert temperature");
-        ms5607.internal_error_state = ret;
-        ms5607.meas_state = MEAS_FINISHED;
+        sensor->internal_error_state = ret;
+        sensor->wake_time = at_the_end_of_time;
+        sensor->meas_state = MEAS_FINISHED;
         return;
     }
-    d2 = ms5607.temperature_raw[0] * 65536 + ms5607.temperature_raw[1] * 256 + ms5607.temperature_raw[2];
+    d2 = sensor->temperature_raw[0] * 65536 + sensor->temperature_raw[1] * 256 + sensor->temperature_raw[2];
 
     // 1st order calculation
-    td   = d2 - ((double)ms5607.state_reg[5]) * 256.0;
-    temp = 2000.0 + (td * ((double)ms5607.state_reg[6])) / 8388608.0;
-    off  = ((double)ms5607.state_reg[2]) * 131072.0 + (((double)ms5607.state_reg[4]) * td) / 64.0;
-    sens = ((double)ms5607.state_reg[1]) * 65536.0  + (((double)ms5607.state_reg[3]) * td) / 128.0;
+    td   = d2 - ((double)sensor->prom_buffer[5]) * 256.0;
+    temp = 2000.0 + (td * ((double)sensor->prom_buffer[6])) / 8388608.0;
+    off  = ((double)sensor->prom_buffer[2]) * 131072.0 + (((double)sensor->prom_buffer[4]) * td) / 64.0;
+    sens = ((double)sensor->prom_buffer[1]) * 65536.0  + (((double)sensor->prom_buffer[3]) * td) / 128.0;
 
     // 2nd order calculation
     t2    = 0.0;
@@ -218,24 +229,26 @@ void ms5607_get_value(void)
 
     // Range check
     if ((press < MS_PRESS_MIN) || (temp < MS_TEMP_MIN)) {
-        ms5607.pressure = NAN; // Reset variables
-        ms5607.temperature = NAN;
-        ms5607.internal_error_state = MS5607_ERROR_VALUE_LOW;
-        ms5607.meas_state = MEAS_FINISHED;
+        sensor->pressure = NAN; // Reset variables
+        sensor->temperature = NAN;
+        sensor->internal_error_state = MS5607_ERROR_VALUE_LOW;
+        sensor->meas_state = MEAS_FINISHED;
+        sensor->wake_time = at_the_end_of_time;
         return;
     }
     if ((press > MS_PRESS_MAX) || (temp > MS_TEMP_MAX)) {
-        ms5607.pressure = NAN; // Reset variables
-        ms5607.temperature = NAN;
-        ms5607.internal_error_state = MS5607_ERROR_VALUE_HIGH;
-        ms5607.meas_state = MEAS_FINISHED;
+        sensor->pressure = NAN; // Reset variables
+        sensor->temperature = NAN;
+        sensor->internal_error_state = MS5607_ERROR_VALUE_HIGH;
+        sensor->meas_state = MEAS_FINISHED;
+        sensor->wake_time = at_the_end_of_time;
         return;
     }
 
-    ms5607.pressure = (float)press;
-    ms5607.temperature = (float)temp;
-    ms5607.meas_state = MEAS_FINISHED;
-    ms5607.internal_error_state = SUCCESS;
-
+    sensor->pressure = (float)press;
+    sensor->temperature = (float)temp;
+    sensor->meas_state = MEAS_FINISHED;
+    sensor->internal_error_state = SUCCESS;
+    sensor->wake_time = at_the_end_of_time;
     return;
 }

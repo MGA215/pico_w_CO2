@@ -52,11 +52,9 @@ extern void cm1107n_get_value(sensor_t* cm1107n);
 /**
  * @brief Initializes the CM1107N sensor and writes configuration to it
  * 
- * @param cm1107n Sensor structure
- * @param config Configuration to write
- * @return int32_t Return code
+ * @param sensor Sensor structure
  */
-extern int32_t cm1107n_init(sensor_t* sensor);
+extern void cm1107n_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the CM1107N sensor

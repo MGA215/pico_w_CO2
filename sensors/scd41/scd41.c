@@ -171,10 +171,10 @@ void scd41_get_value(sensor_t* scd41)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    if (scd41->config.sensor_type != SCD41) // Check for correct sensor type
+    if (scd41->sensor_type != SCD41) // Check for correct sensor type
     {
         scd41->meas_state = MEAS_FINISHED;
-        scd41->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        scd41->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         scd41->co2 = NAN;
         scd41->humidity = NAN;
         scd41->temperature = NAN;
@@ -192,10 +192,11 @@ void scd41_get_value(sensor_t* scd41)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Meas started");
+            scd41->internal_error_state = PICO_OK;
             s41_power(scd41, true); // Power off
             if (!scd41->config.power_continuous) scd41->wake_time = make_timeout_time_ms(scd41->config.sensor_power_up_time); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
-            if (scd41->internal_error_state) scd41->internal_error_state = ERROR_NO_MEAS;
+            // if (scd41->internal_error_state) scd41->internal_error_state = ERROR_NO_MEAS;
             scd41->timeout_iterator = 0; // Initialize read status timeout iterator
             scd41->measurement_iterator = 0; // Initialize read single measurement iterator
             return;
@@ -321,10 +322,14 @@ void scd41_get_value(sensor_t* scd41)
     }
 }
 
-int32_t scd41_init(sensor_t* sensor)
+void scd41_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != SCD41) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != SCD41) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
     ret = s41_write_config(&(sensor->config)); // Write config to the sensor
     if (!ret)
@@ -333,7 +338,8 @@ int32_t scd41_init(sensor_t* sensor)
     }
     else sensor->meas_state = MEAS_FINISHED;
     sleep_ms(100);
-    return ret;
+    sensor->internal_error_state = ret;
+    return;
 }
 
 int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)

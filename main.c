@@ -24,6 +24,7 @@
 #include "error_handler/error_handler.h"
 #include "sensors/sensors.h"
 #include "uart/uart.h"
+#include "common/i2c_extras.h"
 
 #include "common/debug.h"
 
@@ -35,6 +36,8 @@
 #include "hardware/watchdog.h"
 #include "pico/multicore.h"
 #include "pico/mutex.h"
+
+#define N_MS_BOOT_WAIT 1000
 
 
 
@@ -80,13 +83,18 @@ int32_t init(void)
 {
     int32_t ret;
 
+    if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
+
+    init_sensor_i2c();
+    init_device_i2c();
+    svc_pin_init(); // Initialize service mode pin
+
     extern char __flash_binary_start;  // defined in linker script
     extern char __flash_binary_end;    // defined in linker script
     uintptr_t start = (uintptr_t) &__flash_binary_start;
     uintptr_t end = (uintptr_t) &__flash_binary_end;
     print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Binary starts at %08x and ends at %08x, size is %08x", start, end, end-start);
 
-    if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
     error_handler_set_hardfault_core0(); // Set core 0 hardfault exception handler
     
     if (watchdog_enable_caused_reboot()) print_ser_output(SEVERITY_WARN, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Reboot caused by watchdog");
@@ -96,8 +104,6 @@ int32_t init(void)
         mutex_init(&soap_data[0].data_mutex);
     if (!mutex_is_initialized(&soap_data[1].data_mutex))
         mutex_init(&soap_data[1].data_mutex);
-
-    svc_pin_init(); // Initialize service mode pin
 
     display_init(); // Initialize display
 
@@ -109,12 +115,15 @@ int32_t init(void)
 
     while (service_mode == SERVICE_MODE_UART) // If in UART service mode do main loop without initialization
     {
-        loop();
+        // loop();
+        service_comm_eng_process_command();
+        check_svc_mode();
+        watchdog_update();
     }
 
     if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
-    // sensors_init_all(); // initialize sensors
-    sensors_init();
+
+    sensors_init(); // Initialize sensor structures
 
 #if defined __SOAP_H__ && defined __SOAP_CHANNELS_H__
     soap_init(channels1); // Initialize SOAP channels
@@ -122,6 +131,13 @@ int32_t init(void)
     soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.error_state, MEASURED_VALUE_RH, 1, channels2);
     soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.error_state, MEASURED_VALUE_P, 2, channels2);
 #endif
+
+    uint8_t loading_progress = 0;
+    for (int i = 0; i < N_MS_BOOT_WAIT; i++)
+    {
+        sleep_ms(1);
+        watchdog_update();
+    }
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);
 
@@ -133,7 +149,9 @@ int32_t loop(void)
     if (!service_mode)
     {
         // sensors_read_all(); // Read sensor values
+        
         sensors_run();
+        watchdog_update();
         create_soap_messages(); // Create SOAP messages
     }
 #ifdef __SERVICE_COMM_H__

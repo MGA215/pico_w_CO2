@@ -96,10 +96,10 @@ void cdm7162_get_value(sensor_t* cdm7162)
 {
     int32_t ret;
     uint8_t buf[3];
-    if (cdm7162->config.sensor_type != CDM7162) // Check for correct sensor type
+    if (cdm7162->sensor_type != CDM7162) // Check for correct sensor type
     {
         cdm7162->meas_state = MEAS_FINISHED;
-        cdm7162->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        cdm7162->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         cdm7162->co2 = NAN;
         return;
     } 
@@ -115,10 +115,11 @@ void cdm7162_get_value(sensor_t* cdm7162)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas started");
+            cdm7162->internal_error_state = PICO_OK;
             cdm_power(cdm7162, true); // Power on
             if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_ms(cdm7162->config.sensor_power_up_time); // Time for power stabilization
             cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read status
-            if (cdm7162->internal_error_state) cdm7162->internal_error_state = ERROR_NO_MEAS;
+            // if (cdm7162->internal_error_state) cdm7162->internal_error_state = ERROR_NO_MEAS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
             return;
         }
@@ -171,15 +172,20 @@ void cdm7162_get_value(sensor_t* cdm7162)
     }
 }
 
-int32_t cdm7162_init(sensor_t* sensor)
+void cdm7162_init(sensor_t* sensor)
 {
     int32_t ret;
     uint8_t buf;
-    if (sensor->config.sensor_type != CDM7162) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != CDM7162) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
     ret = cdm_write_config(&(sensor->config)); // Write configuration to the sensor
     sleep_ms(100);
-    return ret;
+    sensor->internal_error_state = ret;
+    return;
 }
 
 int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurement_mode)

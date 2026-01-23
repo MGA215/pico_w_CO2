@@ -141,10 +141,10 @@ void scd30_get_value(sensor_t* scd30)
 {
     uint16_t tempBuffer = 0;
     int32_t ret;
-    if (scd30->config.sensor_type != SCD30) // Check for correct sensor type
+    if (scd30->sensor_type != SCD30) // Check for correct sensor type
     {
         scd30->meas_state = MEAS_FINISHED;
-        scd30->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        scd30->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         scd30->co2 = NAN;
         scd30->humidity = NAN;
         scd30->temperature = NAN;
@@ -162,11 +162,12 @@ void scd30_get_value(sensor_t* scd30)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Meas start");
+            scd30->internal_error_state = PICO_OK;
             s30_power(scd30, true); // Power off
             if (!scd30->config.power_continuous) scd30->wake_time = make_timeout_time_ms(scd30->config.sensor_power_up_time); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             scd30->timeout_iterator = 0; // Initialize read status timeout iterator
-            if (scd30->internal_error_state) scd30->internal_error_state = ERROR_NO_MEAS;
+            // if (scd30->internal_error_state) scd30->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -243,10 +244,14 @@ void scd30_get_value(sensor_t* scd30)
     }
 }
 
-int32_t scd30_init(sensor_t* sensor)
+void scd30_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != SCD30) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != SCD30) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
     ret = s30_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
@@ -255,7 +260,7 @@ int32_t scd30_init(sensor_t* sensor)
     }
     else sensor->meas_state = MEAS_FINISHED;
     sensor->internal_error_state = ret;
-    return ret;
+    return;
 }
 
 int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode)

@@ -232,10 +232,10 @@ void ee895_get_value(sensor_t* ee895)
 {
     uint8_t tempBuffer[4] = {0};
     int32_t ret;
-    if (ee895->config.sensor_type != EE895) // Check for correct sensor type
+    if (ee895->sensor_type != EE895) // Check for correct sensor type
     {
         ee895->meas_state = MEAS_FINISHED;
-        ee895->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        ee895->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         ee895->co2 = NAN;
         ee895->pressure = NAN;
         ee895->temperature = NAN;
@@ -253,6 +253,7 @@ void ee895_get_value(sensor_t* ee895)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
+            ee895->internal_error_state = PICO_OK;
             ee_power(ee895, true); // Power on
             if (!ee895->config.power_continuous) ee895->wake_time = make_timeout_time_ms(ee895->config.sensor_power_up_time); // Time for power stabilization
             if (ee895->config.single_meas_mode) 
@@ -261,7 +262,6 @@ void ee895_get_value(sensor_t* ee895)
             }
             else ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
             ee895->timeout_iterator = 0; // Initialize read status timeout iterator
-            if (ee895->internal_error_state) ee895->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_TRIGGER_SINGLE_MEAS:
@@ -435,19 +435,24 @@ void ee895_get_value(sensor_t* ee895)
     }
 }
 
-int32_t ee895_init(sensor_t* sensor)
+void ee895_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != EE895) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != EE895) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+    }
 
     uint8_t fw_read_name[16];
     if ((ret = ee895_read_reg(REG_FW_NAME, 8, fw_read_name)) != 0) // Read sensor name
     {
-        return ret;
+        sensor->internal_error_state = ret;
+        return;
     }
     if (strcmp(fw_read_name, "EE895") != 0) // Check sensor name
     {
-        return ERROR_UNKNOWN_SENSOR;
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
     }
 
     ret = ee_write_config(&(sensor->config)); // Write configuration to sensor
@@ -458,7 +463,9 @@ int32_t ee895_init(sensor_t* sensor)
     }
     else sensor->meas_state = MEAS_FINISHED;
 
-    return ret;
+    sensor->internal_error_state = ret;
+
+    return;
 }
 
 int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode)

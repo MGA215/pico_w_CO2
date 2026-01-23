@@ -128,4 +128,12 @@ extern void common_measurement_start(sensor_t* sensor);
  */
 extern bool common_should_sensor_operate(sensor_t* sensor);
 
+/**
+ * @brief Disables sensor for specified time
+ * 
+ * @param sensor Sensor to disable
+ * @param time_ms Time to disable the sensor for, in ms
+ */
+extern void common_disable_sensor_for_ms(sensor_t* sensor, uint32_t time_ms);
+
 #endif

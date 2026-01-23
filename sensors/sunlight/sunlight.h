@@ -45,11 +45,9 @@ extern void sunlight_get_value(sensor_t* sunlight);
 /**
  * @brief Initializes SUNLIGHT sensor
  * 
- * @param sunlight Output SUNLIGHT sensor structure
- * @param config Configuration of the SUNLIGHT sensor to be written
- * @return int Return code
+ * @param sensor SUNLIGHT sensor structure
  */
-extern int32_t sunlight_init(sensor_t* sensor);
+extern void sunlight_init(sensor_t* sensor);
 
 /**
  * @brief Reads SUNLIGHT sensor configuration

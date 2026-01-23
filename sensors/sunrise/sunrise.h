@@ -45,11 +45,9 @@ extern int32_t sunrise_reset(void);
 /**
  * @brief Initializes SUNRISE sensor
  * 
- * @param sunrise Output SUNRISE sensor structure
- * @param config Configuration of the SUNRISE sensor to be written
- * @return int32_t Return code
+ * @param sensor SUNRISE sensor structure
  */
-extern int32_t sunrise_init(sensor_t* sensor);
+extern void sunrise_init(sensor_t* sensor);
 
 /**
  * @brief Reads measured values from the sensor

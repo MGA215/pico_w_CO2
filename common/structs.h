@@ -125,7 +125,7 @@ struct sensor_config
 typedef struct sensor_functions
 {
     void (*sensor_get_value)(sensor_t* sensor); // Get measured value
-    int32_t (*sensor_init)(sensor_t* sensor); // Initialize sensor
+    void (*sensor_init)(sensor_t* sensor); // Initialize sensor
     int32_t (*sensor_read_config)(sensor_config_t* config, bool single_measurement); // Read sensor configuration
 } sensor_functions_t;
 
@@ -157,6 +157,7 @@ struct sensor
     uint8_t pressure_raw[3];
     uint8_t temperature_raw[3];
     uint8_t humidity_raw[3];
+    uint16_t prom_buffer[16];
 };
 
 // typedef struct ms5607

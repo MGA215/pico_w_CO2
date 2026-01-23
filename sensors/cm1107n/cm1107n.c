@@ -127,10 +127,10 @@ void cm1107n_get_value(sensor_t* cm1107n)
 {
     int32_t ret;
     uint8_t tempBuffer[3];
-    if (cm1107n->config.sensor_type != CM1107N) // Check for correct sensor type
+    if (cm1107n->sensor_type != CM1107N) // Check for correct sensor type
     {
         cm1107n->meas_state = MEAS_FINISHED;
-        cm1107n->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        cm1107n->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         cm1107n->co2 = NAN;
         return;
     } 
@@ -146,9 +146,10 @@ void cm1107n_get_value(sensor_t* cm1107n)
         case MEAS_STARTED:
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas started");
+            cm1107n->internal_error_state = PICO_OK;
             cm_power(cm1107n, true); // Power on
             if (!cm1107n->config.power_continuous) cm1107n->wake_time = make_timeout_time_ms(cm1107n->config.sensor_power_up_time); // Time for power stabilization
-            if (cm1107n->internal_error_state) cm1107n->internal_error_state = ERROR_NO_MEAS;
+            // if (cm1107n->internal_error_state) cm1107n->internal_error_state = ERROR_NO_MEAS;
             cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next FSM state - trigger measurement
             cm1107n->timeout_iterator = 0;
             return;
@@ -199,7 +200,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 if (ret == CM1107N_ERROR_OUT_OF_RANGE)
                 {
                     cm1107n->meas_state = MEAS_FINISHED; // Set FSM state to measurement finished
-                    cm1107n->internal_error_state = ERROR_NO_MEAS; // Invalid measurement has been performed
+                    // cm1107n->internal_error_state = ERROR_NO_MEAS; // Invalid measurement has been performed
                     cm1107n->co2 = NAN; // Set read value to NAN
                     return;
                 }
@@ -225,10 +226,14 @@ void cm1107n_get_value(sensor_t* cm1107n)
     }
 }
 
-int32_t cm1107n_init(sensor_t* sensor)
+void cm1107n_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != CM1107N) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != CM1107N) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
     
     ret = cm_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
@@ -236,7 +241,8 @@ int32_t cm1107n_init(sensor_t* sensor)
         if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
     else sensor->meas_state = MEAS_FINISHED;
-    return ret;
+    sensor->internal_error_state = ret;
+    return;
 }
 
 int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mode)

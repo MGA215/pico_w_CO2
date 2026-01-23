@@ -105,14 +105,18 @@ void common_init_struct(sensor_t* sensor, uint8_t input_index)
     sensor->error_state = ERROR_SENSOR_NOT_INITIALIZED;
     sensor->internal_error_state = STATE_OK;
     sensor->timeout_iterator = 0;
-    sensor->wake_time = at_the_end_of_time;
+    sensor->wake_time = get_absolute_time();
     sensor->config.sensor_active = false;
     sensor->index = input_index;
     sensor->sensor_number = 0;
     sensor->err_iter_counter = 0;
     sensor->start_new_measurement = false;
-    get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index));
+    get_input_power_index(input_index, &(sensor->input_index), &(sensor->power_index)); // For HYT271 and MS5607 not needed
     memset(sensor->state_reg, 0x00, 26);
+    memset(sensor->pressure_raw, 0x00, 3);
+    memset(sensor->temperature_raw, 0x00, 3);
+    memset(sensor->humidity_raw, 0x00, 3);
+    memset(sensor->prom_buffer, 0x00, 16 * sizeof(uint16_t));
 }
 
 void get_input_power_index(uint8_t internal_index, uint8_t* input_index, uint8_t* power_index)
@@ -178,4 +182,9 @@ void common_measurement_start(sensor_t* sensor)
 bool common_should_sensor_operate(sensor_t* sensor)
 {
     return time_reached(sensor->wake_time) && sensor->config.sensor_active;
+}
+
+void common_disable_sensor_for_ms(sensor_t* sensor, uint32_t time_ms)
+{
+    sensor->wake_time = make_timeout_time_ms(time_ms);
 }

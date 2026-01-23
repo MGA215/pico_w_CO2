@@ -30,8 +30,8 @@
 #define ERROR_TIMER_SENSORS_INIT -12 // Error initializing sensor timer
 #define ERROR_SENSOR_NOT_INITIALIZED -13 // Error sensor is not initialized
 // #define ERROR_SENSOR_INIT_FAILED -14 // Error sensor initialization failed
-#define ERROR_NO_MEAS -15 // Error No measurement has been performed yet
-#define ERROR_UNKNOWN_SENSOR -16 // Error Sensor identification failed - unknown sensor
+// #define ERROR_NO_MEAS -15 // Error No measurement has been performed yet
+// #define ERROR_UNKNOWN_SENSOR -16 // Error Sensor identification failed - unknown sensor
 #define ERROR_CONFIG_INIT -17 // Error Failed to read configuration from EEPROM
 #define ERROR_CONFIG_VERIFICATION_FAILED -18 // Error Failed to verify sensor configuration
 

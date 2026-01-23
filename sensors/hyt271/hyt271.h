@@ -12,10 +12,14 @@
 #ifndef __HYT271_H__
 #define __HYT271_H__
 
+#include "common/structs.h"
+
 /**
  * @brief Reads values from the HYT271 sensor
  * 
  */
-extern void hyt271_get_value();
+extern void hyt271_get_value(sensor_t* sensor);
+
+extern sensor_functions_t hyt271_functions;
 
 #endif

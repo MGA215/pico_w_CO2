@@ -190,10 +190,10 @@ int32_t sunrise_write(uint8_t addr, uint8_t* buf, uint16_t len)
 void sunrise_get_value(sensor_t* sunrise)
 {
     int32_t ret;
-    if (sunrise->config.sensor_type != SUNRISE) // Check for correct sensor type
+    if (sunrise->sensor_type != SUNRISE) // Check for correct sensor type
     {
         sunrise->meas_state = MEAS_FINISHED;
-        sunrise->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        sunrise->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         sunrise->co2 = NAN;
         sunrise->temperature = NAN;
         return;
@@ -210,11 +210,12 @@ void sunrise_get_value(sensor_t* sunrise)
         case MEAS_STARTED: // Measurement started
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Meas started");
+            sunrise->internal_error_state = PICO_OK;
             sr_power(sunrise, true); // Power on
             if (!sunrise->config.power_continuous) sunrise->wake_time = make_timeout_time_ms(sunrise->config.sensor_power_up_time); // Time for power stabilization
             sunrise->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunrise->timeout_iterator = 0; // Initialize iterator value
-            if (sunrise->internal_error_state) sunrise->internal_error_state = ERROR_NO_MEAS;
+            // if (sunrise->internal_error_state) sunrise->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -360,19 +361,32 @@ void sunrise_get_value(sensor_t* sunrise)
     }
 }
 
-int32_t sunrise_init(sensor_t* sensor)
+void sunrise_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != SUNRISE) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != SUNRISE) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
 
     uint8_t buf[16];
-    if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) return ret; // Check sensor product code
-    if (strcmp(buf, "006-0-0008") != 0) return ERROR_UNKNOWN_SENSOR;
+    if ((ret = sunrise_read(REG_PRODUCT_CODE, buf, 16)) != 0) // Check sensor product code
+    {
+        sensor->internal_error_state = ret;
+        return;
+    }
+    // if (strcmp(buf, "006-0-0008") != 0)
+    // {
+    //     sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+    //     return;
+    // }
 
     if ((ret = sr_write_config(&(sensor->config))) != 0) // Write configuration
     {
-        return ret;
+        sensor->internal_error_state = ret;
+        return;
     }
 
     if (!ret)
@@ -380,7 +394,8 @@ int32_t sunrise_init(sensor_t* sensor)
         if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
     else sensor->meas_state = MEAS_FINISHED;
-    return SUCCESS;
+    sensor->internal_error_state = STATE_OK;
+    return;
 }
 
 int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mode)

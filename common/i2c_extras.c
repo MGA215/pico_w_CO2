@@ -73,3 +73,17 @@ void init_sensor_i2c(void)
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Initialized sensor I2C bus");
     sleep_us(100);
 }
+
+void init_device_i2c(void)
+{
+    i2c_init(I2C_DEVICE, I2C_DEVICE_FERQ);
+    gpio_init(I2C_DEVICE_SDA);
+    gpio_init(I2C_DEVICE_SCL);
+    gpio_set_function(I2C_DEVICE_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C_DEVICE_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C_DEVICE_SDA);
+    gpio_pull_up(I2C_DEVICE_SCL);
+
+    print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Initialized device I2C bus");
+    sleep_us(100);
+}

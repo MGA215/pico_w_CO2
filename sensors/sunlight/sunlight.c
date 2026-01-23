@@ -189,10 +189,10 @@ int32_t sunlight_write(uint8_t addr, uint8_t* buf, uint16_t len)
 void sunlight_get_value(sensor_t* sunlight)
 {
     int32_t ret;
-    if (sunlight->config.sensor_type != SUNLIGHT) // Check for correct sensor type
+    if (sunlight->sensor_type != SUNLIGHT) // Check for correct sensor type
     {
         sunlight->meas_state = MEAS_FINISHED;
-        sunlight->internal_error_state = ERROR_UNKNOWN_SENSOR;
+        sunlight->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         sunlight->co2 = NAN;
         sunlight->temperature = NAN;
         return;
@@ -209,11 +209,12 @@ void sunlight_get_value(sensor_t* sunlight)
         case MEAS_STARTED: // Measurement start
         {
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Meas started");
+            sunlight->internal_error_state = PICO_OK;
             sl_power(sunlight, true); // Power on
             if (!sunlight->config.power_continuous) sunlight->wake_time = make_timeout_time_ms(sunlight->config.sensor_power_up_time); // Time for power stabilization
             sunlight->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunlight->timeout_iterator = 0; // Initialize iterator value
-            if (sunlight->internal_error_state) sunlight->internal_error_state = ERROR_NO_MEAS;
+            // if (sunlight->internal_error_state) sunlight->internal_error_state = ERROR_NO_MEAS;
             return;
         }
         case MEAS_READ_MODE: // Reading mode
@@ -361,14 +362,19 @@ void sunlight_get_value(sensor_t* sunlight)
     }
 }
 
-int32_t sunlight_init(sensor_t* sensor)
+void sunlight_init(sensor_t* sensor)
 {
     int32_t ret;
-    if (sensor->config.sensor_type != SUNLIGHT) return ERROR_UNKNOWN_SENSOR; // Check for correct sensor type
+    if (sensor->sensor_type != SUNLIGHT) // Check for correct sensor type
+    {
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        return;
+    }
 
     if ((ret = sl_write_config(&(sensor->config))) != 0) // Write configuration
     {
-        return ret; 
+        sensor->internal_error_state = ret;
+        return; 
     }
     
     if (!ret)
@@ -376,7 +382,8 @@ int32_t sunlight_init(sensor_t* sensor)
         if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
     }
     else sensor->meas_state = MEAS_FINISHED;
-    return SUCCESS;
+    sensor->internal_error_state = PICO_OK;
+    return;
 }
 
 int32_t sunlight_read_config(sensor_config_t* config, bool single_measurement_mode)

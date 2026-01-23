@@ -53,10 +53,8 @@ extern void scd30_get_value(sensor_t* scd30);
  * @brief Initializes the sensor and writes configuration to it
  * 
  * @param scd30 Sensor structure
- * @param config Configuration to write
- * @return int32_t Return code
  */
-extern int32_t scd30_init(sensor_t* sensor);
+extern void scd30_init(sensor_t* sensor);
 
 /**
  * @brief Reads configuration from the SCD30 sensor
