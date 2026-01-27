@@ -2526,6 +2526,19 @@ static void display_get_debug_str(uint8_t* buf, uint8_t len, uint8_t debug_sever
     }
 }
 
+void display_write_loading_bar(uint8_t percentage)
+{
+    if (time_reached(process_update_time))
+    {
+        rtc_update();
+        if (percentage > 100) percentage = 100;
+        gfx_pack_progress_bar(percentage);
+        gfx_pack_update();
+        gfx_pack_set_backlight((uint8_t)((uint16_t)(display_brightness) * 255 / 100));
+        process_update_time = make_timeout_time_ms(display_interval); // Wait for next update
+    }
+}
+
 static uint32_t getTotalHeap(void) {
    extern char __StackLimit, __bss_end__;
    

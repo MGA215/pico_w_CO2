@@ -93,7 +93,8 @@ int32_t init(void)
     extern char __flash_binary_end;    // defined in linker script
     uintptr_t start = (uintptr_t) &__flash_binary_start;
     uintptr_t end = (uintptr_t) &__flash_binary_end;
-    print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Binary starts at %08x and ends at %08x, size is %08x", start, end, end-start);
+    print_ser_output(SEVERITY_INFO, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, 
+        "Binary starts at %08x and ends at %08x, size is %08x", start, end, end-start);
 
     error_handler_set_hardfault_core0(); // Set core 0 hardfault exception handler
     
@@ -104,6 +105,11 @@ int32_t init(void)
         mutex_init(&soap_data[0].data_mutex);
     if (!mutex_is_initialized(&soap_data[1].data_mutex))
         mutex_init(&soap_data[1].data_mutex);
+
+    if (!mutex_is_initialized(&config_data.command_mutex)) // Initialize service communication command & response mutexes
+        mutex_init(&config_data.command_mutex);
+    if (!mutex_is_initialized(&config_data.response_mutex))
+        mutex_init(&config_data.response_mutex);
 
     display_init(); // Initialize display
 
@@ -118,6 +124,7 @@ int32_t init(void)
         // loop();
         service_comm_eng_process_command();
         check_svc_mode();
+        update();
         watchdog_update();
     }
 
@@ -132,11 +139,11 @@ int32_t init(void)
     soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.error_state, MEASURED_VALUE_P, 2, channels2);
 #endif
 
-    uint8_t loading_progress = 0;
     for (int i = 0; i < N_MS_BOOT_WAIT; i++)
     {
         sleep_ms(1);
         watchdog_update();
+        display_write_loading_bar(i * 100 / N_MS_BOOT_WAIT);
     }
 
     print_ser_output(SEVERITY_INFO, SOURCE_MAIN_INIT, SOURCE_NO_SOURCE, "Boot time: %s", datetime_str);

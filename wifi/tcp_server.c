@@ -146,11 +146,6 @@ err_t tcp_server_init()
     state.buffer_sent = buffer_sent;
     server_state = CONNECTION_CLOSED; // Set initial connection to closed
 
-    if (!mutex_is_initialized(&config_data.command_mutex)) // Initialize server command & response mutexes
-        mutex_init(&config_data.command_mutex);
-    if (!mutex_is_initialized(&config_data.response_mutex))
-        mutex_init(&config_data.response_mutex);
-
     return ERR_OK;
 }
 

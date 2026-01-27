@@ -78,6 +78,17 @@ static inline void gfx_pack_init_sequence(void);
  */
 static void command(uint8_t command, size_t len, const char* data);
 
+/**
+ * @brief Writes a character on the display
+ * 
+ * @param position Position the character should be written at
+ * @param symbol Symbol to be written
+ * @param add_space_between_symbols if single pixel space should be added around the character (for regular chars)
+ * @return true if character successfully written
+ * @return false if character outside of the display
+ */
+static bool gfx_pack_write_symbol(point_t* position, uint8_t* symbol, bool add_space_between_symbols);
+
 static inline uint8_t* get_char_map(char c);
 
 void gfx_pack_init(uint8_t brightness)
@@ -220,8 +231,12 @@ void gfx_pack_update(void)
 
 bool gfx_pack_write_char(point_t* position, char c)
 {
-    
-    uint8_t* char_map = get_char_map(c); // Pixel map of the character
+    uint8_t* symbol = get_char_map(c); // Pixel map of the character
+    return gfx_pack_write_symbol(position, symbol, true);
+}
+
+static bool gfx_pack_write_symbol(point_t* position, uint8_t* symbol, bool add_space_between_symbols)
+{
     uint16_t start_row = position->y * GFX_PACK_CHAR_HEIGHT + 1; // Start row in px, added upper padding
     uint16_t start_byte_row = GFX_PACK_DISPLAY_WIDTH / 8 * start_row; // Starting byte of the row
     uint16_t start_col = position->x * GFX_PACK_CHAR_WIDTH + 1; // Start column in px, added left padding
@@ -229,14 +244,23 @@ bool gfx_pack_write_char(point_t* position, char c)
         (position->y >= (GFX_PACK_DISPLAY_HEIGHT / GFX_PACK_CHAR_HEIGHT))) return false; // if character outside of drawable area return false
     uint16_t start_byte = start_byte_row + start_col / 8; // Start byte of the character
     uint8_t start_bit = start_col % 8; // Start bit of the character
-    for (int i = 0; i < GFX_PACK_CHAR_HEIGHT - 1; i++) // For each character pixel column
+
+    uint8_t symbol_width = GFX_PACK_CHAR_WIDTH;
+    uint8_t symbol_height = GFX_PACK_CHAR_HEIGHT;
+    if (add_space_between_symbols)
     {
-        for (int j = 0; j < GFX_PACK_CHAR_WIDTH - 1; j++) // For each character pixel row
+        symbol_width--;
+        symbol_height--;
+    }
+
+    for (int i = 0; i < symbol_height; i++) // For each character pixel column
+    {
+        for (int j = 0; j < symbol_width; j++) // For each character pixel row
         {
             uint8_t curr_bit = (start_bit + j) % 8; // Current bit 
             uint16_t curr_byte = start_byte + i * GFX_PACK_DISPLAY_WIDTH / 8 + (start_bit + j) / 8; // Current byte
             if (curr_byte >= GFX_PACK_DISPLAY_HEIGHT * GFX_PACK_DISPLAY_WIDTH / 8) return false; // If outside of buffer return false
-            if (char_map[i] & (0b10000000 >> j)) // Set bit value in buffer
+            if (symbol[i] & (0b10000000 >> j)) // Set bit value in buffer
             {
                 framebuffer[curr_byte] |= (0b10000000 >> curr_bit);
             }
@@ -417,7 +441,47 @@ void gfx_pack_clear_display(void)
 {
     for (int i = 0; i < GFX_PACK_DISPLAY_WIDTH * GFX_PACK_DISPLAY_HEIGHT / 8; i++) // For each byte in framebuffer
     {
-        framebuffer[i] = 0; // Sets byte to 0
+        framebuffer[i] = 0; // Sets byte to clear
     }
 }
 
+void gfx_pack_progress_bar(uint8_t percentage)
+{
+    if (percentage > 100) percentage = 100;
+
+    gfx_pack_clear_display();
+
+    uint8_t seg_index_start = MIN(4, percentage);
+    uint8_t* seg_start = (uint8_t*)font_loading_bar_start[seg_index_start];
+    point_t position = {.x = 2, .y = 3};
+    gfx_pack_write_symbol(&position, seg_start, false);
+    position.x++;
+
+    uint8_t n_seg_full = (percentage - seg_index_start) / GFX_PACK_CHAR_WIDTH;
+    for (uint8_t i = 0; i < n_seg_full; i++) // write full bar part
+    {
+        gfx_pack_write_symbol(&position, (uint8_t*)font_loading_bar_mid[6], false);
+        position.x++;
+    }
+
+    uint8_t n_seg_clear = 16;
+    n_seg_clear -= n_seg_full;
+
+    if (n_seg_full != 16) // write partial bar part
+    {
+        uint8_t index_seg_partial = (percentage - seg_index_start) % GFX_PACK_CHAR_WIDTH;
+        gfx_pack_write_symbol(&position, (uint8_t*)font_loading_bar_mid[index_seg_partial], false);
+        position.x++;
+        n_seg_clear--;
+    }
+
+    for (uint8_t i = 0; i < n_seg_clear; i++) // write clear bar part
+    {
+        gfx_pack_write_symbol(&position, (uint8_t*)font_loading_bar_mid[0], false);
+        position.x++;
+    }
+
+    gfx_pack_write_symbol(&position, (uint8_t*)font_loading_bar_end, false);
+
+    return;
+}

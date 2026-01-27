@@ -27,6 +27,12 @@ void display_init();
  */
 void display_update(bool force_update);
 
+/**
+ * @brief Displays a progress bar
+ * 
+ * @param percentage Percentage of progress
+ */
+void display_write_loading_bar(uint8_t percentage);
 
 
 

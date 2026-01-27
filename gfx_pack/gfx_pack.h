@@ -87,4 +87,11 @@ extern void gfx_pack_clear_display(void);
  */
 extern void gfx_pack_invert_row_color(uint8_t row);
 
+/**
+ * @brief Writes a progress bar on the display; clears display before displaying the bar
+ * 
+ * @param percentage Fill percentage of the bar
+ */
+extern void gfx_pack_progress_bar(uint8_t percentage);
+
 #endif
