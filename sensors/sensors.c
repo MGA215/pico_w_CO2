@@ -298,9 +298,28 @@ static void sensors_sensor_run(sensor_t* sensor)
         if (!sensors_was_measurement_read) sensors_measurement_ready = true; // Set measurement ready
     }
     
-    if (time_reached(sensor_start_measurement_time) && sensors_is_measurement_finished()) // Initialize measurement
+    if (time_reached(sensor_start_measurement_time)) // Initialize measurement
     {
-        sensors_start_measurement();
+        if (!sensors_is_measurement_finished()) // Check if all measurement finished
+        {
+            static uint8_t iterator = 0;
+
+            sensor_start_measurement_time = make_timeout_time_ms(global_configuration.meas_int_ms / 10); // Add 1/10 measurement interval
+
+            if (iterator++ >= 20) // Check for total double delay
+            {
+                for (int i = 0; i < CONNECTED_SENSORS; i++) // Force all sensors to stop
+                {
+                    common_measurement_force_stop(&sensors[i]);
+                }
+            }
+            iterator %= 20;
+        }
+        
+        if (sensors_is_measurement_finished())
+        {
+            sensors_start_measurement();
+        }
     }
 }
 
