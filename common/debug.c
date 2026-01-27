@@ -3,6 +3,7 @@
 #include "pico/stdlib.h"
 #include "string.h"
 #include "pico/printf.h"
+#include "pico/mutex.h"
 
 #define COLORED_DEBUG true
 
@@ -50,6 +51,8 @@
  * 6 ... display trace and higher
  */
 uint8_t debug = 6; // Global max debug level
+
+
 
 static debug_configuration_t config_normal =
 {
@@ -121,9 +124,12 @@ static debug_configuration_t config_debug =
 
 debug_configuration_t* debug_configuration = &config_debug;
 
+static mutex_t uart_mutex;
+
 
 void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const uint8_t* message, ...)
 {
+    if (!mutex_is_initialized(&uart_mutex)) mutex_init(&uart_mutex);
     
     if (debug >= severity)
     {
@@ -391,11 +397,22 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
 
         va_list va;
         va_start(va, message);
-        vsnprintf(buf, message_len, message, va);
+        if (mutex_enter_timeout_ms(&uart_mutex, 100))
+        {
+            vsnprintf(buf, message_len, message, va);
+            mutex_exit(&uart_mutex);
+        }
         va_end(va);
 
-        float time_sec = (float)(to_us_since_boot(get_absolute_time()) / 1000) / 1000.0f;
+        uint64_t time_since_boot_ms = to_us_since_boot(get_absolute_time()) / 1000;
+        uint32_t time_sec = (uint32_t)(time_since_boot_ms / 1000);
+        uint16_t time_ms = (uint16_t)(time_since_boot_ms % 1000);
         uart_tx_wait_blocking(uart0);
-        printf("%s[%12.3f] %s %s %s %s\n"RESET"", severity_color, time_sec, severity_str, source_str, subsource_str, buf);
+
+        if (mutex_enter_timeout_ms(&uart_mutex, 100))
+        {
+            printf("%s[%8u.%03u] %s %s %s %s\n"RESET"", severity_color, time_sec, time_ms, severity_str, source_str, subsource_str, buf);
+            mutex_exit(&uart_mutex);
+        }
     }
 }

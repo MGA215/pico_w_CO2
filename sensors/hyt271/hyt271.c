@@ -42,7 +42,7 @@ void hyt271_get_value(sensor_t* sensor)
             }
             sensor->meas_state = MEAS_READ_VALUE; // Next state - read value
             sensor->internal_error_state = SUCCESS;
-            sensor->wake_time = make_timeout_time_ms(200);
+            sensor->wake_time = make_timeout_time_us(200000);
             return;
         }
         case MEAS_READ_VALUE:

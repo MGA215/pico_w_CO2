@@ -194,7 +194,7 @@ void tcp_state_machine(void)
                 if (last_error == ERR_OK) last_error = ERR_CLSD; // Might not be the best error
                 new_state = STATE_CONNECTION_CLOSING; // Close connection in case it was still running
             }
-            tcp_client_open_timeout = make_timeout_time_ms(5000); // Make timeout 5 seconds for the connection to establish
+            tcp_client_open_timeout = make_timeout_time_us(5000000); // Make timeout 5 seconds for the connection to establish
             new_state = STATE_CONNECTION_OPENING;
             break;
         }
@@ -252,7 +252,7 @@ void tcp_state_machine(void)
                 break;
             }
             new_state = STATE_SENDING;
-            tcp_client_send_timeout = make_timeout_time_ms(5000); // Make timeout 10 seconds for the data to be sent
+            tcp_client_send_timeout = make_timeout_time_us(5000000); // Make timeout 10 seconds for the data to be sent
             break;
         }
         case STATE_SENDING: // Wait for the message to be sent

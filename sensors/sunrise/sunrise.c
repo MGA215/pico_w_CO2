@@ -212,7 +212,7 @@ void sunrise_get_value(sensor_t* sunrise)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SUNRISE, "Meas started");
             sunrise->internal_error_state = PICO_OK;
             sr_power(sunrise, true); // Power on
-            if (!sunrise->config.power_continuous) sunrise->wake_time = make_timeout_time_ms(sunrise->config.sensor_power_up_time); // Time for power stabilization
+            if (!sunrise->config.power_continuous) sunrise->wake_time = make_timeout_time_us(1000 * (uint64_t)sunrise->config.sensor_power_up_time); // Time for power stabilization
             sunrise->meas_state = MEAS_READ_MODE; // Next step - read mode
             sunrise->timeout_iterator = 0; // Initialize iterator value
             // if (sunrise->internal_error_state) sunrise->internal_error_state = ERROR_NO_MEAS;
@@ -250,12 +250,12 @@ void sunrise_get_value(sensor_t* sunrise)
             if (sunrise->config.single_meas_mode) // If in single measurement mode
             {
                 sunrise->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next step - write measurement command
-                sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
+                sunrise->wake_time = make_timeout_time_us(10000); // Timer 10 ms
             }
             else
             {
                 sunrise->meas_state = MEAS_READ_VALUE; // Next step - read measurement data
-                sunrise->wake_time = make_timeout_time_ms(300); // Timer 300 ms
+                sunrise->wake_time = make_timeout_time_us(300000); // Timer 300 ms
             }
             return;
         }
@@ -281,7 +281,7 @@ void sunrise_get_value(sensor_t* sunrise)
                 sunrise->internal_error_state = ret; // Output return state
                 return;
             }
-            sunrise->wake_time = make_timeout_time_ms(300); // Set timer 300 ms
+            sunrise->wake_time = make_timeout_time_us(300000); // Set timer 300 ms
             sunrise->meas_state = MEAS_READ_VALUE; // Next step - read measurement data
             return;
         }
@@ -319,7 +319,7 @@ void sunrise_get_value(sensor_t* sunrise)
             }
             else if (ret == SUNRISE_ERROR_DATA_READY_TIMEOUT) // On data not ready
             {
-                sunrise->wake_time = make_timeout_time_ms(300); // Try again after 300 ms
+                sunrise->wake_time = make_timeout_time_us(300000); // Try again after 300 ms
                 return;
             }
             uint16_t val = 0;
@@ -329,7 +329,7 @@ void sunrise_get_value(sensor_t* sunrise)
             sunrise->temperature = (float)((int16_t)ntoh16(val)) / 100.0f; // Set temperature value
             if (sunrise->config.single_meas_mode) // If single measurement mode
             {
-                sunrise->wake_time = make_timeout_time_ms(10); // Timer 10 ms
+                sunrise->wake_time = make_timeout_time_us(10000); // Timer 10 ms
                 sunrise->meas_state = MEAS_READ_STATUS; // Next step - read status
             }
             else // Not in single measurement mode
@@ -391,7 +391,7 @@ void sunrise_init(sensor_t* sensor)
 
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(3000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
     sensor->internal_error_state = STATE_OK;

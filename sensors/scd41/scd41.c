@@ -194,7 +194,7 @@ void scd41_get_value(sensor_t* scd41)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD41, "Meas started");
             scd41->internal_error_state = PICO_OK;
             s41_power(scd41, true); // Power off
-            if (!scd41->config.power_continuous) scd41->wake_time = make_timeout_time_ms(scd41->config.sensor_power_up_time); // Time for power stabilization
+            if (!scd41->config.power_continuous) scd41->wake_time = make_timeout_time_us(1000 * (uint64_t)scd41->config.sensor_power_up_time); // Time for power stabilization
             scd41->meas_state = MEAS_READ_MODE; // Next step - read status
             // if (scd41->internal_error_state) scd41->internal_error_state = ERROR_NO_MEAS;
             scd41->timeout_iterator = 0; // Initialize read status timeout iterator
@@ -232,7 +232,7 @@ void scd41_get_value(sensor_t* scd41)
             else
             {
                 scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
-                scd41->wake_time = make_timeout_time_ms(4000); // Wait 5 seconds
+                scd41->wake_time = make_timeout_time_us(4000000); // Wait 5 seconds
             }
             return;
         }
@@ -250,7 +250,7 @@ void scd41_get_value(sensor_t* scd41)
                 return;
             }
             scd41->meas_state = MEAS_READ_STATUS; // Set next state to read measurement status
-            scd41->wake_time = make_timeout_time_ms(4000); // Wait 5 seconds
+            scd41->wake_time = make_timeout_time_us(4000000); // Wait 5 seconds
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -286,7 +286,7 @@ void scd41_get_value(sensor_t* scd41)
                 print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_SCD41, "Read status failed, abort...");
                 return;
             }
-            scd41->wake_time = make_timeout_time_ms(100); // Check status after 100 ms
+            scd41->wake_time = make_timeout_time_us(100000); // Check status after 100 ms
             return;
         }
         case MEAS_READ_VALUE: // Reading values
@@ -334,7 +334,7 @@ void scd41_init(sensor_t* sensor)
     ret = s41_write_config(&(sensor->config)); // Write config to the sensor
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(5000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(5000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
     sleep_ms(100);

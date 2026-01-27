@@ -183,8 +183,8 @@ void display_init(void)
     update_display_buffer = true;
     row = DISPLAY_NONE;
     row_select = 0;
-    brightness_update_timer = make_timeout_time_ms(1);
-    process_update_time = make_timeout_time_ms(display_interval); // Set display & input checking interval
+    brightness_update_timer = make_timeout_time_us(1000);
+    process_update_time = make_timeout_time_us((uint64_t)display_interval * 1000); // Set display & input checking interval
     gfx_pack_init((uint8_t)((uint16_t)(display_brightness) * 255 / 100));
 
     rtc_update();
@@ -206,7 +206,7 @@ void display_update(bool force_update)
         write_display();
         gfx_pack_update();
         gfx_pack_set_backlight((uint8_t)((uint16_t)(display_brightness) * 255 / 100));
-        process_update_time = make_timeout_time_us(display_interval * 1000); // Wait for next update
+        process_update_time = make_timeout_time_us((uint64_t)display_interval * 1000); // Wait for next update
     }
 }
 
@@ -972,7 +972,7 @@ static void display_on_button_c_pressing(void)
     {
         if (display_brightness < 2) return;
         display_brightness -= 2;
-        brightness_update_timer = make_timeout_time_ms(brightness_update_time_ms);
+        brightness_update_timer = make_timeout_time_us((uint64_t)brightness_update_time_ms * 1000);
     }
 }
 
@@ -982,7 +982,7 @@ static void display_on_button_d_pressing(void)
     {
         if (display_brightness > 98) return;
         display_brightness += 2;
-        brightness_update_timer = make_timeout_time_ms(brightness_update_time_ms);
+        brightness_update_timer = make_timeout_time_us((uint64_t)brightness_update_time_ms * 1000);
     }
 }
 
@@ -2535,7 +2535,7 @@ void display_write_loading_bar(uint8_t percentage)
         gfx_pack_progress_bar(percentage);
         gfx_pack_update();
         gfx_pack_set_backlight((uint8_t)((uint16_t)(display_brightness) * 255 / 100));
-        process_update_time = make_timeout_time_ms(display_interval); // Wait for next update
+        process_update_time = make_timeout_time_us(1000 * (uint64_t)display_interval); // Wait for next update
     }
 }
 

@@ -46,7 +46,7 @@ bool rtc_update(void)
 {
     if (time_reached(rtc_time)) // Check if RTC should be read
     {
-        rtc_time = make_timeout_time_ms(rtc_read_interval_ms); // Make new timeout
+        rtc_time = make_timeout_time_us(1000 * (uint64_t)rtc_read_interval_ms); // Make new timeout
         ds3231_datetime_t dt;
         ds3231_get_datetime(&dt, &rtc); // read datetime
         if (datetime.year == dt.year && datetime.month == dt.month &&

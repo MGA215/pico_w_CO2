@@ -148,7 +148,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CM1107N, "Meas started");
             cm1107n->internal_error_state = PICO_OK;
             cm_power(cm1107n, true); // Power on
-            if (!cm1107n->config.power_continuous) cm1107n->wake_time = make_timeout_time_ms(cm1107n->config.sensor_power_up_time); // Time for power stabilization
+            if (!cm1107n->config.power_continuous) cm1107n->wake_time = make_timeout_time_us(1000 * (uint64_t)cm1107n->config.sensor_power_up_time); // Time for power stabilization
             // if (cm1107n->internal_error_state) cm1107n->internal_error_state = ERROR_NO_MEAS;
             cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next FSM state - trigger measurement
             cm1107n->timeout_iterator = 0;
@@ -165,7 +165,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                 cm1107n->internal_error_state = ret; // Set state to ret value
                 return;
             }
-            cm1107n->wake_time = make_timeout_time_ms(2000); // Check after 2 seconds if measuement finished (should be 1 second)
+            cm1107n->wake_time = make_timeout_time_us(2000000); // Check after 2 seconds if measuement finished (should be 1 second)
             cm1107n->meas_state = MEAS_READ_VALUE; // Next FSM state - read value
             return;
         }
@@ -194,7 +194,7 @@ void cm1107n_get_value(sensor_t* cm1107n)
                     }
                     print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CM1107N, "Sensor preheating");
                     cm1107n->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // Next state trigger another measurement
-                    cm1107n->wake_time = make_timeout_time_ms(1);
+                    cm1107n->wake_time = make_timeout_time_us(1000);
                     return;
                 }
                 if (ret == CM1107N_ERROR_OUT_OF_RANGE)
@@ -238,7 +238,7 @@ void cm1107n_init(sensor_t* sensor)
     ret = cm_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(3000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
     sensor->internal_error_state = ret;

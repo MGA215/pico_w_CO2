@@ -124,7 +124,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_COZIR_LP3, "Meas started");
             cozir_lp3->internal_error_state = PICO_OK;
             lp3_power(cozir_lp3, true);
-            if (!cozir_lp3->config.power_continuous) cozir_lp3->wake_time = make_timeout_time_ms(cozir_lp3->config.sensor_power_up_time); // Time for power stabilization
+            if (!cozir_lp3->config.power_continuous) cozir_lp3->wake_time = make_timeout_time_us(1000 * (uint64_t)cozir_lp3->config.sensor_power_up_time); // Time for power stabilization
             cozir_lp3->meas_state = MEAS_READ_VALUE; // Ignore read status - is implemented within read value
             return;
         }
@@ -177,7 +177,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             if (tempBuffer[0] == 0xFF && tempBuffer[1] == 0xFF)
             {
                 cozir_lp3->timeout_iterator++;
-                cozir_lp3->wake_time = make_timeout_time_ms(100);
+                cozir_lp3->wake_time = make_timeout_time_us(100000);
                 return;
             }
 
@@ -185,7 +185,7 @@ void cozir_lp3_get_value(sensor_t* cozir_lp3)
             //     if (buf[0] == 0xFF && buf[1] == 0xFF)
             //     {
             //         cozir_lp3->timeout_iterator++;
-            //         cozir_lp3->wake_time = make_timeout_time_ms(100);
+            //         cozir_lp3->wake_time = make_timeout_time_us(1000 * 100);
             //         return;
             //     }
             // }
@@ -225,7 +225,7 @@ void cozir_lp3_init(sensor_t* sensor)
     ret = lp3_write_config(&(sensor->config));
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(3000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
     sensor->internal_error_state = ret;

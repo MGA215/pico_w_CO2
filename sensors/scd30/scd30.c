@@ -164,7 +164,7 @@ void scd30_get_value(sensor_t* scd30)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_SCD30, "Meas start");
             scd30->internal_error_state = PICO_OK;
             s30_power(scd30, true); // Power off
-            if (!scd30->config.power_continuous) scd30->wake_time = make_timeout_time_ms(scd30->config.sensor_power_up_time); // Time for power stabilization
+            if (!scd30->config.power_continuous) scd30->wake_time = make_timeout_time_us(1000 * (uint64_t)scd30->config.sensor_power_up_time); // Time for power stabilization
             scd30->meas_state = MEAS_READ_STATUS; // Next step - read status
             scd30->timeout_iterator = 0; // Initialize read status timeout iterator
             // if (scd30->internal_error_state) scd30->internal_error_state = ERROR_NO_MEAS;
@@ -197,7 +197,7 @@ void scd30_get_value(sensor_t* scd30)
                 scd30->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            scd30->wake_time = make_timeout_time_ms(50); // Check status after 50 ms
+            scd30->wake_time = make_timeout_time_us(50000); // Check status after 50 ms
             return;
         }
         case MEAS_READ_VALUE: // Reading values
@@ -256,7 +256,7 @@ void scd30_init(sensor_t* sensor)
     ret = s30_write_config(&(sensor->config)); // Write configuration to sensor
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(3000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(3000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
     sensor->internal_error_state = ret;

@@ -255,7 +255,7 @@ void ee895_get_value(sensor_t* ee895)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_EE895, "Meas started");
             ee895->internal_error_state = PICO_OK;
             ee_power(ee895, true); // Power on
-            if (!ee895->config.power_continuous) ee895->wake_time = make_timeout_time_ms(ee895->config.sensor_power_up_time); // Time for power stabilization
+            if (!ee895->config.power_continuous) ee895->wake_time = make_timeout_time_us(1000 * (uint64_t)ee895->config.sensor_power_up_time); // Time for power stabilization
             if (ee895->config.single_meas_mode) 
             {
                 ee895->meas_state = MEAS_TRIGGER_SINGLE_MEAS; // If single measurement mode - wait for trigger ready
@@ -301,7 +301,7 @@ void ee895_get_value(sensor_t* ee895)
                     ee895->internal_error_state = ret; // Set sensor state to return value
                     return;
                 }
-                ee895->wake_time = make_timeout_time_ms(300); // Wait for the measurement
+                ee895->wake_time = make_timeout_time_us(300000); // Wait for the measurement
                 ee895->meas_state = MEAS_READ_STATUS; // Next step - read status
                 ee895->timeout_iterator = 0; // Reset iterator
                 return;
@@ -315,7 +315,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            ee895->wake_time = make_timeout_time_ms(5000); // Check next in 5000 ms
+            ee895->wake_time = make_timeout_time_us(5000000); // Check next in 5000 ms
             return;
         }
         case MEAS_READ_STATUS: // Reading status
@@ -345,7 +345,7 @@ void ee895_get_value(sensor_t* ee895)
                 ee895->meas_state = MEAS_FINISHED; // Finished measurement
                 return;
             }
-            ee895->wake_time = make_timeout_time_ms(25); // Check status after 25 ms
+            ee895->wake_time = make_timeout_time_us(25000); // Check status after 25 ms
             return;
         }
         case MEAS_READ_VALUE: // Reading values
@@ -459,7 +459,7 @@ void ee895_init(sensor_t* sensor)
 
     if (!ret)
     {
-        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_ms(1000);
+        if (sensor->meas_state == MEAS_STARTED) sensor->wake_time = make_timeout_time_us(1000000);
     }
     else sensor->meas_state = MEAS_FINISHED;
 

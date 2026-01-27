@@ -186,5 +186,5 @@ bool common_should_sensor_operate(sensor_t* sensor)
 
 void common_disable_sensor_for_ms(sensor_t* sensor, uint32_t time_ms)
 {
-    sensor->wake_time = make_timeout_time_ms(time_ms);
+    sensor->wake_time = make_timeout_time_us((uint64_t)time_ms * 1000);
 }

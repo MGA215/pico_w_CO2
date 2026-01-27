@@ -235,6 +235,7 @@ static void sensors_sensor_init(sensor_t* sensor)
             print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
                 "Init sensor %i success", sensor->index);
             common_measurement_force_stop(sensor);
+            sensor->error_state = STATE_OK;
             return;
         }
     }
@@ -304,7 +305,7 @@ static void sensors_sensor_run(sensor_t* sensor)
         {
             static uint8_t iterator = 0;
 
-            sensor_start_measurement_time = make_timeout_time_ms(global_configuration.meas_int_ms / 10); // Add 1/10 measurement interval
+            sensor_start_measurement_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.meas_int_ms / 10); // Add 1/10 measurement interval
 
             if (iterator++ >= 20) // Check for total double delay
             {
@@ -330,8 +331,10 @@ static void sensors_run_trhp_measurement(sensor_t* sensor)
     for (int i = 0; i < 2; i++) // Try measurement twice
     {
         sensor->functions->sensor_get_value(sensor);
+
         if (!sensor->internal_error_state) // On no error
         {
+            sensor->error_state = STATE_OK;
             return;
         }
         if (i == 0) // on first iteration
@@ -366,7 +369,11 @@ static void sensors_sensor_run_measurement(sensor_t* sensor)
 
         sensor->functions->sensor_get_value(sensor);
 
-        if (!sensor->internal_error_state) return;
+        if (!sensor->internal_error_state)
+        {
+            sensor->error_state = STATE_OK;
+            return;
+        }
     }
     sensor->error_state = ERROR_SENSOR_READING_FAILED;
     sensor->err_total_counter++;
@@ -768,7 +775,7 @@ static void sensors_start_measurement(void)
         }
         common_measurement_start(&sensors[i]);
     }
-    sensor_start_measurement_time = make_timeout_time_ms(global_configuration.meas_int_ms);
+    sensor_start_measurement_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.meas_int_ms);
     sensors_was_measurement_read = false;
     sensors_measurement_ready = false;
 }

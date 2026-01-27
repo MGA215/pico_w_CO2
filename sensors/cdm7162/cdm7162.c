@@ -117,7 +117,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Meas started");
             cdm7162->internal_error_state = PICO_OK;
             cdm_power(cdm7162, true); // Power on
-            if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_ms(cdm7162->config.sensor_power_up_time); // Time for power stabilization
+            if (!cdm7162->config.power_continuous) cdm7162->wake_time = make_timeout_time_us(1000 * (uint64_t)cdm7162->config.sensor_power_up_time); // Time for power stabilization
             cdm7162->meas_state = MEAS_READ_VALUE; // Next step - read status
             // if (cdm7162->internal_error_state) cdm7162->internal_error_state = ERROR_NO_MEAS;
             cdm7162->timeout_iterator = 0; // Initialize read status timeout iterator
@@ -143,7 +143,7 @@ void cdm7162_get_value(sensor_t* cdm7162)
             }
             if ((buf[0] & (0b1 << 7)) != 0) // Data not ready to be read
             {
-                cdm7162->wake_time = make_timeout_time_ms(500); // Wait 500 ms until next status check
+                cdm7162->wake_time = make_timeout_time_us(500000); // Wait 500 ms until next status check
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_CDM7162, "Data not ready to be read");
                 return;
             }
