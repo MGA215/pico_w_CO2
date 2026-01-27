@@ -15,9 +15,9 @@
 #include "pico/stdlib.h"
 #include "constants.h"
 #include "pico/mutex.h"
-// #if FULL_BUILD
-// #include "../service_comm/service_comm.h"
-// #endif
+#if FULL_BUILD
+    #include "../service_comm/service_comm.h"
+#endif
 
 typedef struct sensor_config sensor_config_t;
 typedef struct sensor sensor_t;

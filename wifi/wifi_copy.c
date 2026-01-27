@@ -149,7 +149,7 @@ void wifi_main()
             while (service_mode == SERVICE_MODE_UART)
             {
                 uart_service_read_command();
-                if (config_data.response_rdy) uart_service_send_response();
+                if (config_data.response_rdy && !config_data.response_sent) uart_service_send_response();
                 tight_loop_contents();
             }
             cyw43_arch_deinit();

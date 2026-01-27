@@ -10,6 +10,8 @@
 #define UART_TX 0
 #define UART_RX 1
 
+#define UART_TIME_OUT_US 50000
+
 
 extern uint8_t buffer_sent[];
 extern uint8_t buffer_recv[];
@@ -28,13 +30,13 @@ void uart_service_init(void)
 void uart_service_read_command(void)
 {
     uint32_t ptr = 0;
-    if (uart_is_readable_within_us(UART_INST, MUTEX_TIMEOUT_MS))
+    if (uart_is_readable_within_us(UART_INST, UART_TIME_OUT_US))
     {
         do
         {
             buffer_recv[ptr++] = uart_getc(UART_INST);
             if (ptr >= (360 - 1)) break;
-        } while (uart_is_readable_within_us(UART_INST, MUTEX_TIMEOUT_MS));
+        } while (uart_is_readable_within_us(UART_INST, UART_TIME_OUT_US));
         buffer_recv[ptr] = '\0';
         if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS))
         {

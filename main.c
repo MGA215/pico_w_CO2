@@ -23,7 +23,6 @@
 #include "display/display.h"
 #include "error_handler/error_handler.h"
 #include "sensors/sensors.h"
-#include "uart/uart.h"
 #include "common/i2c_extras.h"
 
 #include "common/debug.h"
@@ -115,18 +114,9 @@ int32_t init(void)
 
     check_svc_mode();
 
-    // multicore_launch_core1(core1_main); // Launch second core
+    multicore_launch_core1(core1_main); // Launch second core
     
     watchdog_enable(3000, true); // 3 sec watchdog
-
-    while (service_mode == SERVICE_MODE_UART) // If in UART service mode do main loop without initialization
-    {
-        // loop();
-        service_comm_eng_process_command();
-        check_svc_mode();
-        update();
-        watchdog_update();
-    }
 
     if (!config_read_all()) return ERROR_CONFIG_INIT; // Reading config from EEPROM
 
@@ -138,6 +128,17 @@ int32_t init(void)
     soap_init_general(&channel01G, &hyt271.humidity, "RHamb", &hyt271.error_state, MEASURED_VALUE_RH, 1, channels2);
     soap_init_general(&channel02G, &ms5607.pressure, "Pamb", &ms5607.error_state, MEASURED_VALUE_P, 2, channels2);
 #endif
+
+    while (service_mode == SERVICE_MODE_UART) // If in UART service mode do main loop without initialization
+    {
+        if (config_data.command_rdy) // Check if service command is ready
+        {
+            service_comm_eng_process_command(); // Process service command
+        }
+        check_svc_mode();
+        update();
+        watchdog_update();
+    }
 
     for (int i = 0; i < N_MS_BOOT_WAIT; i++)
     {
