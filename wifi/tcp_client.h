@@ -15,6 +15,12 @@
 #include "pico/stdlib.h"
 #include "lwip/err.h"
 
+// Last message timestamp
+extern uint8_t last_message_time[32];
+
+// Last error code
+extern uint8_t last_message_error;
+
 
 
 /**
@@ -26,13 +32,10 @@
 err_t tcp_client_init(bool* retry_send);
 
 /**
- * @brief Runs the TCP client, opens a socket, sends data and closes the socket
+ * @brief Runs the TCP client state machine
  * 
- * @param soap_index Index of message that should be sent
- * @return true if the client should be run immediately again
- * @return false if connection was closed or communication ended
  */
-bool run_tcp_client(uint8_t soap_index);
+void tcp_state_machine(void);
 
 /**
  * @brief Stops the TCP client
@@ -47,5 +50,11 @@ extern void tcp_client_stop(void);
  * @return false if client has stopped
  */
 extern bool tcp_client_is_running(void);
+
+/**
+ * @brief Instructs the TCP client to send messages
+ * 
+ */
+extern void tcp_run_client(void);
 
 #endif

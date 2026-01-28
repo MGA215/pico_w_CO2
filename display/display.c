@@ -12,9 +12,9 @@
 #include "rtc/rtc.h"
 
 #if FULL_BUILD
-    #include "wifi/wifi_copy.h"
+    #include "wifi/wifi.h"
     #include "cyw43.h"
-    #include "wifi/tcp_client_copy.h"
+    #include "wifi/tcp_client.h"
     #include "wifi/tcp_server.h"
 #endif
 
@@ -134,7 +134,7 @@ extern uint8_t debug_tcp_client;
 extern uint8_t debug_tcp_server;
 extern uint8_t debug_tcp_dns;
 
-#ifdef __TCP_CLIENT_COPY_H__
+#ifdef __TCP_CLIENT_H__
 // Time the last message was sent
 extern uint8_t last_message_time[32];
 
@@ -148,7 +148,7 @@ uint8_t last_message_error = 0;
 // Time new measurement cycle should start
 extern absolute_time_t sensor_start_measurement_time;
 
-#ifdef __WIFI_COPY_H__
+#ifdef __WIFI_H__
 // Time new message should be sent
 extern absolute_time_t send_data_time;
 #else

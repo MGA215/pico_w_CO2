@@ -23,4 +23,6 @@ extern void wifi_main();
 
 extern bool wifi_is_running(void);
 
+extern absolute_time_t send_data_time;
+
 #endif

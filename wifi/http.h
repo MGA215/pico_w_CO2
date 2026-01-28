@@ -22,8 +22,9 @@
  * @param soap_action SOAP action (http://tempuri.org/InsertMSxSample)
  * @param data Data to send
  * @param data_len Length of the data to send
- * @return uint8_t* buffer containing the message
+ * @param out_buf Output buffer the message will be saved to
+ * @param out_buf_size Size of the output buffer
  */
-uint8_t* create_http_header(uint8_t* ip_url_addr, bool is_url, uint8_t* path, uint16_t port, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex);
+void create_http_header(uint8_t* ip_url_addr, bool is_cloud, uint8_t* path, uint16_t port, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex, uint8_t* out_buf, uint16_t out_buf_size);
 
 #endif

@@ -122,7 +122,7 @@ static debug_configuration_t config_debug =
     .debug_tcp_dns = 5,
 };
 
-debug_configuration_t* debug_configuration = &config_debug;
+debug_configuration_t* debug_configuration = &config_normal;
 
 static mutex_t uart_mutex;
 

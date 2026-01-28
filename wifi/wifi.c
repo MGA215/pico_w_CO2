@@ -76,7 +76,7 @@ static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
 static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
 {
     absolute_time_t scan_time = nil_time; // Scan time
-    absolute_time_t wifi_timeout = make_timeout_time_us(1000 * timeout_ms); // Wifi timeout time
+    absolute_time_t wifi_timeout = make_timeout_time_us(1000 * (uint64_t)timeout_ms); // Wifi timeout time
     bool scan_in_progress = false;
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_NO_SOURCE, "Starting WiFi scan");
 
@@ -90,10 +90,10 @@ static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, ui
                     scan_in_progress = true;
                 } else { // Scan failed to initialize
                     print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to start scan: %d\n", err);
-                    scan_time = make_timeout_time_us(1000 * 10000); // wait 10s and scan again
+                    scan_time = make_timeout_time_us(10000000); // wait 10s and scan again
                 }
             } else if (!cyw43_wifi_scan_active(&cyw43_state) && !wifi) { // Scan inactive and wifi not found
-                scan_time = make_timeout_time_us(1000 * 10000); // wait 10s and scan again
+                scan_time = make_timeout_time_us(10000000); // wait 10s and scan again
                 scan_in_progress = false; 
                 print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_NO_SOURCE, "WiFi network not found");
             }
@@ -149,7 +149,7 @@ void wifi_main()
             while (service_mode == SERVICE_MODE_UART)
             {
                 uart_service_read_command();
-                if (config_data.response_rdy) uart_service_send_response();
+                if (config_data.response_rdy && !config_data.response_sent) uart_service_send_response();
                 tight_loop_contents();
             }
             cyw43_arch_deinit();
@@ -175,15 +175,15 @@ void wifi_main()
         if (wifi_connect(100000, global_configuration.sta_ssid, global_configuration.sta_password, auth_mode))// Try connecting to the network
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to connect to the network, next try in %d seconds", wifi_wait_next_connect_ms);
-            wifi_wait_next_connect_time = make_timeout_time_us(1000 * wifi_wait_next_connect_ms); // Try again in wifi_wait_next_connect_ms
+            wifi_wait_next_connect_time = make_timeout_time_us(1000 * (uint64_t)wifi_wait_next_connect_ms); // Try again in wifi_wait_next_connect_ms
             continue;
         }
         wifi_wait_next_connect_time = nil_time;
         tcp_client_init(&retry_send_message); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server structs
 
-        send_data_time = make_timeout_time_us(1000 * global_configuration.soap_int * 4 / 3); // Send data after wifi_send_data_time_ms + initial offset
-        wait_dns = make_timeout_time_us(1000 * wifi_wait_for_dns);
+        send_data_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.soap_int * 4 / 3); // Send data after wifi_send_data_time_ms + initial offset
+        wait_dns = make_timeout_time_us(1000 * (uint64_t)wifi_wait_for_dns);
 
         while (wifi)
         {
@@ -242,30 +242,21 @@ static void wifi_loop(void)
     if (!ip_found && time_reached(wait_dns)) // Check for dns timeout
     {
         tcp_client_init(&retry_send_message);
-        wait_dns = make_timeout_time_us(1000 * wifi_wait_for_dns); // Reset timeout
+        wait_dns = make_timeout_time_us(1000 * (uint64_t)wifi_wait_for_dns); // Reset timeout
     }
 
     if (!sending) sending = time_reached(send_data_time); // Check if message should be sent
     
-    if ((!service_mode && sending) && ip_found && global_configuration.soap_mode) // If should send data
+    if (!service_mode && ip_found && global_configuration.soap_mode) // If should send data
     {
         sleep_ms(5);
-        print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Running TCP client...");
         if (time_reached(send_data_time))
         {
-            message_index = 0;
-            message_sent_index = 255;
-            send_data_time = make_timeout_time_us(1000 * global_configuration.soap_int); // Next message timeout
+            print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Running TCP client...");
+            tcp_run_client(); // Start TCP client
+            send_data_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.soap_int);
         }
-
-        if ((data_client_sending || !tcp_client_is_running()) && message_sent_index != message_index) // If data should be being sent or client is not running (for initial condition) AND message with the same index was not sent
-        {
-            data_client_sending = run_tcp_client(message_index); // Run TCP client FSM
-        }
-        if (!data_client_sending) message_sent_index = message_index; // Save last message index that has been sent if already sent
-        if (!data_client_sending && !tcp_client_is_running() && !retry_send_message) message_index++; // If no data being sent and client is not running and shouldn't retry message sending
-        if ((global_configuration.aux_msg == 0x01 && message_index == 2) || 
-            (global_configuration.aux_msg != 0x01 && message_index == 1)) sending = false; // Chech messages sent
+        tcp_state_machine(); // Run TCP client FSM
     }
     tcp_server_run(); // Run TCP server
 }

@@ -16,7 +16,7 @@
     #include "service_comm/service_comm.h"
     #include "soap/soap.h"
     #include "soap/soap_channels.h"
-    #include "wifi/wifi_copy.h"
+    #include "wifi/wifi.h"
 #endif
 
 #include "config/config.h"
