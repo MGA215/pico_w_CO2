@@ -20,6 +20,7 @@
 
 #define STATUS_ITEMS 12
 #define EE895_ITEMS 12
+#define EE872_ITEMS 12
 #define CDM7162_ITEMS 20
 #define SUNRISE_ITEMS 22
 #define SUNLIGHT_ITEMS 22
@@ -121,6 +122,7 @@ extern uint8_t debug_power;
 extern uint8_t debug_ms5607;
 extern uint8_t debug_hyt271;
 extern uint8_t debug_ee895;
+extern uint8_t debug_ee872;
 extern uint8_t debug_cdm7162;
 extern uint8_t debug_sunrise;
 extern uint8_t debug_sunlight;
@@ -498,6 +500,24 @@ static void display_on_button_b()
                         }
                         break;
                     }
+                    case EE872:
+                    {
+                        if (EE872_ITEMS <= 5)
+                        {
+                            row_select = (row_select + 1) % EE872_ITEMS;
+                        }
+                        else 
+                        {
+                            if (page_offset >= EE872_ITEMS - 5)
+                            {
+                                page_offset = 0;
+                                row_select = 0;
+                            }
+                            else if (row_select == 4) page_offset++;
+                            else row_select++;
+                        }
+                        break;
+                    }
                     default: break;
                 }
                 break;
@@ -685,20 +705,25 @@ static void display_on_button_c()
                 }
                 case 22:
                 {
-                    if (debug_configuration->debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi--;
+                    if (debug_configuration->debug_ee872 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ee872--;
                     break;
                 }
                 case 23:
                 {
-                    if (debug_configuration->debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client--;
+                    if (debug_configuration->debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi--;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_configuration->debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns--;
+                    if (debug_configuration->debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client--;
                     break;
                 }
                 case 25:
+                {
+                    if (debug_configuration->debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns--;
+                    break;
+                }
+                case 26:
                 {
                     if (debug_configuration->debug_tcp_server > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server--;
                     break;
@@ -870,20 +895,25 @@ static void display_on_button_d()
                 }
                 case 22:
                 {
-                    if (debug_configuration->debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi++;
+                    if (debug_configuration->debug_ee872 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_ee872++;
                     break;
                 }
                 case 23:
                 {
-                    if (debug_configuration->debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client++;
+                    if (debug_configuration->debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi++;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_configuration->debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns++;
+                    if (debug_configuration->debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client++;
                     break;
                 }
                 case 25:
+                {
+                    if (debug_configuration->debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns++;
+                    break;
+                }
+                case 26:
                 {
                     if (debug_configuration->debug_tcp_server < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server++;
                     break;
@@ -1943,6 +1973,82 @@ static void write_display(void)
                         gfx_pack_invert_row_color(row_select + 1);
                         break;
                     }
+                    case EE872:
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
+                            switch (page_offset + i)
+                            {
+                                case 0:
+                                {
+                                    snprintf(buf, 32, "SENSOR NO: %x%x", sensors[sensor_index].config.sensor_type, sensors[sensor_index].config.sensor_ord);
+                                    break;
+                                }
+                                case 1:
+                                {
+                                    snprintf(buf, 32, "INPUT: %i", sensors[sensor_index].index);
+                                    break;
+                                }
+                                case 2:
+                                {
+                                    snprintf(buf, 32, "INTERFACE: UART");
+                                    break;
+                                }
+                                case 3:
+                                {
+                                    snprintf(buf, 32, "POWER: %s", sensors[sensor_index].config.sensor_active ? "ENABLED" : "DISABLED");
+                                    break;
+                                }
+                                case 4:
+                                {
+                                    snprintf(buf, 32, "VOLTAGE: 12 V EXT");
+                                    break;
+                                }
+                                case 5:
+                                {
+                                    snprintf(buf, 32, "AUX 12 V: %s", sensors[sensor_index].config.power_12V ? "ENABLED" : "DISABLED");
+                                    break;
+                                }
+                                case 6:
+                                {
+                                    snprintf(buf, 32, "PWR CONN: %s", sensors[sensor_index].config.power_continuous ? "CONT" : "ON MEAS");
+                                    break;
+                                }
+                                case 7:
+                                {
+                                    snprintf(buf, 32, "PWR CTRL: %s", sensors[sensor_index].config.power_global_control ? "GLOBAL" : "SENSOR");
+                                    break;
+                                }
+                                case 8:
+                                {
+                                    snprintf(buf, 32, "MANUAL P COMP: %s", sensors[sensor_index].config.ext_pressure_comp ? "TRUE" : "FALSE");
+                                    break;
+                                }
+                                case 9:
+                                {
+                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    break;
+                                }
+                                case 10:
+                                {
+                                    snprintf(buf, 32, "MEAS PERIOD: %u s", sensors[sensor_index].config.meas_period);
+                                    break;
+                                }
+                                case 11:
+                                {
+                                    snprintf(buf, 32, "FILTER COEFF: %u", sensors[sensor_index].config.filter_coeff);
+                                    break;
+                                }
+                                default: break;
+                            }
+                            position.x = 0;
+                            position.y = i + 1;
+                            gfx_pack_write_text(&position, buf);
+                            memset(buf, 0x00, 32);
+                        }
+                        gfx_pack_invert_row_color(row_select + 1);
+                        break;
+                    }
                     default: break;
                 }
             }
@@ -2068,20 +2174,25 @@ static void write_display(void)
                     }
                     case 22:
                     {
-                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_configuration->debug_wifi);
+                        snprintf(buf, 32, "DEBUG EE872: %i", debug_configuration->debug_ee872);
                         break;
                     }
                     case 23:
                     {
-                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_configuration->debug_tcp_client);
+                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_configuration->debug_wifi);
                         break;
                     }
                     case 24:
                     {
-                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_configuration->debug_tcp_dns);
+                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_configuration->debug_tcp_client);
                         break;
                     }
                     case 25:
+                    {
+                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_configuration->debug_tcp_dns);
+                        break;
+                    }
+                    case 26:
                     {
                         snprintf(buf, 32, "DEBUG TCP SERVER: %i", debug_configuration->debug_tcp_server);
                         break;
@@ -2413,6 +2524,11 @@ static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
         case CM1107N:
         {
             snprintf(buf, len, "Cubic CM1107N");
+            break;
+        }
+        case EE872:
+        {
+            snprintf(buf, len, "E+E EE872");
             break;
         }
         default:

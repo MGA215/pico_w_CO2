@@ -10,7 +10,12 @@
 #define UART_TX 0
 #define UART_RX 1
 
-#define UART_TIME_OUT_US 50000
+#define UART_SENSOR uart1
+#define UART1_SENSOR_TX 8
+#define UART1_SENSOR_RX 9
+#define UART1_BAUDRATE 9600
+
+#define UART_TIMEOUT_US 50000
 
 
 extern uint8_t buffer_sent[];
@@ -30,13 +35,13 @@ void uart_service_init(void)
 void uart_service_read_command(void)
 {
     uint32_t ptr = 0;
-    if (uart_is_readable_within_us(UART_INST, UART_TIME_OUT_US))
+    if (uart_is_readable_within_us(UART_INST, UART_TIMEOUT_US))
     {
         do
         {
             buffer_recv[ptr++] = uart_getc(UART_INST);
             if (ptr >= (360 - 1)) break;
-        } while (uart_is_readable_within_us(UART_INST, UART_TIME_OUT_US));
+        } while (uart_is_readable_within_us(UART_INST, UART_TIMEOUT_US));
         buffer_recv[ptr] = '\0';
         if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS))
         {
@@ -72,4 +77,45 @@ void uart_service_send_response(void)
         memset(buffer_sent, 0x00, response_len);
         config_data.response_sent = true;
     }
+}
+
+void uart_sensor_init(void)
+{
+    if (uart_is_enabled(UART_SENSOR)) return;
+    gpio_init(UART1_SENSOR_TX);
+    gpio_init(UART1_SENSOR_RX);
+    gpio_set_function(UART1_SENSOR_TX, GPIO_FUNC_UART);
+    gpio_set_function(UART1_SENSOR_RX, GPIO_FUNC_UART);
+
+    uart_set_format(UART_SENSOR, 8, 1, UART_PARITY_EVEN);
+
+    uart_init(UART_SENSOR, UART1_BAUDRATE);
+}
+
+void uart_sensor_send(uint8_t* data, uint8_t data_len)
+{
+    for (uint8_t iter = 0; iter < data_len; iter++)
+    {
+        uart_putc_raw(UART_SENSOR, data[iter]);
+    }
+}
+
+uint8_t uart_sensor_recv(uint8_t* data, uint8_t max_data_len)
+{
+    uint8_t data_len = 0;
+    while (uart_is_readable_within_us(UART_SENSOR, UART_TIMEOUT_US))
+    {
+        data[data_len++] = uart_getc(UART_SENSOR);
+        if (data_len >= max_data_len) return data_len;
+    }
+    return data_len;
+}
+
+void uart_sensor_empty_buffer(void)
+{
+    while (uart_is_readable_within_us(UART_SENSOR, UART_TIMEOUT_US / 10))
+    {
+        uart_getc(UART_SENSOR);
+    }
+    return;
 }

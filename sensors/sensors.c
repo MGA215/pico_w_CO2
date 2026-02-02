@@ -21,6 +21,7 @@
 #include "power/power.h"
 #include "ms5607/ms5607.h"
 #include "hyt271/hyt271.h"
+#include "ee872/ee872.h"
 #include "../eeprom/eeprom.h"
 
 
@@ -152,7 +153,7 @@ void sensors_init_trhp_sensor_struct(sensor_t* sensor, sensor_type_e sensor_type
             sensor->functions = &hyt271_functions;
             break;
         default:
-            sensor->functions->sensor_get_value = NULL;
+            sensor->functions = NULL;
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
                 "Failed to assign function to sensor type %i", sensor_type);
             sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
@@ -221,7 +222,7 @@ static void sensors_sensor_init(sensor_t* sensor)
 
         sensor->error_state = sensors_mux_to_sensor(sensor->index);
         if (sensor->error_state) continue;
-        if (sensor->functions->sensor_init == NULL) // Nonexistent init function
+        if (sensor->functions == NULL || sensor->functions->sensor_init == NULL) // Nonexistent init function
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
                 "Unknown init function on sensor %i", sensor->index);
@@ -248,6 +249,12 @@ static void sensors_sensor_init(sensor_t* sensor)
 
 static void sensors_sensor_verify(sensor_t* sensor)
 {
+    if (sensor->config.sensor_IIC == 0) // on UART type sensor - temporary!!!
+    {
+        sensor->error_state = STATE_OK;
+        return;
+    }
+
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
         "Verifying sensor %i configuration...", sensor->index);
 
@@ -278,27 +285,6 @@ static void sensors_sensor_verify(sensor_t* sensor)
 
 static void sensors_sensor_run(sensor_t* sensor)
 {
-    if (common_should_sensor_operate(sensor)) // Should sensor react
-    {
-        sensors_sensor_run_measurement(sensor);
-    }
-
-    if (common_should_sensor_operate(&ms5607)) // Should pressure sensor react
-    {
-        sensors_run_trhp_measurement(&ms5607);
-    }
-
-    if (common_should_sensor_operate(&hyt271)) // Should TRH sensor react
-    {
-        sensors_run_trhp_measurement(&hyt271);
-    }
-
-    if (sensors_is_measurement_finished() && !sensors_measurement_ready) // On measurement finished - single operation
-    {
-        sensors_on_measurement_finish();
-        if (!sensors_was_measurement_read) sensors_measurement_ready = true; // Set measurement ready
-    }
-    
     if (time_reached(sensor_start_measurement_time)) // Initialize measurement
     {
         if (!sensors_is_measurement_finished()) // Check if all measurement finished
@@ -322,6 +308,27 @@ static void sensors_sensor_run(sensor_t* sensor)
             sensors_start_measurement();
         }
     }
+
+    if (common_should_sensor_operate(sensor)) // Should sensor react
+    {
+        sensors_sensor_run_measurement(sensor);
+    }
+
+    if (common_should_sensor_operate(&ms5607)) // Should pressure sensor react
+    {
+        sensors_run_trhp_measurement(&ms5607);
+    }
+
+    if (common_should_sensor_operate(&hyt271)) // Should TRH sensor react
+    {
+        sensors_run_trhp_measurement(&hyt271);
+    }
+
+    if (sensors_is_measurement_finished() && !sensors_measurement_ready) // On measurement finished - single operation
+    {
+        sensors_on_measurement_finish();
+        if (!sensors_was_measurement_read) sensors_measurement_ready = true; // Set measurement ready
+    }    
 }
 
 static void sensors_run_trhp_measurement(sensor_t* sensor)
@@ -356,10 +363,13 @@ static void sensors_sensor_run_measurement(sensor_t* sensor)
 
     for (int i = 0; i < N_READ_TRIES; i++)
     {
-        sensor->error_state = sensors_mux_to_sensor(sensor->index);
-        if (sensor->error_state) continue;
+        if (sensor->config.sensor_IIC)
+        {
+            sensor->error_state = sensors_mux_to_sensor(sensor->index);
+            if (sensor->error_state) continue;
+        }
 
-        if (sensor->functions->sensor_get_value == NULL) // Nonexistent init function
+        if (sensor->functions == NULL || sensor->functions->sensor_get_value == NULL) // Nonexistent init function
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
                 "Unknown get_value function on sensor %i", sensor->index);
@@ -423,13 +433,15 @@ static void sensors_read_config_from_eeprom(sensor_t* sensor)
         return;
     }
     memcpy(&(sensor->config), &config, sizeof(sensor_config_t)); // Assign configuration
+    if (sensor->config.sensor_type == EE895 && !sensor->config.sensor_IIC) sensor->config.sensor_type = EE872; // !!! TEMPORARY, ToDo: remove - forces EE872 if config says (EE895 and comm UART)
     sensor->sensor_type = sensor->config.sensor_type;
     sensor->sensor_number = sensor->config.sensor_ord; // Set sensor type index (for differentiating same type sensors)
 
     switch (sensor->sensor_type) // assign functions
     {
         case EE895:
-            sensor->functions = &ee895_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &ee895_functions_i2c;
+            else sensor->functions = &ee872_functions_uart;
             break;
         case CDM7162:
             sensor->functions = &cdm7162_functions;
@@ -451,6 +463,10 @@ static void sensors_read_config_from_eeprom(sensor_t* sensor)
             break;
         case CM1107N:
             sensor->functions = &cm1107n_functions;
+            break;
+        case EE872:
+            if (sensor->config.sensor_IIC) sensor->functions = NULL;
+            else sensor->functions = &ee872_functions_uart;
             break;
         default:
             sensor->functions = NULL;
@@ -478,9 +494,10 @@ static int32_t sensors_mux_to_sensor(uint8_t sensor_index)
 static int32_t sensors_read_config(sensor_config_t* configuration, sensor_t* sensor)
 {
     int32_t ret;
+
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Reading configuration %i...", sensor->index);
 
-    if (sensor->functions->sensor_read_config != NULL) // read sensor configuration
+    if (sensor->functions != NULL && sensor->functions->sensor_read_config != NULL) // read sensor configuration
     {
         ret = sensor->functions->sensor_read_config(configuration, sensor->config.single_meas_mode);
     }
@@ -766,13 +783,7 @@ static void sensors_start_measurement(void)
     common_measurement_start(&hyt271);
     for (int i = 0; i < CONNECTED_SENSORS; i++)
     {
-        if (sensors[i].error_state == ERROR_SENSOR_UNKNOWN_SENSOR)
-        {
-            print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-                "Unknown sensor on input %i", sensors[i].index);
-            sensors[i].err_total_counter++;
-            continue;
-        }
+        if (sensors[i].error_state == ERROR_SENSOR_UNKNOWN_SENSOR) continue;
         common_measurement_start(&sensors[i]);
     }
     sensor_start_measurement_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.meas_int_ms);
@@ -785,6 +796,7 @@ static void sensors_on_measurement_finish(void)
     set_power(false, false);
     for (int i = 0; i < CONNECTED_SENSORS; i++)
     {
+        if (!sensors[i].config.sensor_active) continue;
         if (sensors[i].config.ext_pressure_comp && ms5607.pressure != NAN && sensors[i].error_state == STATE_OK) // Compensate for pressure
         {
             float val = sensors_sensor_compensate_pressure(sensors[i].co2, ms5607.pressure);

@@ -517,7 +517,7 @@ static err_t tcp_client_close(void* arg)
         }
         state->tcp_pcb = NULL; // Destroy PCB
     }
-    client_state = STATE_CONNECTION_CLOSED;
+    // client_state = STATE_CONNECTION_CLOSING;
     return err;
 }
 

@@ -236,6 +236,14 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
             config->pressure_en = false;
             break;
         }
+        case EE872:
+        {
+            config->co2_en = true;
+            config->temp_en = true;
+            config->RH_en = false;
+            config->pressure_en = true;
+            break;
+        }
         default:
         {
             config->co2_en = false;
@@ -304,6 +312,12 @@ static inline int32_t serializer_check_values(sensor_config_t* config)
         {
             if (config->abc_period < 1 * 24 || config->abc_period > 30 * 24) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->abc_target_value < 400 || config->abc_target_value > 1500) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
+            break;
+        }
+        case EE872:
+        {
+            if (config->meas_period < 10 || config->meas_period > 3600) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
+            if (config->filter_coeff < 1 || config->filter_coeff > 20) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             break;
         }
         default: return SUCCESS;

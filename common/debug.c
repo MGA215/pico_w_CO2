@@ -73,6 +73,7 @@ static debug_configuration_t config_normal =
     .debug_ms5607 = 3,
     .debug_hyt271 = 3,
 
+    .debug_sensor_unknown = 3,
     .debug_ee895 = 3,
     .debug_cdm7162 = 3,
     .debug_sunrise = 3,
@@ -81,6 +82,7 @@ static debug_configuration_t config_normal =
     .debug_scd41 = 3,
     .debug_cozir_lp3 = 3,
     .debug_cm1107n = 3,
+    .debug_ee872 = 3,
 
     .debug_wifi = 5,
     .debug_tcp_client = 5,
@@ -107,6 +109,7 @@ static debug_configuration_t config_debug =
     .debug_ms5607 = 5,
     .debug_hyt271 = 5,
 
+    .debug_sensor_unknown = 5,
     .debug_ee895 = 5,
     .debug_cdm7162 = 5,
     .debug_sunrise = 5,
@@ -115,6 +118,7 @@ static debug_configuration_t config_debug =
     .debug_scd41 = 5,
     .debug_cozir_lp3 = 5,
     .debug_cm1107n = 5,
+    .debug_ee872 = 5,
 
     .debug_wifi = 5,
     .debug_tcp_client = 5,
@@ -122,7 +126,7 @@ static debug_configuration_t config_debug =
     .debug_tcp_dns = 5,
 };
 
-debug_configuration_t* debug_configuration = &config_normal;
+debug_configuration_t* debug_configuration = &config_debug;
 
 static mutex_t uart_mutex;
 
@@ -190,9 +194,17 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 if (severity > debug_configuration->debug_eeprom && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[EEPROM]    ");
                 break;
+            case SOURCE_UNKNOWN:
+                if (severity > debug_configuration->debug_sensor_unknown && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[UNKNOWN]   ");
+                break;
             case SOURCE_EE895:
                 if (severity > debug_configuration->debug_ee895 && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[EE895]     ");
+                break;
+            case SOURCE_EE872:
+                if (severity > debug_configuration->debug_ee872 && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[EE872]     ");
                 break;
             case SOURCE_CDM7162:
                 if (severity > debug_configuration->debug_cdm7162 && subsource == SOURCE_NO_SOURCE) return;
@@ -302,9 +314,17 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
                 if (severity > debug_configuration->debug_eeprom) return;
                 snprintf(subsource_str, 13, "[EEPROM]    ");
                 break;
+            case SOURCE_UNKNOWN:
+                if (severity > debug_configuration->debug_sensor_unknown) return;
+                snprintf(source_str, 13, "[UNKNOWN]   ");
+                break;
             case SOURCE_EE895:
                 if (severity > debug_configuration->debug_ee895) return;
                 snprintf(subsource_str, 13, "[EE895]     ");
+                break;
+            case SOURCE_EE872:
+                if (severity > debug_configuration->debug_ee872) return;
+                snprintf(subsource_str, 13, "[EE872]     ");
                 break;
             case SOURCE_CDM7162:
                 if (severity > debug_configuration->debug_cdm7162) return;

@@ -8,6 +8,7 @@ add_subdirectory(scd30)
 add_subdirectory(scd41)
 add_subdirectory(cozir-lp3)
 add_subdirectory(cm1107n)
+add_subdirectory(ee872)
 add_subdirectory(mux)
 add_subdirectory(power)
 add_subdirectory(ms5607)
@@ -16,6 +17,7 @@ add_subdirectory(hyt271)
 target_link_libraries(pico-sensors
   INTERFACE
   pico-ee895
+  pico-ee872
   pico-cdm7162
   pico-sunrise
   pico-sunlight
@@ -23,6 +25,7 @@ target_link_libraries(pico-sensors
   pico-scd41
   pico-cozir-lp3
   pico-cm1107n
+  pico-ee872
   pico-mux
   pico-power
   pico-common

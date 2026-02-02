@@ -39,6 +39,7 @@ typedef enum debug_source
     SOURCE_GFX = 8,
     SOURCE_SERVICE_COMM = 9,
     SOURCE_EEPROM = 10,
+    SOURCE_UNKNOWN = 19,
     SOURCE_EE895 = 20,
     SOURCE_CDM7162 = 21,
     SOURCE_SUNRISE = 22,
@@ -47,10 +48,11 @@ typedef enum debug_source
     SOURCE_SCD41 = 25,
     SOURCE_COZIR_LP3 = 26,
     SOURCE_CM1107N = 27,
-    SOURCE_POWER = 30,
-    SOURCE_MUX = 31,
-    SOURCE_MS5607 = 32,
-    SOURCE_HYT271 = 33,
+    SOURCE_EE872 = 28,
+    SOURCE_POWER = 50,
+    SOURCE_MUX = 51,
+    SOURCE_MS5607 = 52,
+    SOURCE_HYT271 = 53,
     SOURCE_WIFI = 100,
     SOURCE_TCP_CLIENT = 101,
     SOURCE_TCP_SERVER = 102,
@@ -83,6 +85,7 @@ typedef struct debug_config
     uint8_t debug_ms5607;
     uint8_t debug_hyt271;
 
+    uint8_t debug_sensor_unknown;
     uint8_t debug_ee895;
     uint8_t debug_cdm7162;
     uint8_t debug_sunrise;
@@ -92,6 +95,7 @@ typedef struct debug_config
     uint8_t debug_scd41;
     uint8_t debug_cozir_lp3;
     uint8_t debug_cm1107n;
+    uint8_t debug_ee872;
 
     uint8_t debug_wifi;
     uint8_t debug_tcp_client;

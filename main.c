@@ -24,6 +24,7 @@
 #include "error_handler/error_handler.h"
 #include "sensors/sensors.h"
 #include "common/i2c_extras.h"
+#include "uart/uart.h"
 
 #include "common/debug.h"
 
@@ -73,7 +74,7 @@ void core1_main(void)
 {
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_NO_SOURCE, "Starting core 1...");
     error_handler_set_hardfault_core1();
-#ifdef __WIFI_COPY_H__
+#ifdef __WIFI_H__
     wifi_main();
 #endif
 }
@@ -86,6 +87,7 @@ int32_t init(void)
 
     init_sensor_i2c();
     init_device_i2c();
+    uart_sensor_init();
     svc_pin_init(); // Initialize service mode pin
 
     extern char __flash_binary_start;  // defined in linker script

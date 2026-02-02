@@ -18,8 +18,17 @@
 #include "common/functions.h"
 #include "../power/power.h"
 
+#include "uart/uart.h"
+#include "hardware/watchdog.h"
+
 #define EE895_ADDR              0x5F
 #define EE895_MAX_REG_READ      8
+
+#define EE872_ADDR              237
+#define EE872_UART_TIMEOUT_MS   100
+#define EE872_CO2_ADDR          0x0424
+#define EE872_T_ADDR            0x03EA
+#define EE872_P_ADDR            0x04B0
 
 // CO2 range
 #define CO2_MIN_RANGE           0.0
@@ -66,7 +75,7 @@
 #define REG_MEAS_FILTER         (0x1451)
 #define REG_MEAS_OFFSET         (0x1452)
 
-sensor_functions_t ee895_functions = {
+sensor_functions_t ee895_functions_i2c = {
     .sensor_get_value = ee895_get_value,
     .sensor_init = ee895_init,
     .sensor_read_config = ee895_read_config

@@ -48,6 +48,9 @@ pico_enable_stdio_usb(pico_w_CO2 1)
 target_link_libraries(pico_w_CO2
         pico_stdlib)
 
+target_link_libraries(pico_w_CO2
+        cmsis_core)
+
 target_compile_definitions(pico_w_CO2 PRIVATE
   PICO_STACK_SIZE=4096
 )
@@ -58,7 +61,7 @@ target_include_directories(pico_w_CO2 PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/wifi
 )
 
-set(PICO_DEOPTIMIZED_DEBUG 0 CACHE BOOL "Deoptimized debug")
+# set(PICO_DEOPTIMIZED_DEBUG 0 CACHE BOOL "Deoptimized debug")
 set(FULL_BUILD 1)
 add_compile_definitions(-DFULL_BUILD=${FULL_BUILD})
 
@@ -105,3 +108,6 @@ if (FULL_BUILD)
 endif()
         
 pico_add_extra_outputs(pico_w_CO2)
+
+add_custom_command(TARGET pico_w_CO2 POST_BUILD
+    COMMAND arm-none-eabi-objdump -S pico_w_CO2.elf > pico_w_CO2.lst)

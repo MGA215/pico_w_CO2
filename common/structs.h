@@ -34,8 +34,9 @@ typedef enum sensor_type
     SCD41 = 5,
     COZIR_LP3 = 6,
     CM1107N = 7,
-    MS5607 = 8,
-    HYT271 = 9
+    EE872 = 8,
+    MS5607 = 21,
+    HYT271 = 22,
 } sensor_type_e;
 
 typedef enum sensor_state

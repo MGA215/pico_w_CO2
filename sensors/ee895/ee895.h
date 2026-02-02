@@ -59,6 +59,9 @@ extern void ee895_init(sensor_t* sensor);
  */
 extern int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode);
 
-extern sensor_functions_t ee895_functions;
+
+
+extern sensor_functions_t ee895_functions_i2c;
+
 
 #endif
