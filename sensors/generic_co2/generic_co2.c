@@ -1,7 +1,7 @@
 /**
- * @file ee895.c
+ * @file generic_co2.c
  * @author Martin Garncarz (246815@vutbr.cz)
- * @brief Implements communication with E+E EE895 sensor
+ * @brief Implements communication with a generic HC CO2 probe
  * @version 0.1
  * @date 2024-06-28
  * 
@@ -28,6 +28,16 @@
 #define MODBUS_FN_CODE_READ_MULTI 0x03
 #define MODBUS_FN_CODE_WRITE_MULTI 0x10
 
+
+// Register addresses - float
+#define REG_T_C_FLOAT           (0x03EA)
+#define REG_CO2_AVG_FLOAT       (0x0424)
+#define REG_CO2_RAW_NPC_FLOAT   (0x042A)
+#define REG_P_MBAR_FLOAT        (0x04B0)
+
+#define REG_STATUS              (0x01F9)
+#define REG_STATUS_DETAIL       (0x0258)
+
 sensor_functions_t generic_co2_functions = {
     .sensor_get_value = generic_co2_get_value,
     .sensor_init = generic_co2_init,
@@ -42,25 +52,6 @@ sensor_functions_t generic_co2_functions = {
  * @return uint16_t CRC value
  */
 static inline uint16_t generic_co2_modbus_crc(uint8_t* buf, uint32_t len);
-
-// /**
-//  * @brief Reads number of registers via Generic CO2 sensor interface
-//  * 
-//  * @param addr Address of the register to be read from
-//  * @param nreg Number of registers to read
-//  * @param buf Output buffer of values
-//  * @return int32_t Return code
-//  */
-// static int32_t generic_co2_read(uint16_t addr, uint16_t nreg, uint16_t* buf);
-
-// /**
-//  * @brief Writes a value to the EE895
-//  * 
-//  * @param addr Address of the register to be written to
-//  * @param value Value to be written
-//  * @return int32_t Return code
-//  */
-// static int32_t generic_co2_write(uint16_t addr, uint16_t nreg, uint16_t* buffer);
 
 /**
  * @brief Switches sensor power to [on] state if not controlled globally
@@ -123,7 +114,7 @@ int32_t generic_co2_read(uint16_t addr, uint16_t nreg, uint16_t* buf)
     if (commandBuffer[1] != 0x03 || commandBuffer[2] != 2 * nreg) return EE895_ERROR_READ_RESP; // Check valid command & number of registers
 
     if (generic_co2_modbus_crc(commandBuffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC
-    for (uint8_t i = 0; i < nreg * 2; i++)
+    for (uint8_t i = 0; i < nreg; i++)
     {
         buf[i] = (commandBuffer[4 + 2 * i] * 256) + commandBuffer[3 + 2 * i];
     }
@@ -199,6 +190,112 @@ void generic_co2_init(sensor_t* sensor)
 
 void generic_co2_get_value(sensor_t* sensor)
 {
-    sensor->internal_error_state = STATE_OK;
-    return;
+    uint16_t tempBuffer[2] = {0};
+    int32_t ret;
+    if (sensor->sensor_type != GENERIC_CO2) // Check for correct sensor type
+    {
+        sensor->meas_state = MEAS_FINISHED;
+        sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
+        sensor->co2 = NAN;
+        sensor->pressure = NAN;
+        sensor->temperature = NAN;
+        return;
+    } 
+    switch(sensor->meas_state)
+    {
+        case MEAS_FINISHED: // Measurement finished
+        {
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Meas finished");
+            sensor->wake_time = at_the_end_of_time; // Disable timer
+            return;
+        }
+        case MEAS_STARTED: // Measurement started
+        {
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Meas started");
+            sensor->internal_error_state = PICO_OK;
+            if (!sensor->config.power_continuous) sensor->wake_time = make_timeout_time_us(1000 * (uint64_t)sensor->config.sensor_power_up_time); // Time for power stabilization
+            sensor->meas_state = MEAS_READ_STATUS; // Next step - read status
+            sensor->timeout_iterator = 0; // Initialize read status timeout iterator
+            return;
+        }
+        case MEAS_READ_STATUS: // Reading status
+        {
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Read status");
+            ret = generic_co2_read(REG_STATUS, 2, tempBuffer); // Reading status register
+            if (ret != 0) // On invalid read
+            {
+                sensor->co2 = NAN; // Set values to NaN
+                sensor->temperature = NAN;
+                sensor->pressure = NAN;
+                sensor->meas_state = MEAS_FINISHED; // Finished measurement
+                sensor->internal_error_state = ret; // Set sensor state to return value
+                return;
+            }
+            uint16_t status = tempBuffer[0] | tempBuffer[1];
+            if (!status) // On data ready
+            {
+                sensor->meas_state = MEAS_READ_VALUE; // Next step - read values
+                return;
+            }
+            if (sensor->timeout_iterator++ > 20) // On timeout
+            {
+                sensor->co2 = NAN; // Set values to NaN
+                sensor->temperature = NAN;
+                sensor->pressure = NAN;
+                sensor->internal_error_state = EE895_ERROR_DATA_READY_TIMEOUT; // Set sensor state
+                sensor->meas_state = MEAS_FINISHED; // Finished measurement
+                return;
+            }
+            sensor->wake_time = make_timeout_time_us(25000); // Check status after 25 ms
+            return;
+        }
+        case MEAS_READ_VALUE: // Reading values
+        {
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Read value");
+            float val;
+            ret = generic_co2_read_float(REG_T_C_FLOAT, &val); // Read temperature
+            if (ret != 0) // On invalid read
+            {
+                sensor->temperature = NAN; // Set values to NaN
+                sensor->pressure = NAN;
+                sensor->co2 = NAN;
+                sensor->meas_state = MEAS_FINISHED; // Measurement finished
+                sensor->internal_error_state = ret; // Set sensor state to return value
+                return;
+            }
+            sensor->temperature = val; // Assign value
+
+            ret = generic_co2_read_float(REG_CO2_AVG_FLOAT, &val); // Read co2
+            if (ret != 0) // On invalid read
+            {
+                sensor->co2 = NAN; // Set values to NaN
+                sensor->pressure = NAN;
+                sensor->meas_state = MEAS_FINISHED; // Measurement finished
+                sensor->internal_error_state = ret; // Set sensor state to return value
+                return;
+            }
+            sensor->co2 = val; // Assign value
+
+            ret = generic_co2_read_float(REG_P_MBAR_FLOAT, &val); // Read pressure
+            if (ret != 0) // On invalid read
+            {
+                sensor->pressure = NAN; // Set value to NaN
+                sensor->meas_state = MEAS_FINISHED; // Measurement finished
+                sensor->internal_error_state = ret; // Set sensor state to return value
+                return;
+            }
+            sensor->pressure = val; // Assign value
+            sensor->meas_state = MEAS_FINISHED; // Finished measurement
+            sensor->internal_error_state = SUCCESS; // Set state
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Measured CO2 value: %f", sensor->co2);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Measured temperature value: %f", sensor->temperature);
+            print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_GENERIC_CO2, "Measured pressure value: %f", sensor->pressure);
+            return;
+        }
+        default:
+        {
+            sensor->meas_state = MEAS_FINISHED;
+            return;
+        }
+    }
 }

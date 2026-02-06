@@ -94,7 +94,6 @@ void uart_sensor_init(void)
 
 void uart_sensor_send(uint8_t* data, uint8_t data_len)
 {
-    return;
     for (uint8_t iter = 0; iter < data_len; iter++)
     {
         uart_putc_raw(UART_SENSOR, data[iter]);
@@ -103,7 +102,6 @@ void uart_sensor_send(uint8_t* data, uint8_t data_len)
 
 uint8_t uart_sensor_recv(uint8_t* data, uint8_t max_data_len)
 {
-    return 0;
     uint8_t data_len = 0;
     while (uart_is_readable_within_us(UART_SENSOR, UART_TIMEOUT_US))
     {
@@ -115,7 +113,6 @@ uint8_t uart_sensor_recv(uint8_t* data, uint8_t max_data_len)
 
 void uart_sensor_empty_buffer(void)
 {
-    return;
     while (uart_is_readable_within_us(UART_SENSOR, UART_TIMEOUT_US / 10))
     {
         uart_getc(UART_SENSOR);

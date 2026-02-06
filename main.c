@@ -116,7 +116,7 @@ int32_t init(void)
 
     check_svc_mode();
 
-    multicore_launch_core1(core1_main); // Launch second core
+    // multicore_launch_core1(core1_main); // Launch second core
     
     watchdog_enable(3000, true); // 3 sec watchdog
 

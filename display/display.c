@@ -28,6 +28,7 @@
 #define SCD41_ITEMS 15
 #define COZIR_LP3_ITEMS 18
 #define CM1107N_ITEMS 13
+#define GENERIC_CO2_ITEMS 0
 
 typedef enum display_row
 {
@@ -130,6 +131,7 @@ extern uint8_t debug_scd30;
 extern uint8_t debug_scd41;
 extern uint8_t debug_cozir_lp3;
 extern uint8_t debug_cm1107n;
+extern uint8_t debug_generic_co2;
 
 extern uint8_t debug_wifi;
 extern uint8_t debug_tcp_client;
@@ -710,20 +712,25 @@ static void display_on_button_c()
                 }
                 case 23:
                 {
-                    if (debug_configuration->debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi--;
+                    if (debug_configuration->debug_generic_co2 > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_generic_co2--;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_configuration->debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client--;
+                    if (debug_configuration->debug_wifi > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi--;
                     break;
                 }
                 case 25:
                 {
-                    if (debug_configuration->debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns--;
+                    if (debug_configuration->debug_tcp_client > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client--;
                     break;
                 }
                 case 26:
+                {
+                    if (debug_configuration->debug_tcp_dns > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns--;
+                    break;
+                }
+                case 27:
                 {
                     if (debug_configuration->debug_tcp_server > 0 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server--;
                     break;
@@ -900,20 +907,25 @@ static void display_on_button_d()
                 }
                 case 23:
                 {
-                    if (debug_configuration->debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi++;
+                    if (debug_configuration->debug_generic_co2 < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_generic_co2++;
                     break;
                 }
                 case 24:
                 {
-                    if (debug_configuration->debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client++;
+                    if (debug_configuration->debug_wifi < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_wifi++;
                     break;
                 }
                 case 25:
                 {
-                    if (debug_configuration->debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns++;
+                    if (debug_configuration->debug_tcp_client < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_client++;
                     break;
                 }
                 case 26:
+                {
+                    if (debug_configuration->debug_tcp_dns < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_dns++;
+                    break;
+                }
+                case 27:
                 {
                     if (debug_configuration->debug_tcp_server < 6 && service_mode != SERVICE_MODE_UART) debug_configuration->debug_tcp_server++;
                     break;
@@ -2179,20 +2191,25 @@ static void write_display(void)
                     }
                     case 23:
                     {
-                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_configuration->debug_wifi);
+                        snprintf(buf, 32, "DEBUG HC PROBE: %i", debug_configuration->debug_generic_co2);
                         break;
                     }
                     case 24:
                     {
-                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_configuration->debug_tcp_client);
+                        snprintf(buf, 32, "DEBUG WIFI: %i", debug_configuration->debug_wifi);
                         break;
                     }
                     case 25:
                     {
-                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_configuration->debug_tcp_dns);
+                        snprintf(buf, 32, "DEBUG TCP CLIENT: %i", debug_configuration->debug_tcp_client);
                         break;
                     }
                     case 26:
+                    {
+                        snprintf(buf, 32, "DEBUG TCP DNS: %i", debug_configuration->debug_tcp_dns);
+                        break;
+                    }
+                    case 27:
                     {
                         snprintf(buf, 32, "DEBUG TCP SERVER: %i", debug_configuration->debug_tcp_server);
                         break;
@@ -2529,6 +2546,11 @@ static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
         case EE872:
         {
             snprintf(buf, len, "E+E EE872");
+            break;
+        }
+        case GENERIC_CO2:
+        {
+            snprintf(buf, len, "HC COMET PROBE");
             break;
         }
         default:

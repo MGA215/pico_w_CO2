@@ -83,10 +83,11 @@ static debug_configuration_t config_normal =
     .debug_cozir_lp3 = 3,
     .debug_cm1107n = 3,
     .debug_ee872 = 3,
+    .debug_generic_co2 = 3,
 
-    .debug_wifi = 5,
-    .debug_tcp_client = 5,
-    .debug_tcp_server = 3,
+    .debug_wifi = 6,
+    .debug_tcp_client = 6,
+    .debug_tcp_server = 6,
     .debug_tcp_dns = 3,
 };
 
@@ -119,6 +120,7 @@ static debug_configuration_t config_debug =
     .debug_cozir_lp3 = 5,
     .debug_cm1107n = 5,
     .debug_ee872 = 5,
+    .debug_generic_co2 = 5,
 
     .debug_wifi = 5,
     .debug_tcp_client = 5,
@@ -126,7 +128,7 @@ static debug_configuration_t config_debug =
     .debug_tcp_dns = 5,
 };
 
-debug_configuration_t* debug_configuration = &config_debug;
+debug_configuration_t* debug_configuration = &config_normal;
 
 static mutex_t uart_mutex;
 
@@ -233,6 +235,10 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             case SOURCE_CM1107N:
                 if (severity > debug_configuration->debug_cm1107n && subsource == SOURCE_NO_SOURCE) return;
                 snprintf(source_str, 13, "[CM1107N]   ");
+                break;
+            case SOURCE_GENERIC_CO2:
+                if (severity > debug_configuration->debug_generic_co2 && subsource == SOURCE_NO_SOURCE) return;
+                snprintf(source_str, 13, "[HC PROBE]  ");
                 break;
             case SOURCE_POWER:
                 if (severity > debug_configuration->debug_power && subsource == SOURCE_NO_SOURCE) return;
@@ -353,6 +359,10 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
             case SOURCE_CM1107N:
                 if (severity > debug_configuration->debug_cm1107n) return;
                 snprintf(subsource_str, 13, "[CM1107N]   ");
+                break;
+            case SOURCE_GENERIC_CO2:
+                if (severity > debug_configuration->debug_generic_co2) return;
+                snprintf(subsource_str, 13, "[HC PROBE]  ");
                 break;
             case SOURCE_POWER:
                 if (severity > debug_configuration->debug_power) return;

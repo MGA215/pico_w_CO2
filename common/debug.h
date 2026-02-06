@@ -49,6 +49,7 @@ typedef enum debug_source
     SOURCE_COZIR_LP3 = 26,
     SOURCE_CM1107N = 27,
     SOURCE_EE872 = 28,
+    SOURCE_GENERIC_CO2 = 29,
     SOURCE_POWER = 50,
     SOURCE_MUX = 51,
     SOURCE_MS5607 = 52,
@@ -96,6 +97,7 @@ typedef struct debug_config
     uint8_t debug_cozir_lp3;
     uint8_t debug_cm1107n;
     uint8_t debug_ee872;
+    uint8_t debug_generic_co2;
 
     uint8_t debug_wifi;
     uint8_t debug_tcp_client;

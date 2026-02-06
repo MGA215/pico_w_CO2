@@ -500,6 +500,7 @@ static void sensors_read_config_from_eeprom(sensor_t* sensor)
             break;
         case GENERIC_CO2:
             sensor->functions = &generic_co2_functions;
+            break;
         default:
             sensor->functions = NULL;
             break;

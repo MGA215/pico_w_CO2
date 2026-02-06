@@ -27,7 +27,7 @@
 
 // CO2 range
 #define CO2_MIN_RANGE           0.0
-#define CO2_MAX_RANGE           10000.0
+#define CO2_MAX_RANGE           50000.0
 
 // temperature range
 #define T_MIN_RANGE            -40.0

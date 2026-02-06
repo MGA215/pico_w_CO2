@@ -244,6 +244,14 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
             config->pressure_en = true;
             break;
         }
+        case GENERIC_CO2:
+        {
+            config->co2_en = true;
+            config->temp_en = true;
+            config->RH_en = false;
+            config->pressure_en = true;
+            break;
+        }
         default:
         {
             config->co2_en = false;
