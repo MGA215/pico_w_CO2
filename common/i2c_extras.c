@@ -69,7 +69,7 @@ void init_sensor_i2c(void)
     gpio_set_function(I2C_SENSOR_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SENSOR_SCL);
 
-    i2c_baud = i2c_init(I2C_SENSOR, I2C_FREQ); // Initialize I2C
+    i2c_baud = i2c_init(I2C_SENSOR, 100000); // Initialize I2C
     print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Initialized sensor I2C bus");
     sleep_us(100);
 }

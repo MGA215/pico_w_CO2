@@ -23,6 +23,7 @@
 #include "hyt271/hyt271.h"
 #include "ee872/ee872.h"
 #include "../eeprom/eeprom.h"
+#include "generic_co2/generic_co2.h"
 
 
 #include "string.h"
@@ -134,6 +135,29 @@ void sensors_init()
     watchdog_update();
     
     sensors_init_trhp_sensor_struct(&hyt271, HYT271); // Initialize HYT271 struct
+
+    // mux_init(); // Initialize MUX
+    // power_5v_set_vector(0);
+    // power_en_set_vector_affected_sensors(0xFF, true);
+
+    // mux_enable_sensor(6);
+    // int32_t ret = generic_co2_write_float(0xB0, 1.05f);
+    // print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Write return value: %i", ret);
+    // float val;
+    // while (true)
+    // {
+    //     uint16_t status_buffer[2];
+    //     int32_t ret = generic_co2_read(0x10, 2, status_buffer);
+    //     uint32_t status = status_buffer[1] << 16 | status_buffer[0];
+    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Status: %08X, return value: %i", status, ret);
+    //     ret = generic_co2_read_float(0x0C, &val);
+    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Read pressure: %f hPa, return value: %i", val, ret);
+    //     ret = generic_co2_read_float(0x18, &val);
+    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Read temperature: %f degC, return value: %i", val, ret);
+    //     // sleep_ms(5000);
+    // }
+
+
     watchdog_update();
 }
 
@@ -249,7 +273,7 @@ static void sensors_sensor_init(sensor_t* sensor)
 
 static void sensors_sensor_verify(sensor_t* sensor)
 {
-    if (sensor->config.sensor_IIC == 0) // on UART type sensor - temporary!!!
+    if (sensor->sensor_type == EE872 || sensor->sensor_type == GENERIC_CO2) // on UART type sensor - temporary!!!
     {
         sensor->error_state = STATE_OK;
         return;
@@ -433,7 +457,6 @@ static void sensors_read_config_from_eeprom(sensor_t* sensor)
         return;
     }
     memcpy(&(sensor->config), &config, sizeof(sensor_config_t)); // Assign configuration
-    if (sensor->config.sensor_type == EE895 && !sensor->config.sensor_IIC) sensor->config.sensor_type = EE872; // !!! TEMPORARY, ToDo: remove - forces EE872 if config says (EE895 and comm UART)
     sensor->sensor_type = sensor->config.sensor_type;
     sensor->sensor_number = sensor->config.sensor_ord; // Set sensor type index (for differentiating same type sensors)
 
@@ -441,33 +464,42 @@ static void sensors_read_config_from_eeprom(sensor_t* sensor)
     {
         case EE895:
             if (sensor->config.sensor_IIC) sensor->functions = &ee895_functions_i2c;
-            else sensor->functions = &ee872_functions_uart;
+            else sensor->functions = NULL;
             break;
         case CDM7162:
-            sensor->functions = &cdm7162_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &cdm7162_functions;
+            else sensor->functions = NULL;
             break;
         case SUNRISE:
-            sensor->functions = &sunrise_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &sunrise_functions;
+            else sensor->functions = NULL;
             break;
         case SUNLIGHT:
-            sensor->functions = &sunlight_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &sunlight_functions;
+            else sensor->functions = NULL;
             break;
         case SCD30:
-            sensor->functions = &scd30_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &scd30_functions;
+            else sensor->functions = NULL;
             break;
         case SCD41:
-            sensor->functions = &scd41_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &scd41_functions;
+            else sensor->functions = NULL;
             break;
         case COZIR_LP3:
-            sensor->functions = &cozir_lp3_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &cozir_lp3_functions;
+            else sensor->functions = NULL;
             break;
         case CM1107N:
-            sensor->functions = &cm1107n_functions;
+            if (sensor->config.sensor_IIC) sensor->functions = &cm1107n_functions;
+            else sensor->functions = NULL;
             break;
         case EE872:
             if (sensor->config.sensor_IIC) sensor->functions = NULL;
             else sensor->functions = &ee872_functions_uart;
             break;
+        case GENERIC_CO2:
+            sensor->functions = &generic_co2_functions;
         default:
             sensor->functions = NULL;
             break;
@@ -504,7 +536,7 @@ static int32_t sensors_read_config(sensor_config_t* configuration, sensor_t* sen
     else 
     {
         print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_NO_SOURCE, 
-            "Unknown init function on sensor %i", sensor->index);
+            "Unknown read config function on sensor %i", sensor->index);
         sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         return ERROR_SENSOR_UNKNOWN_SENSOR;
     }

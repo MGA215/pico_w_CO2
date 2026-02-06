@@ -24,12 +24,6 @@
 #define EE895_ADDR              0x5F
 #define EE895_MAX_REG_READ      8
 
-#define EE872_ADDR              237
-#define EE872_UART_TIMEOUT_MS   100
-#define EE872_CO2_ADDR          0x0424
-#define EE872_T_ADDR            0x03EA
-#define EE872_P_ADDR            0x04B0
-
 // CO2 range
 #define CO2_MIN_RANGE           0.0
 #define CO2_MAX_RANGE           10000.0

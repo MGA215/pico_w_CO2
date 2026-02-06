@@ -158,8 +158,6 @@ int32_t loop(void)
 {
     if (!service_mode)
     {
-        // sensors_read_all(); // Read sensor values
-        
         sensors_run();
         watchdog_update();
         create_soap_messages(); // Create SOAP messages

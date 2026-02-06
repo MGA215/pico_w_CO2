@@ -13,6 +13,7 @@ add_subdirectory(mux)
 add_subdirectory(power)
 add_subdirectory(ms5607)
 add_subdirectory(hyt271)
+add_subdirectory(generic_co2)
 
 target_link_libraries(pico-sensors
   INTERFACE
@@ -31,6 +32,7 @@ target_link_libraries(pico-sensors
   pico-common
   pico-ms5607
   pico-hyt271
+  pico-generic-co2
 )
 
 target_sources(pico-sensors

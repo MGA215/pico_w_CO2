@@ -163,8 +163,8 @@ static int32_t ee872_read(uint16_t addr, uint16_t nreg, uint8_t* buffer)
     }
     if (recv_buffer[1] != 0x03 || recv_buffer[2] != 2 * nreg) // Check valid command & number of registers
     {
-        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "Addr: 0x%X; nreg: %i, recv_len: %i", addr, nreg, recv_data_len);
-        print_ser_output(SEVERITY_DEBUG, SOURCE_SENSORS, SOURCE_EE895, "FnCode: 0x%X, data_read_len: %i, expected %i", recv_buffer[1], recv_buffer[2], 2*nreg);
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_EE872, "Addr: 0x%X; nreg: %i, recv_len: %i", addr, nreg, recv_data_len);
+        print_ser_output(SEVERITY_ERROR, SOURCE_SENSORS, SOURCE_EE872, "FnCode: 0x%X, data_read_len: %i, expected %i", recv_buffer[1], recv_buffer[2], 2*nreg);
         return EE895_ERROR_READ_RESP; 
     }
     if (ee_modbus_crc(recv_buffer, nreg * 2 + 5) != 0) return EE895_ERROR_INVALID_CRC; // Check CRC valid

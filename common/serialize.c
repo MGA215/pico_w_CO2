@@ -104,7 +104,7 @@ int32_t serializer_deserialize(sensor_config_t* config, uint8_t* serialized, uin
 
     memset(config, 0x00, sizeof(sensor_config_t));
 
-    if (buf[0] >= CONNECTED_SENSORS && serialized[0] < 255) return ERROR_DESERIALIZATION_FAILURE; // These boundaries might error when new sensor added (ID >= 8)
+    if (buf[0] >= SENSOR_TYPES && serialized[0] < 255) return ERROR_DESERIALIZATION_FAILURE; // These boundaries might error when new sensor added (ID >= 8)
     config->sensor_type = (sensor_type_e)buf[0];
 
     config->sensor_ord = buf[1];
