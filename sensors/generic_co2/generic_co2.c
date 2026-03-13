@@ -174,6 +174,42 @@ int32_t generic_co2_read_float(uint16_t addr, float* value)
     return ret;
 }
 
+int32_t generic_co2_write32(uint16_t addr, uint32_t value)
+{
+    uint16_t buffer[2];
+    buffer[0] = ((value & 0x0000FF00) >> 8) | ((value & 0x000000FF) << 8);
+    buffer[1] = ((value & 0x00FF0000) >> 8) | ((value & 0xFF000000) >> 24);
+
+    return generic_co2_write(addr, 2, buffer);
+}
+
+int32_t generic_co2_read32(uint16_t addr, uint32_t* value)
+{
+    uint16_t fbuffer[2];
+    int32_t ret = generic_co2_read(addr, 2, fbuffer);
+    *value = 0;
+    *value |= (fbuffer[0] & 0x00FF) << 8;
+    *value |= (fbuffer[0] & 0xFF00) >> 8;
+    *value |= (fbuffer[1] & 0x00FF) << 24;
+    *value |= (fbuffer[1] & 0xFF00) << 8;
+    return ret;
+}
+
+int32_t generic_co2_write16(uint16_t addr, uint16_t value)
+{
+    uint16_t buffer = ntoh16(value);
+
+    return generic_co2_write(addr, 1, &buffer);
+}
+
+int32_t generic_co2_read16(uint16_t addr, uint16_t* value)
+{
+    uint16_t fbuffer;
+    int32_t ret = generic_co2_read(addr, 1, &fbuffer);
+    *value = ntoh16(fbuffer);  
+    return ret;
+}
+
 static inline void generic_co2_power(sensor_t* sensor, bool on)
 {
     if (!sensor->config.power_global_control && !sensor->config.power_continuous) // If power not controlled globally

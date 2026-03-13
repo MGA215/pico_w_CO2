@@ -71,6 +71,13 @@ extern void generic_co2_init(sensor_t* sensor);
 
 extern void generic_co2_get_value(sensor_t* sensor);
 
+extern int32_t generic_co2_read32(uint16_t addr, uint32_t* value);
+
+extern int32_t generic_co2_write32(uint16_t addr, uint32_t value);
+
+extern int32_t generic_co2_read16(uint16_t addr, uint16_t* value);
+
+extern int32_t generic_co2_write16(uint16_t addr, uint16_t value);
 
 
 extern sensor_functions_t generic_co2_functions;

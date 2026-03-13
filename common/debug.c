@@ -66,7 +66,7 @@ static debug_configuration_t config_normal =
     .debug_ram = 3,
     .debug_service_comm = 3,
 
-    .debug_sensors = 3,
+    .debug_sensors = 6,
 
     .debug_mux = 3,
     .debug_power = 3,
@@ -83,11 +83,11 @@ static debug_configuration_t config_normal =
     .debug_cozir_lp3 = 3,
     .debug_cm1107n = 3,
     .debug_ee872 = 3,
-    .debug_generic_co2 = 3,
+    .debug_generic_co2 = 4,
 
-    .debug_wifi = 6,
-    .debug_tcp_client = 6,
-    .debug_tcp_server = 6,
+    .debug_wifi = 3,
+    .debug_tcp_client = 3,
+    .debug_tcp_server = 3,
     .debug_tcp_dns = 3,
 };
 

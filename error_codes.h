@@ -28,7 +28,7 @@
 // Main Errors
 #define ERROR_STDIO_INIT -11 // Error initializing STDIO
 #define ERROR_TIMER_SENSORS_INIT -12 // Error initializing sensor timer
-#define ERROR_SENSOR_NOT_INITIALIZED -13 // Error sensor is not initialized
+// #define ERROR_SENSOR_NOT_INITIALIZED -13 // Error sensor is not initialized
 // #define ERROR_SENSOR_INIT_FAILED -14 // Error sensor initialization failed
 // #define ERROR_NO_MEAS -15 // Error No measurement has been performed yet
 // #define ERROR_UNKNOWN_SENSOR -16 // Error Sensor identification failed - unknown sensor
@@ -42,6 +42,9 @@
 #define ERROR_SENSOR_CONFIG_PARSING_FAILED -3 // Sensor configuration parsing failed
 #define ERROR_SENSOR_CONFIG_VERIFICATION_FAILED -4 // Sensor configuration verification failed
 #define ERROR_SENSOR_READING_FAILED -5 // Sensor measurement reading failed
+#define ERROR_SENSOR_NOT_INITIALIZED -6 // Sensor not yet initialized
+#define ERROR_SENSOR_NOT_VERIFIED -7 // Sensor not yet verified
+#define ERROR_SENSOR_NO_MEAS -8 // Sensor not yet measured
 
 // Serialization errors
 #define ERROR_SERIALIZATION_BUFFER_LEN -21 // Error - serialization buffer is too short
@@ -71,6 +74,20 @@
 #define EE895_ERROR_WRITE_RESP 114 // Error ee895 - write response is not valid
 #define EE895_ERROR_DATA_READY_TIMEOUT 115 // Error ee895 - Data was not ready for more than 1.25 s
 #define EE895_ERROR_RANGE 116 // Error ee895 - read data is out of range
+
+// Generic CO2 sensor status bits
+#define GENERIC_CO2_STATUS_BIT_CH0_ERR 0
+#define GENERIC_CO2_STATUS_BIT_CH1_ERR 1
+#define GENERIC_CO2_STATUS_BIT_CH2_ERR 2
+#define GENERIC_CO2_STATUS_BIT_CH3_ERR 3
+#define GENERIC_CO2_STATUS_BIT_CH4_ERR 4
+#define GENERIC_CO2_STATUS_BIT_CH5_ERR 5
+#define GENERIC_CO2_STATUS_BIT_CH6_ERR 6
+#define GENERIC_CO2_STATUS_BIT_CH7_ERR 7
+#define GENERIC_CO2_STATUS_BIT_UNKNOWN_SENSOR 8
+#define GENERIC_CO2_STATUS_BIT_NO_CO2_MEAS 9
+#define GENERIC_CO2_STATUS_BIT_EEPROM_INIT_ERROR 10
+#define GENERIC_CO2_STATUS_BIT_EEPROM_WRITE_ERROR 11
 
 // CDM7162 Errors
 #define CDM7162_ERROR_WRITE_RESP 214 // Error CDM7162 - write response is not valid

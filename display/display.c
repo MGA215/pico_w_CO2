@@ -10,6 +10,7 @@
 #include "soap/soap_channels.h"
 #include "malloc.h"
 #include "rtc/rtc.h"
+#include "../error_codes.h"
 
 #if FULL_BUILD
     #include "wifi/wifi.h"
@@ -169,11 +170,7 @@ static void display_on_button_c_pressing(void);
 static void display_on_button_d_pressing(void);
 static void write_display(void);
 static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);
-static void write_display_sensor(uint8_t* sensor_name, int state, 
-        bool co2, float co2_value, 
-        bool temp, float temp_value, 
-        bool pressure, float pressure_value,
-        bool humidity, float humidity_value);
+static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name);
 static void display_get_debug_str(uint8_t* buf, uint8_t len, uint8_t debug_severity);
 static uint64_t getFreeHeap(void);
 static void boot_time(void);
@@ -1100,11 +1097,7 @@ static void write_display(void)
                     snprintf(sensor_name, 18, "ERR_NO_SENSOR %i", display_sensor); // Write error no sensor to display
                     gfx_pack_write_text(&position, sensor_name);
                 }
-                else write_display_sensor(sensor_name, sensors[display_sensor].error_state, 
-                        sensors[display_sensor].config.co2_en, sensors[display_sensor].co2,
-                        sensors[display_sensor].config.temp_en, sensors[display_sensor].temperature,
-                        sensors[display_sensor].config.pressure_en, sensors[display_sensor].pressure,
-                        sensors[display_sensor].config.RH_en, sensors[display_sensor].humidity); // Write sensor readings to the display
+                else write_display_sensor(&sensors[display_sensor], sensor_name); // Write sensor readings to the display
 
                 snprintf(sensor_name, 24, "ERRORS: %i", sensors[display_sensor].err_total_counter);
                 position.x = 0;
@@ -1117,7 +1110,7 @@ static void write_display(void)
                 strcpy(sensor_name, "T/RH sensor");
                 position.x = 0;
                 position.y = 1;
-                write_display_sensor(sensor_name, hyt271.error_state, false, 0, true, hyt271.temperature, false, 0, true, hyt271.humidity); // Write sensor readings to the display
+                write_display_sensor(&hyt271, sensor_name); // Write sensor readings to the display
                 snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_total_counter);
                 position.x = 0;
                 position.y = 5;
@@ -1129,7 +1122,7 @@ static void write_display(void)
                 strcpy(sensor_name, "P sensor");
                 position.x = 0;
                 position.y = 1;
-                write_display_sensor(sensor_name, ms5607.error_state, false, 0, true, ms5607.temperature, true, ms5607.pressure, false, 0); // Write sensor readings to the display
+                write_display_sensor(&ms5607, sensor_name); // Write sensor readings to the display
             }
             else 
             {
@@ -2562,12 +2555,39 @@ static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
     return;
 }
 
-static void write_display_sensor(uint8_t* sensor_name, int state, 
-        bool co2, float co2_value, 
-        bool temp, float temp_value, 
-        bool pressure, float pressure_value,
-        bool humidity, float humidity_value)
+// static void write_display_sensor(uint8_t* sensor_name, int state, 
+//         bool co2, float co2_value, 
+//         bool temp, float temp_value, 
+//         bool pressure, float pressure_value,
+//         bool humidity, float humidity_value)
+static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
 {
+    bool co2 = sensor->config.co2_en;
+    float co2_value = sensor->co2;
+    bool temp = sensor->config.temp_en;
+    float temp_value = sensor->temperature;
+    bool pressure = sensor->config.pressure_en;
+    float pressure_value = sensor->pressure;
+    bool humidity = sensor->config.RH_en;
+    float humidity_value = sensor->humidity;
+    int32_t state = sensor->error_state;
+    if (!state)
+    {
+        switch (sensor->sensor_state)
+        {
+            case NOT_INITIALIZED:
+                state = ERROR_SENSOR_NOT_INITIALIZED;
+                break;
+            case INITIALIZED:
+                state = ERROR_SENSOR_NOT_VERIFIED;
+                break;
+            case VERIFIED_NO_MEAS:
+                state = ERROR_SENSOR_NO_MEAS;
+                break;
+        }
+    }
+
+
     uint8_t row = 1;
     point_t position;
     position.x = 0;

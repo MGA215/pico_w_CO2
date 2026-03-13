@@ -141,19 +141,13 @@ void sensors_init()
     // power_en_set_vector_affected_sensors(0xFF, true);
 
     // mux_enable_sensor(6);
-    // int32_t ret = generic_co2_write_float(0xB0, 1.05f);
-    // print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Write return value: %i", ret);
-    // float val;
+    // // int32_t ret = generic_co2_write_float(0xB0, 1.05f);
+    // // print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Write return value: %i", ret);
     // while (true)
     // {
-    //     uint16_t status_buffer[2];
-    //     int32_t ret = generic_co2_read(0x10, 2, status_buffer);
-    //     uint32_t status = status_buffer[1] << 16 | status_buffer[0];
-    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Status: %08X, return value: %i", status, ret);
-    //     ret = generic_co2_read_float(0x0C, &val);
-    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Read pressure: %f hPa, return value: %i", val, ret);
-    //     ret = generic_co2_read_float(0x18, &val);
-    //     print_ser_output(SEVERITY_FATAL, SOURCE_SENSORS, SOURCE_NO_SOURCE, "Read temperature: %f degC, return value: %i", val, ret);
+    //     uint16_t val;
+    //     int32_t ret = generic_co2_read16(0x94, &val);
+    //     print_ser_output(SEVERITY_ERROR, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "period: %i", val);
     //     // sleep_ms(5000);
     // }
 
@@ -260,6 +254,7 @@ static void sensors_sensor_init(sensor_t* sensor)
             print_ser_output(SEVERITY_INFO, SOURCE_SENSORS, SOURCE_EE895 + sensor->sensor_type, 
                 "Init sensor %i success", sensor->index);
             common_measurement_force_stop(sensor);
+            sensor->internal_error_state = ERROR_SENSOR_NO_MEAS;
             sensor->error_state = STATE_OK;
             return;
         }
