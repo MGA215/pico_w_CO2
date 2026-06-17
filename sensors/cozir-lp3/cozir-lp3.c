@@ -236,6 +236,7 @@ int32_t cozir_lp3_read_config(sensor_config_t* config, bool single_measurement_m
 {
     int32_t ret;
     uint8_t buf[2];
+    (void)single_measurement_mode;
     config->sensor_type = COZIR_LP3;
     if ((ret = cozir_lp3_read(REG_MEAS_CONTROL, &buf[0], 1)) != 0) return ret;
     if ((ret = cozir_lp3_read(REG_DIGITAL_FILTER_SETTING, &buf[0], 1)) != 0) return ret;

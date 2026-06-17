@@ -403,6 +403,7 @@ int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mod
     int32_t ret;
     uint8_t buf[13] = {0};
     uint8_t data = 0;
+    (void)single_measurement_mode;
     config->sensor_type = SUNRISE;
     if ((ret = sunrise_read(REG_MEAS_MODE, buf, 13)) != 0) return ret; // Read measurement registers
     config->single_meas_mode = (bool)buf[0]; // Save measurement settings data
@@ -429,7 +430,6 @@ int32_t sunrise_read_config(sensor_config_t* config, bool single_measurement_mod
 
 static int32_t sr_write_config(sensor_config_t* config)
 {
-    bool changed = false;
     int32_t ret;
     sensor_config_t read_config;
     if ((ret = sunrise_read_config(&read_config, false)) != 0) return ret; // Read SUNRISE config
@@ -451,7 +451,6 @@ static int32_t sr_write_config(sensor_config_t* config)
         data |= !config->invert_nRDY << 5;
 
         if ((ret = sunrise_write(REG_METER_CONTROL, &data, 1)) != 0) return ret; // Write measurement control register
-        changed = true;
     }
     if (read_config.meas_period != config->meas_period ||
         read_config.meas_samples != config->meas_samples ||
@@ -479,7 +478,6 @@ static int32_t sr_write_config(sensor_config_t* config)
         command_buf[12] = (uint8_t)(config->filter_coeff);
 
         if ((ret = sunrise_write(REG_MEAS_MODE, command_buf, 13)) != 0) return ret; // Write measurement registers
-        changed = true;
     }
 
     sunrise_reset();

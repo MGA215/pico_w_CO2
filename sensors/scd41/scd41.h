@@ -70,6 +70,12 @@ extern int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
  */
 extern void scd41_reset(void);
 
+/**
+ * @brief Performs factory reset of the sensor
+ * 
+ */
+extern void s41_factory_reset(void);
+
 extern sensor_functions_t scd41_functions;
 
 #endif

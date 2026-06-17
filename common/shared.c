@@ -32,7 +32,7 @@ message_channel_general_t* channels2[16] = { // Second 16 channels
     &channel_general_default
 }; 
 
-uint8_t datetime_str[30] = {0};
+char datetime_str[20] = {0};
 datetime_t datetime;
 
 float cozir_unfiltered = 0;

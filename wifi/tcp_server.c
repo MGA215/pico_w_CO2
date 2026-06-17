@@ -151,11 +151,6 @@ err_t tcp_server_init()
 
 void tcp_server_run(void)
 {
-    if (!&state) // No state exists
-    {
-        print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP state not initialized");
-        return;
-    }
     switch (server_state) // Check server state
     {
         case CONNECTION_CLOSED: // If connection closed
@@ -167,17 +162,25 @@ void tcp_server_run(void)
             }
             print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_SERVER, "Listening on port %i...", TCP_SERVER_PORT);
             break;
+        case LISTENING:
+        {
+            break;
+        }
         case CONNECTED:
         {
             if (config_data.response_rdy)
             {
                 mutex_enter_timeout_ms(&config_data.response_mutex, MUTEX_TIMEOUT_MS); // Safe encode copy response
-                encodeCOBS(config_data.response, buffer_sent, &config_data.response_len);
+                encodeCOBS(config_data.response, buffer_sent, (int32_t*)&config_data.response_len);
                 buffer_sent_len = config_data.response_len;
                 mutex_exit(&config_data.response_mutex);
                 tcp_server_send_data(&state); // ToDo send data
                 config_data.response_rdy = false;
             }
+        }
+        default:
+        {
+            break;
         }
         
     }
@@ -245,7 +248,8 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *client_pcb, err_t err)
 
 static err_t tcp_server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len) 
 {
-    TCP_SERVER_T *state = (TCP_SERVER_T*)arg; // get server state
+    (void)tpcb;
+    (void)arg;
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "Sent %i bytes of data", len);
     return ERR_OK;
 }
@@ -290,7 +294,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
     if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS)) // Safe decode copy command
     {
         // encodeCOBS(buffer_recv_frame, config_data.command, &frame_len);
-        if (decodeCOBS(buffer_recv_frame, config_data.command, &frame_len) != 0) // Decode message
+        if (decodeCOBS(buffer_recv_frame, config_data.command, (int32_t*)&frame_len) != 0) // Decode message
         {
             print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Failed to decode message");
             mutex_exit(&config_data.command_mutex);
@@ -301,7 +305,7 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
         config_data.command_len = frame_len; // Save frame length
         mutex_exit(&config_data.command_mutex);
         
-        uint16_t data_len = service_comm_parse_message(); // Parse message
+        uint32_t data_len = service_comm_parse_message(); // Parse message
 
         if (frame_len > CMD_PADDING + CMD_MAX_LEN || data_len > CMD_MAX_LEN) // Check message too long
         {
@@ -324,7 +328,6 @@ err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err
 
 static err_t tcp_server_client_disconnected(void* arg, int status)
 {
-    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
     print_ser_output(status == 0 ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Client disconnected: error status: %i", status);
     return tcp_server_remove_client(arg);
 }
@@ -355,6 +358,7 @@ static err_t tcp_server_remove_client(void* arg)
 
 static err_t tcp_server_poll(void *arg, struct tcp_pcb *tpcb) 
 {
+    (void)tpcb;
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_SERVER, "TCP server poll, closing connection");
     return tcp_server_client_disconnected(arg, 0);
 }
@@ -369,7 +373,6 @@ static void tcp_server_err(void *arg, err_t err)
 
 static err_t tcp_server_result(void* arg, int status)
 {
-    TCP_SERVER_T* state = (TCP_SERVER_T*)arg;
     if (status != ERR_OK)
     {
         print_ser_output(status == 0 ? SEVERITY_INFO : SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_SERVER, "Server stopping: error status: %i", status);

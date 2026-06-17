@@ -145,7 +145,6 @@ void ms5607_get_value(sensor_t* sensor)
     }
     int32_t i, ret;
     uint32_t d1, d2;
-    uint8_t temp_buffer[3];
     double temp, press, off, sens, off2, sens2, td, t2;
     sensor->internal_error_state = PICO_OK;
 

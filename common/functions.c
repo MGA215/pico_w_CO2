@@ -72,7 +72,7 @@ uint32_t float2byte(float float_value)
 
 //     return *( (uint32_t*)&bytes[0]);
 
-    uint32_t output;
+    uint32_t output = 0;
     uint32_t bytes = 0;
     memcpy(&bytes, &float_value, 4);
     output |= (bytes & 0xFF000000) >> 24;

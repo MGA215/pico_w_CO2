@@ -55,13 +55,6 @@ static int32_t cdm_write_config(sensor_config_t* config);
  */
 static inline void cdm_power(sensor_t* cdm7162, bool on);
 
-/**
- * @brief Sets device operation mode to power down
- * 
- * @return int32_t Return code
- */
-static int32_t cdm_deinit(void); // DO NOT USE - Writes to EEPROM
-
 sensor_functions_t cdm7162_functions = {
     .sensor_get_value = cdm7162_get_value,
     .sensor_init = cdm7162_init,
@@ -151,14 +144,14 @@ void cdm7162_get_value(sensor_t* cdm7162)
             uint16_t val = 0; // Convert read CO2 to uint16_t
             val |= buf[1] << 0;
             val |= buf[2] << 8;
-            if (val < CO2_MIN_RANGE || val > CO2_MAX_RANGE) // If value out of range
+            if (val > CO2_MAX_RANGE) // If value out of range
             {
                 cdm7162->co2 = NAN; // Set CO2 to unknown
                 cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
                 cdm7162->internal_error_state = CDM7162_ERROR_RANGE; // Output RANGE ERROR state
                 return;
             }
-            cdm7162->co2 = val; // Save measured CO2
+            cdm7162->co2 = (float)val; // Save measured CO2
             print_ser_output(SEVERITY_TRACE, SOURCE_SENSORS, SOURCE_CDM7162, "Measured CO2 value: %f", cdm7162->co2);
             cdm7162->internal_error_state = SUCCESS; // Output SUCCESS state
             cdm7162->meas_state = MEAS_FINISHED; // Measurement finished
@@ -175,7 +168,6 @@ void cdm7162_get_value(sensor_t* cdm7162)
 void cdm7162_init(sensor_t* sensor)
 {
     int32_t ret;
-    uint8_t buf;
     if (sensor->sensor_type != CDM7162) // Check for correct sensor type
     {
         sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
@@ -191,6 +183,7 @@ void cdm7162_init(sensor_t* sensor)
 int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
+    (void)single_measurement_mode;
     uint8_t buf[4] = {0xFF};
     config->sensor_type = CDM7162;
 
@@ -342,7 +335,7 @@ static int32_t cdm_write_config(sensor_config_t* config)
     if (read_config.abc_period != config->abc_period) // Check period LTA
     {
         buf = 0;
-        uint8_t val;
+        uint8_t val = 0;
         uint16_t period = config->abc_period / 24; // Convert abc period to days
         if (period % 30 == 0)
         {
@@ -393,7 +386,7 @@ int32_t cdm7162_reset(void)
     return SUCCESS;
 }
 
-static int32_t cdm_deinit(void)
+int32_t cdm_deinit(void)
 {
     int32_t ret;
     uint8_t op_mode;

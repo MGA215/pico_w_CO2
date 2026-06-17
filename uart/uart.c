@@ -46,13 +46,13 @@ void uart_service_read_command(void)
         if (mutex_enter_timeout_ms(&config_data.command_mutex, MUTEX_TIMEOUT_MS))
         {
             uint32_t len = ptr;
-            decodeCOBS(buffer_recv, config_data.command, &len);
+            decodeCOBS(buffer_recv, config_data.command, (int32_t*)&len);
             mutex_exit(&config_data.command_mutex);
             memset(buffer_recv, 0x00, ptr);
             config_data.command_len = len;
             uint16_t data_len = service_comm_parse_message();
             if (config_data.command_len > CMD_PADDING + CMD_MAX_LEN || data_len > CMD_MAX_LEN) return; // Check message too long
-            if (config_data.command_len != data_len + CMD_PADDING) return; // Check message too short
+            if (config_data.command_len != (uint32_t)data_len + CMD_PADDING) return; // Check message too short
                 
             config_data.command_rdy = true;
             config_data.response_sent = false;
@@ -66,7 +66,7 @@ void uart_service_send_response(void)
     uint16_t response_len;
     if (mutex_enter_timeout_ms(&config_data.response_mutex, MUTEX_TIMEOUT_MS))
     {
-        encodeCOBS(config_data.response, buffer_sent, &config_data.response_len);
+        encodeCOBS(config_data.response, buffer_sent, (int32_t*)&config_data.response_len);
         response_len = config_data.response_len;
         mutex_exit(&config_data.response_mutex);
         config_data.response_rdy = false;

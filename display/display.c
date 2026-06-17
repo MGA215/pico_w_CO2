@@ -98,10 +98,10 @@ static uint8_t page_offset = 0;
 static uint8_t item_offset = 0;
 
 // Boot time string
-static uint8_t boot_time_str[30];
+static char boot_time_str[20];
 
 // FW version string
-static uint8_t fw_version_str[16];
+static char fw_version_str[16];
 
 
 
@@ -141,12 +141,12 @@ extern uint8_t debug_tcp_dns;
 
 #ifdef __TCP_CLIENT_H__
 // Time the last message was sent
-extern uint8_t last_message_time[32];
+extern char last_message_time[20];
 
 // Error of the last message sent
 extern uint8_t last_message_error;
 #else
-uint8_t last_message_time[32] = {0};
+uint8_t last_message_time[20] = {0};
 uint8_t last_message_error = 0;
 #endif
 
@@ -169,9 +169,9 @@ static void display_on_button_e();
 static void display_on_button_c_pressing(void);
 static void display_on_button_d_pressing(void);
 static void write_display(void);
-static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len);
-static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name);
-static void display_get_debug_str(uint8_t* buf, uint8_t len, uint8_t debug_severity);
+static void get_sensor_name_string(sensor_t* sensor, char* buf, uint8_t len);
+static void write_display_sensor(sensor_t* sensor, char* sensor_name);
+static void display_get_debug_str(char* buf, uint8_t len, uint8_t debug_severity);
 static uint64_t getFreeHeap(void);
 static void boot_time(void);
 
@@ -179,8 +179,8 @@ static void boot_time(void);
 void display_init(void)
 {
     rtc_init();
-    if (strlen(boot_time_str) == 0) boot_time();
-    snprintf(fw_version_str, 16, "%u.%u.%u.%u", (uint8_t)FW_VERSION_MAJOR, (uint8_t)FW_VERSION_MINOR, (uint8_t)FW_VERSION_PATCH, (uint8_t)FW_VERSION_BUILD);
+    if (strlen((char*)boot_time_str) == 0) boot_time();
+    snprintf(fw_version_str, 16, "%u.%u.%u.%u", (uint16_t)FW_VERSION_MAJOR, (uint16_t)FW_VERSION_MINOR, (uint16_t)FW_VERSION_PATCH, (uint16_t)FW_VERSION_BUILD);
     update_display_buffer = true;
     row = DISPLAY_NONE;
     row_select = 0;
@@ -194,7 +194,7 @@ void display_init(void)
 static void boot_time(void)
 {
     rtc_update();
-    memcpy(boot_time_str, datetime_str, 30);
+    memcpy(boot_time_str, datetime_str, 20);
     return;
 }
 
@@ -765,6 +765,10 @@ static void display_on_button_c()
             }
             break;
         }
+        default:
+        {
+            break;
+        }
     }
 }
 
@@ -962,8 +966,8 @@ static void display_on_button_d()
                 }
                 case 10:
                 {
-                    uint8_t buf[32];
-                    snprintf(buf, 32, "%i", to_ms_since_boot(get_absolute_time()) / 1000);
+                    char buf[32];
+                    snprintf(buf, 32, "%lu", to_ms_since_boot(get_absolute_time()) / 1000);
                     if ((int)item_offset < ((int)strlen(buf) - 21 + 14)) item_offset++; // Offset, 21 ... display width in chars, 14 ... length of prefix SINCE BOOT:_ _s
                     break;
                 }
@@ -973,6 +977,10 @@ static void display_on_button_d()
                     break;
                 }
             }
+            break;
+        }
+        default:
+        {
             break;
         }
     }
@@ -1035,7 +1043,7 @@ static void write_display(void)
     {
         case DISPLAY_NONE:
         {
-            uint8_t buf[32];
+            char buf[32];
             for (int i = 0; i < 5; i++)
             {
                 switch(page_offset + i)
@@ -1047,7 +1055,7 @@ static void write_display(void)
                     }
                     case 1:
                     {
-                        uint8_t debug_sev_str[6];
+                        char debug_sev_str[6];
                         display_get_debug_str(debug_sev_str, 6, debug);
                         snprintf(buf, 32, "DEBUG LEVEL: %s", debug_sev_str);
                         break;
@@ -1086,7 +1094,7 @@ static void write_display(void)
             if (sensor <= SENSOR_7 && sensor != SENSORS_NONE)
             {
                 uint8_t display_sensor = sensor - 1;
-                uint8_t sensor_name[24];
+                char sensor_name[24];
                 memset(sensor_name, 0x00, 24);
                 get_sensor_name_string(&sensors[display_sensor], sensor_name, 24);
 
@@ -1099,26 +1107,26 @@ static void write_display(void)
                 }
                 else write_display_sensor(&sensors[display_sensor], sensor_name); // Write sensor readings to the display
 
-                snprintf(sensor_name, 24, "ERRORS: %i", sensors[display_sensor].err_total_counter);
+                snprintf(sensor_name, 24, "ERRORS: %lu", sensors[display_sensor].err_total_counter);
                 position.x = 0;
                 position.y = 5;
                 gfx_pack_write_text(&position, sensor_name); // Write number of errors
             }
             else if (sensor == SENSOR_AUX_TRH)
             {
-                uint8_t sensor_name[24];
+                char sensor_name[24];
                 strcpy(sensor_name, "T/RH sensor");
                 position.x = 0;
                 position.y = 1;
                 write_display_sensor(&hyt271, sensor_name); // Write sensor readings to the display
-                snprintf(sensor_name, 24, "ERRORS: %i", hyt271.err_total_counter);
+                snprintf(sensor_name, 24, "ERRORS: %lu", hyt271.err_total_counter);
                 position.x = 0;
                 position.y = 5;
                 gfx_pack_write_text(&position, sensor_name); // Write number of errors
             }
             else if (sensor == SENSOR_AUX_P)
             {
-                uint8_t sensor_name[24];
+                char sensor_name[24];
                 strcpy(sensor_name, "P sensor");
                 position.x = 0;
                 position.y = 1;
@@ -1126,7 +1134,7 @@ static void write_display(void)
             }
             else 
             {
-                uint8_t buf[32];
+                char buf[32];
                 uint8_t sensor_index = sensor - 10 - 1;
                 switch(sensors[sensor_index].sensor_type)
                 {
@@ -1183,7 +1191,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -1259,12 +1267,12 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1273,7 +1281,7 @@ static void write_display(void)
                                 }
                                 case 11:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_altitude_comp)
                                         snprintf(buf2, 16, "%i m", sensors[sensor_index].config.altitude);
                                     else snprintf(buf2, 16, "-");
@@ -1383,7 +1391,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -1413,7 +1421,7 @@ static void write_display(void)
                                 }
                                 case 15:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1513,7 +1521,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -1543,7 +1551,7 @@ static void write_display(void)
                                 }
                                 case 15:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1643,7 +1651,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -1653,7 +1661,7 @@ static void write_display(void)
                                 }
                                 case 11:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1662,7 +1670,7 @@ static void write_display(void)
                                 }
                                 case 12:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_altitude_comp)
                                         snprintf(buf2, 16, "%i m", sensors[sensor_index].config.altitude);
                                     else snprintf(buf2, 16, "-");
@@ -1737,12 +1745,12 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1751,7 +1759,7 @@ static void write_display(void)
                                 }
                                 case 11:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_altitude_comp)
                                         snprintf(buf2, 16, "%i m", sensors[sensor_index].config.altitude);
                                     else snprintf(buf2, 16, "-");
@@ -1836,7 +1844,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -1846,7 +1854,7 @@ static void write_display(void)
                                 }
                                 case 11:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.enable_pressure_comp)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.pressure);
                                     else snprintf(buf2, 16, "-");
@@ -1875,7 +1883,7 @@ static void write_display(void)
                                 }
                                 case 16:
                                 {
-                                    uint8_t buf2[16];
+                                    char buf2[16];
                                     if (sensors[sensor_index].config.alarm_en)
                                         snprintf(buf2, 16, "%i hPa", sensors[sensor_index].config.alarm_treshold_co2_high);
                                     else snprintf(buf2, 16, "-");
@@ -1950,7 +1958,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -2031,7 +2039,7 @@ static void write_display(void)
                                 }
                                 case 9:
                                 {
-                                    snprintf(buf, 32, "POWER UP TIME: %u s", sensors[sensor_index].config.sensor_power_up_time);
+                                    snprintf(buf, 32, "POWER UP TIME: %lu s", sensors[sensor_index].config.sensor_power_up_time);
                                     break;
                                 }
                                 case 10:
@@ -2063,7 +2071,7 @@ static void write_display(void)
         {
             for (int i = 0; i < 5; i++)
             {
-                uint8_t buf[32];
+                char buf[32];
                 
                 switch (page_offset + i)
                 {
@@ -2223,17 +2231,17 @@ static void write_display(void)
         {
             for (int i = 0; i < 5; i++)
             {
-                uint8_t buf[48];
+                char buf[48];
                 switch (page_offset + i)
                 {
                     case 0:
                     {
-                        snprintf(buf, 32, "SN: %08x", global_configuration.ser_num);
+                        snprintf(buf, 32, "SN: %08lx", global_configuration.ser_num);
                         break;
                     }
                     case 1:
                     {
-                        snprintf(buf, 32, "AUX SN: %08x", global_configuration.ser_num_aux);
+                        snprintf(buf, 32, "AUX SN: %08lx", global_configuration.ser_num_aux);
                         break;
                     }
                     case 2:
@@ -2248,12 +2256,12 @@ static void write_display(void)
                     }
                     case 4:
                     {
-                        snprintf(buf, 32, "MEAS INT: %u s", global_configuration.meas_int_ms / 1000);
+                        snprintf(buf, 32, "MEAS INT: %lu s", global_configuration.meas_int_ms / 1000);
                         break;
                     }
                     case 5:
                     {
-                        snprintf(buf, 32, "SEND INT: %u s", global_configuration.soap_int / 1000);
+                        snprintf(buf, 32, "SEND INT: %lu s", global_configuration.soap_int / 1000);
                         break;
                     }
                     case 6:
@@ -2286,7 +2294,7 @@ static void write_display(void)
                     }
                     case 10:
                     {
-                        snprintf(buf, 32, "");
+                        buf[0] = '\0';
                         break;
                     }
                     default:
@@ -2306,7 +2314,7 @@ static void write_display(void)
         {
             for (int i = 0; i < 5; i++)
             {
-                uint8_t buf[32];
+                char buf[32];
                 switch (page_offset + i)
                 {
                     case 0:
@@ -2320,7 +2328,7 @@ static void write_display(void)
                     }
                     case 1:
                     {
-                        uint8_t server_state[12];
+                        char server_state[12];
 #ifdef __TCP_SERVER_H__
                         switch(tcp_server_is_running())
                         {
@@ -2387,7 +2395,7 @@ static void write_display(void)
                     }
                     case 8:
                     {
-                        uint8_t svc_mode_str[12];
+                        char svc_mode_str[12];
                         switch (service_mode)
                         {
                             case SERVICE_MODE_DISABLED:
@@ -2417,7 +2425,7 @@ static void write_display(void)
                     }
                     case 10:
                     {
-                        snprintf(buf, 32, "SINCE BOOT: %i s", to_ms_since_boot(get_absolute_time()) / 1000);
+                        snprintf(buf, 32, "SINCE BOOT: %lu s", to_ms_since_boot(get_absolute_time()) / 1000);
                         break;
                     }
                     case 11:
@@ -2440,15 +2448,15 @@ static void write_display(void)
         }
         case CHANNELS:
         {
-            uint8_t buf[32];
+            char buf[32];
             position.x = 0;
             position.y = 1;
             gfx_pack_write_text(&position, "NO|SENSOR|ACT|UNIT");
-            for (int i = 0; i < 4; i++)
+            for (uint8_t i = 0; i < 4; i++)
             {
                 if (page_offset + i < 16)
                 {
-                    uint8_t unit[4];
+                    char unit[4];
                     switch (global_configuration.channel_quant[page_offset + i])
                     {
                         case MEASURED_VALUE_CO2:
@@ -2466,7 +2474,7 @@ static void write_display(void)
                 }
                 else
                 {
-                    uint8_t unit[4] = {0};
+                    char unit[4] = {0};
                     switch (channels2[page_offset + i - 16]->measured_value_type)
                     {
                         case MEASURED_VALUE_CO2:
@@ -2491,7 +2499,7 @@ static void write_display(void)
     return;
 }
 
-static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
+static void get_sensor_name_string(sensor_t* sensor, char* buf, uint8_t len)
 {
     if (len < 24) return;
     switch(sensor->sensor_type) // On sensor type generate string
@@ -2560,7 +2568,7 @@ static void get_sensor_name_string(sensor_t* sensor, uint8_t* buf, uint8_t len)
 //         bool temp, float temp_value, 
 //         bool pressure, float pressure_value,
 //         bool humidity, float humidity_value)
-static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
+static void write_display_sensor(sensor_t* sensor, char* sensor_name)
 {
     bool co2 = sensor->config.co2_en;
     float co2_value = sensor->co2;
@@ -2581,8 +2589,7 @@ static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
             case INITIALIZED:
                 state = ERROR_SENSOR_NOT_VERIFIED;
                 break;
-            case VERIFIED_NO_MEAS:
-                state = ERROR_SENSOR_NO_MEAS;
+            case SENSOR_OK:
                 break;
         }
     }
@@ -2600,9 +2607,9 @@ static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
 
     if (state != 0) // If sensor in invalid state
     {
-        uint8_t buf[6];
+        char buf[6];
         
-        snprintf(buf, 6, "E%i", state);
+        snprintf(buf, 6, "E%li", state);
         gfx_pack_write_text(&position, buf); // Write error code (sensor state)
         row++;
         position.x = 0;
@@ -2610,7 +2617,7 @@ static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
     }
     else
     {
-        uint8_t buf[16];
+        char buf[16];
         memset(buf, 0x00, 16);
 
         if (co2)
@@ -2653,7 +2660,7 @@ static void write_display_sensor(sensor_t* sensor, uint8_t* sensor_name)
     }
 }
 
-static void display_get_debug_str(uint8_t* buf, uint8_t len, uint8_t debug_severity)
+static void display_get_debug_str(char* buf, uint8_t len, uint8_t debug_severity)
 {
     switch (debug_severity)
     {

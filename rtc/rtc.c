@@ -52,7 +52,7 @@ bool rtc_update(void)
         if (datetime.year == dt.year && datetime.month == dt.month &&
             datetime.dotw == dt.dotw && datetime.day == dt.day &&
             datetime.hour == dt.hour && datetime.min == dt.minutes && datetime.sec == dt.seconds) return false; // Check for the same time
-        datetime2str(datetime_str, 30, &dt); // convert datetime to string
+        datetime2str(datetime_str, 20, &dt); // convert datetime to string
         datetime.year = dt.year; // Update time
         datetime.month = dt.month;
         datetime.day = dt.day;

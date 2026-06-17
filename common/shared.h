@@ -30,7 +30,7 @@ extern message_channel channels1[16];
 extern message_channel_general_t* channels2[16];
 
 extern datetime_t datetime;
-extern uint8_t datetime_str[30];
+extern char datetime_str[20];
 
 extern float cozir_unfiltered;
 

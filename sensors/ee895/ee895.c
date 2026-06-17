@@ -452,7 +452,7 @@ void ee895_init(sensor_t* sensor)
         sensor->internal_error_state = ret;
         return;
     }
-    if (strcmp(fw_read_name, "EE895") != 0) // Check sensor name
+    if (strcmp((char*)fw_read_name, "EE895") != 0) // Check sensor name
     {
         sensor->error_state = ERROR_SENSOR_UNKNOWN_SENSOR;
         return;
@@ -491,7 +491,6 @@ int32_t ee895_read_config(sensor_config_t* config, bool single_measurement_mode)
 static int32_t ee_write_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint8_t buf[6] = {0};
 
     sensor_config_t read_config;
     if ((ret = ee895_read_config(&read_config, config->single_meas_mode)) != 0) return ret; // Read config

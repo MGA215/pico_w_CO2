@@ -91,49 +91,49 @@ static debug_configuration_t config_normal =
     .debug_tcp_dns = 3,
 };
 
-static debug_configuration_t config_debug =
-{
-    .debug_main_init = 5,
-    .debug_main_loop = 5,
-    .debug_soap = 5,
-    .debug_rtc = 5,
-    .debug_eeprom = 5,
-    .debug_display = 5,
-    .debug_gfx = 5,
-    .debug_ram = 5,
-    .debug_service_comm = 5,
+// static debug_configuration_t config_debug =
+// {
+//     .debug_main_init = 5,
+//     .debug_main_loop = 5,
+//     .debug_soap = 5,
+//     .debug_rtc = 5,
+//     .debug_eeprom = 5,
+//     .debug_display = 5,
+//     .debug_gfx = 5,
+//     .debug_ram = 5,
+//     .debug_service_comm = 5,
 
-    .debug_sensors = 5,
+//     .debug_sensors = 5,
 
-    .debug_mux = 5,
-    .debug_power = 5,
-    .debug_ms5607 = 5,
-    .debug_hyt271 = 5,
+//     .debug_mux = 5,
+//     .debug_power = 5,
+//     .debug_ms5607 = 5,
+//     .debug_hyt271 = 5,
 
-    .debug_sensor_unknown = 5,
-    .debug_ee895 = 5,
-    .debug_cdm7162 = 5,
-    .debug_sunrise = 5,
-    .debug_sunlight = 5,
-    .debug_scd30 = 5,
-    .debug_scd41 = 5,
-    .debug_cozir_lp3 = 5,
-    .debug_cm1107n = 5,
-    .debug_ee872 = 5,
-    .debug_generic_co2 = 5,
+//     .debug_sensor_unknown = 5,
+//     .debug_ee895 = 5,
+//     .debug_cdm7162 = 5,
+//     .debug_sunrise = 5,
+//     .debug_sunlight = 5,
+//     .debug_scd30 = 5,
+//     .debug_scd41 = 5,
+//     .debug_cozir_lp3 = 5,
+//     .debug_cm1107n = 5,
+//     .debug_ee872 = 5,
+//     .debug_generic_co2 = 5,
 
-    .debug_wifi = 5,
-    .debug_tcp_client = 5,
-    .debug_tcp_server = 5,
-    .debug_tcp_dns = 5,
-};
+//     .debug_wifi = 5,
+//     .debug_tcp_client = 5,
+//     .debug_tcp_server = 5,
+//     .debug_tcp_dns = 5,
+// };
 
 debug_configuration_t* debug_configuration = &config_normal;
 
 static mutex_t uart_mutex;
 
 
-void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const uint8_t* message, ...)
+void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const char* message, ...)
 {
     if (!mutex_is_initialized(&uart_mutex)) mutex_init(&uart_mutex);
     
@@ -141,11 +141,11 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
     {
         int32_t message_len = strlen(message);
         message_len += 64;
-        uint8_t buf[message_len];
-        uint8_t severity_str[8];
-        uint8_t severity_color[12];
-        uint8_t source_str[13] = "            ";
-        uint8_t subsource_str[13] = "            ";
+        char buf[message_len];
+        char severity_str[8];
+        char severity_color[12];
+        char source_str[13] = "            ";
+        char subsource_str[13] = "            ";
 
         switch(source)
         {
@@ -441,7 +441,7 @@ void print_ser_output(debug_severity_e severity, debug_source_e source, debug_so
 
         if (mutex_enter_timeout_ms(&uart_mutex, 100))
         {
-            printf("%s[%8u.%03u] %s %s %s %s\n"RESET"", severity_color, time_sec, time_ms, severity_str, source_str, subsource_str, buf);
+            printf("%s[%8lu.%03u] %s %s %s %s\n"RESET"", severity_color, time_sec, time_ms, severity_str, source_str, subsource_str, buf);
             mutex_exit(&uart_mutex);
         }
     }

@@ -96,7 +96,7 @@ int32_t scd30_read(uint16_t command, uint16_t* buf, uint32_t len)
     if ((ret = scd30_write_command(command))) return ret; // Send command
     busy_wait_ms(3);
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD30_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read resonse
-    for (int i = 0; i < len; i++) // Check each word CRC
+    for (uint32_t i = 0; i < len; i++) // Check each word CRC
     {
         if (s30_crc(&read_data[3 * i], 3) != 0) return SCD30_ERROR_CRC; // Check data CRC
         uint16_t val = ((read_data[3 * i + 1]) << 8) | (read_data[3 * i]);
@@ -267,6 +267,7 @@ int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode)
 {
     int32_t ret;
     uint16_t val;
+    (void)single_measurement_mode;
     config->sensor_type = SCD30;
     if ((ret = scd30_read(CMD_START_CONT_MEAS, &val, 1)) != 0) return ret; // Read pressure
     config->pressure = val;
@@ -292,7 +293,6 @@ int32_t scd30_read_config(sensor_config_t* config, bool single_measurement_mode)
 static int32_t s30_write_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint16_t val;
     sensor_config_t read_config;
     if ((ret = scd30_read_config(&read_config, false)) != 0) return ret; // Read config
 

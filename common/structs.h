@@ -44,8 +44,7 @@ typedef enum sensor_state
 {
     SENSOR_OK = 0,
     NOT_INITIALIZED = 1,
-    INITIALIZED = 2,
-    VERIFIED_NO_MEAS = 3,
+    INITIALIZED = 2
 } sensor_state_e;
 
 typedef enum meas_state_fsm
@@ -164,7 +163,7 @@ struct sensor
 
 typedef struct soap_data
 {
-    uint8_t data[MAX_SOAP_SIZE];
+    char data[MAX_SOAP_SIZE];
     uint16_t data_len;
     mutex_t data_mutex;
 } soap_data_t;
@@ -213,7 +212,7 @@ typedef struct
 
 typedef struct
 {
-    uint8_t channel_name[16];
+    char channel_name[16];
     bool channel_active;
     measured_value_type_e measured_value_type;
     float* measured_value;
@@ -231,28 +230,28 @@ typedef struct
 {
     uint32_t ser_num;
     uint32_t ser_num_aux;
-    uint8_t channel_act[16];
+    char channel_act[16];
     uint8_t channel_idx[16];
-    uint8_t channel_quant[16];
+    char channel_quant[16];
     uint8_t sta_security;
     uint8_t wlan_mode;
-    uint8_t host_name[32];
-    uint8_t sta_ssid[32];
-    uint8_t sta_password[32];
-    uint8_t sta_ip[16];
-    uint8_t sta_gw[16];
-    uint8_t sta_mask[16];
-    uint8_t sta_dns[16];
-    uint8_t soap_ip[32];
-    uint8_t soap_path[32];
+    char host_name[32];
+    char sta_ssid[32];
+    char sta_password[32];
+    char sta_ip[16];
+    char sta_gw[16];
+    char sta_mask[16];
+    char sta_dns[16];
+    char soap_ip[32];
+    char soap_path[32];
     uint16_t soap_port;
-    uint8_t cloud_ip[32];
-    uint8_t cloud_path[32];
+    char cloud_ip[32];
+    char cloud_path[32];
     uint16_t cloud_port;
     uint32_t meas_int_ms;
     uint32_t soap_int;
     uint8_t soap_mode;
-    uint8_t device_desc[16];
+    char device_desc[16];
     uint8_t aux_msg;
     bool reinit_sensors_on_error;
 } global_config_t;

@@ -78,6 +78,7 @@
 #define CONFIG_SEND_BUFFER_SIZE 4096
 #define CONFIG_RECVD_BUFFER_SIZE 300 + 60
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 // value representing the interval between display draws in ms
 static uint16_t display_interval = 33;
@@ -87,6 +88,8 @@ static uint32_t wifi_wait_next_connect_ms = 30000;
 
 // value representing the timeout for DNS server to resolve host IP in ms
 static uint32_t wifi_wait_for_dns = 30000;
+
+#pragma GCC diagnostic warning "-Wunused-variable"
 
 
 #endif

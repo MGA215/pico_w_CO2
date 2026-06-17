@@ -86,10 +86,10 @@ void encodeBase64(uint8_t *bStr, uint16_t bLen, uint8_t *chBase64) {
 void decodeBase64(uint8_t *chBase64, uint8_t *chStr) {
 
   unsigned char *bTmp1;
-  int i, x, shifter;
+  int x, shifter = 0;
   int cnt = -1;
 
-  for (i = 0; i < strlen((char*)chBase64); i++) {
+  for (uint i = 0; i < strlen((char*)chBase64); i++) {
 
     bTmp1 = (unsigned char*)strchr((char*)bBase64, *(chBase64+i));
     if (!bTmp1) {

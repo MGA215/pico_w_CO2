@@ -28,16 +28,16 @@ static uint16_t header_size = 512;
 #define SOAP_TEMP_BUF_LEN 64
 #define MAX_URL_LEN 64
 
-void create_http_header(uint8_t* ip_url_addr, bool is_cloud, uint8_t* path, uint16_t port, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex, uint8_t* out_buf, uint16_t out_buf_size)
+void create_http_header(char* ip_url_addr, bool is_cloud, char* path, uint16_t port, char* soap_action, char* data, uint16_t data_len, mutex_t* data_mutex, char* out_buf, uint16_t out_buf_size)
 {
-    uint8_t header[header_size]; // Create header buffer
+    char header[header_size]; // Create header buffer
     memset(header, 0x00, header_size);
 
-    if (strlen(soap_action) > MAX_SOAP_ACTION_LEN || is_cloud && strlen(ip_url_addr) > MAX_URL_LEN) return; // Check max lengths
+    if (strlen(soap_action) > MAX_SOAP_ACTION_LEN || (is_cloud && strlen(ip_url_addr) > MAX_URL_LEN)) return; // Check max lengths
     if (is_cloud) // Cloud header
     {
         uint8_t soap_temp_buf[SOAP_TEMP_BUF_LEN] = {0};
-        calcCloudKey(data, data_len, soapSecretKey, soap_temp_buf);
+        calcCloudKey((uint8_t*)data, data_len, (uint8_t*)soapSecretKey, soap_temp_buf);
         snprintf(header, header_size, "POST http://%s%s HTTP/1.1\r\nHost: http://%s\r\nContent-Type: text/xml; charset=utf-8\r\nX-COMET-Key: %s\r\nContent-Length: %u\r\nSOAPAction: \"%s\"\r\n\r\n",
             ip_url_addr, path, ip_url_addr, soap_temp_buf, data_len, soap_action); // Create header
     }

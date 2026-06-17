@@ -391,6 +391,7 @@ int32_t sunlight_read_config(sensor_config_t* config, bool single_measurement_mo
     int32_t ret;
     uint8_t buf[13] = {0};
     uint8_t data = 0xFF;
+    (void)single_measurement_mode;
     config->sensor_type = SUNLIGHT;
 
     //sunlight_write(REG_CLEAR_ERROR, &data, 1); // Wake sensor up
@@ -420,7 +421,6 @@ int32_t sunlight_read_config(sensor_config_t* config, bool single_measurement_mo
 
 static int32_t sl_write_config(sensor_config_t* config)
 {
-    bool changed = false;
     int32_t ret;
     sensor_config_t read_config;
     if ((ret = sunlight_read_config(&read_config, false)) != 0) return ret; // Read SUNRISE config
@@ -433,7 +433,6 @@ static int32_t sl_write_config(sensor_config_t* config)
         read_config.invert_nRDY != config->invert_nRDY)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Config - Writing meter control");
-        changed = true;
         uint8_t data = 0; // meter control vector
         data |= !config->enable_nRDY;
         data |= !config->enable_abc << 1;
@@ -452,7 +451,6 @@ static int32_t sl_write_config(sensor_config_t* config)
         read_config.filter_coeff != config->filter_coeff)
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SUNLIGHT, "Config - Writing full configuration");
-        changed = true;
         uint8_t command_buf[13] = {0};
         command_buf[0] = (uint8_t)config->single_meas_mode; // Prepare command buffer
         uint16_t val = ntoh16(config->meas_period);

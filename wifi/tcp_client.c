@@ -32,7 +32,7 @@
 typedef struct TCP_CLIENT_T_ {
     struct tcp_pcb *tcp_pcb;
     ip_addr_t remote_addr;
-    uint8_t buffer[BUF_SIZE];
+    char buffer[BUF_SIZE];
     int buffer_len;
     int sent_len;
     bool complete;
@@ -69,7 +69,7 @@ static uint16_t data_sent_len;
 static bool client_start = false;
 
 // Last message timestamp
-uint8_t last_message_time[32] = {0};
+char last_message_time[20] = {0};
 
 // Last error code
 uint8_t last_message_error = ERR_OK;
@@ -151,7 +151,7 @@ static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len);
  * @param arg TCP client structure
  * @return err_t Return error
  */
-static err_t tcp_client_send(void* arg, uint8_t* data);
+static err_t tcp_client_send(void* arg, char* data);
 
 /**
  * @brief Callback when client receives any data
@@ -269,7 +269,7 @@ void tcp_state_machine(void)
         {
             print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Successfully sent message %i at %s", message_index, datetime_str);
             if (global_configuration.aux_msg) message_index = (message_index + 1) % 2; // Prepare for the next message
-            memcpy(last_message_time, datetime_str, 30); // Save last message sent datetime
+            memcpy(last_message_time, datetime_str, 20); // Save last message sent datetime
             new_state = STATE_CONNECTION_CLOSING; // Close client
             break;
         }
@@ -297,7 +297,7 @@ bool tcp_client_is_running(void)
     return client_state ? true : false;
 }
 
-err_t tcp_client_init(bool* retry_send)
+err_t tcp_client_init(void)
 {
     memset(&state, 0x00, sizeof(TCP_CLIENT_T)); // Create clear structure
     if (global_configuration.soap_mode == 0x02) // data to cloud
@@ -328,6 +328,8 @@ err_t tcp_client_init(bool* retry_send)
 
 void tcp_client_ip_found(const char *name, const ip_addr_t *ipaddr, void *callback_arg)
 {
+    (void)name;
+    (void)callback_arg;
     state.remote_addr = *ipaddr; // Assign IP address
     ip_found = true; // IP was found
     print_ser_output(SEVERITY_INFO, SOURCE_WIFI, SOURCE_TCP_DNS, "IP address found");
@@ -371,6 +373,7 @@ static bool tcp_client_open(void* arg)
 
 static err_t tcp_client_poll(void* arg, struct tcp_pcb* tpcb)
 {
+    (void)tpcb;
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Client poll, closing connection");
     return tcp_client_result(arg, 0);
 }
@@ -410,14 +413,15 @@ static err_t tcp_client_recv(void* arg, struct tcp_pcb* tpcb, struct pbuf* p, er
 
 static err_t tcp_client_sent(void* arg, struct tcp_pcb* tpcb, u16_t len)
 {
-    TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
+    (void)tpcb;
+    (void)arg;
     print_ser_output(SEVERITY_DEBUG, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message sending finished, sent %u bytes", len);
     data_sent = true; // Data sent
     data_sent_len = len; // Copy data sent length
     return ERR_OK;
 }
 
-static err_t tcp_client_send(void* arg, uint8_t* data)
+static err_t tcp_client_send(void* arg, char* data)
 {
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     print_ser_output(SEVERITY_TRACE, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Message:\n");
@@ -448,12 +452,13 @@ static err_t tcp_client_send(void* arg, uint8_t* data)
         print_ser_output(SEVERITY_ERROR, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Failed to send data: %i", err);
         return err;
     }
-    memcpy(last_message_time, datetime_str, 30);
+    memcpy(last_message_time, datetime_str, 20);
     return ERR_OK;
 }
 
 static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
 {
+    (void)tpcb;
     TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     if (err != ERR_OK) // Check for errors
     {
@@ -468,7 +473,6 @@ static err_t tcp_client_connected(void* arg, struct tcp_pcb* tpcb, err_t err)
 
 static err_t tcp_client_result(void* arg, int status)
 {
-    TCP_CLIENT_T* state = (TCP_CLIENT_T*)arg;
     if (status == ERR_CLSD) // Error server closed
     {
         print_ser_output(SEVERITY_WARN, SOURCE_WIFI, SOURCE_TCP_CLIENT, "Server closed connection");

@@ -25,6 +25,6 @@
  * @param out_buf Output buffer the message will be saved to
  * @param out_buf_size Size of the output buffer
  */
-void create_http_header(uint8_t* ip_url_addr, bool is_cloud, uint8_t* path, uint16_t port, uint8_t* soap_action, uint8_t* data, uint16_t data_len, mutex_t* data_mutex, uint8_t* out_buf, uint16_t out_buf_size);
+void create_http_header(char* ip_url_addr, bool is_cloud, char* path, uint16_t port, char* soap_action, char* data, uint16_t data_len, mutex_t* data_mutex, char* out_buf, uint16_t out_buf_size);
 
 #endif

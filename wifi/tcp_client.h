@@ -16,7 +16,7 @@
 #include "lwip/err.h"
 
 // Last message timestamp
-extern uint8_t last_message_time[32];
+extern char last_message_time[20];
 
 // Last error code
 extern uint8_t last_message_error;
@@ -26,10 +26,9 @@ extern uint8_t last_message_error;
 /**
  * @brief Initializes the TCP structures and sets IP address
  * 
- * @param retry_send Pointer to bool if message should be tried to be sent again
  * @return err_t Error code
  */
-err_t tcp_client_init(bool* retry_send);
+err_t tcp_client_init();
 
 /**
  * @brief Runs the TCP client state machine

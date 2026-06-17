@@ -305,7 +305,7 @@ static inline int32_t serializer_check_values(sensor_config_t* config)
         }
         case SCD41:
         {
-            if (config->altitude < 0 || config->altitude > 3000) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
+            if (config->altitude > 3000) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             if (config->pressure < 700 || config->pressure > 1200) return ERROR_DESERIALIZATION_VALUE_OUT_OF_RAGE;
             break;
         }

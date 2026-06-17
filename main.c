@@ -81,8 +81,6 @@ void core1_main(void)
 
 int32_t init(void)
 {
-    int32_t ret;
-
     if (!stdio_init_all()) return ERROR_STDIO_INIT; // Initializing STDIO
 
     init_sensor_i2c();

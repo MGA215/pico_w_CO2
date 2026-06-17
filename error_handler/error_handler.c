@@ -3,31 +3,20 @@
 #include "common/debug.h"
 #include "hardware/watchdog.h"
 #include "hardware/exception.h"
+#include "pico/multicore.h"
+#include <stdio.h>
 
-#define HARDFAULT_HANDLING_ASM(_x)             \
-  __asm volatile(                              \
-	"mov r1, lr\n"                             \
-	"lsr r0, r1, #2\n"                         \
-	"cmp r0, #0\n"                             \
-	"bne psp_act\n"                            \
-	"mrs r0, msp\n"                            \
-	"b core_0_call_handler\n"                  \
-	"psp_act:\n"                               \
-	"mrs r0, psp\n"                            \
-	"core_0_call_handler:\n"                   \
-	"b core0_handler \n"                       \
-	)
 
-typedef struct __attribute__((packed)) ContextStateFrame {
-	uint32_t r0;
-	uint32_t r1;
-	uint32_t r2;
-	uint32_t r3;
-	uint32_t r12;
-	uint32_t lr;
-	uint32_t return_address;
-	uint32_t xpsr;
-} sContextStateFrame;
+typedef struct {
+    uint32_t r0;
+    uint32_t r1;
+    uint32_t r2;
+    uint32_t r3;
+    uint32_t r12;
+    uint32_t lr;  // Link Register (Return address of the calling function)
+    uint32_t pc;  // Program Counter (The EXACT instruction that crashed)
+    uint32_t psr; // Program Status Register
+} StackFrame;
 
 
 // Default exception handler for hardfault
@@ -35,50 +24,73 @@ exception_handler_t hardfault_default_handler = NULL;
 
 
 static void error_handler_set(exception_handler_t handle, enum exception_number exception);
-
-
-__attribute__((optimize("O0")))
-void core0_handler(sContextStateFrame *frame) {
-	// If and only if a debugger is attached, execute a breakpoint
-	// instruction so we can take a look at what triggered the fault
-	__asm("bkpt 1");
-
-	// Logic for dealing with the exception. Typically:
-	//  - log the fault which occurred for postmortem analysis
-	//  - If the fault is recoverable,
-	//    - clear errors and return back to Thread Mode
-	//  - else
-	//    - reboot system
-}
+void hardfault_analyzer_c(StackFrame *frame);
 
 __attribute__((optimize("O0")))
-void __attribute__((noreturn)) core0_hardfault_handler(void)
+void __attribute__((noreturn)) __time_critical_func(core0_hardfault_handler)(void)
 {
-    // __asm volatile(                                
-    //   "mov r1, lr\n"                             
-    //   "lsr r0, r1, #2\n"                         
-    //   "cmp r0, #0\n"                             
-    //   "bne psp_act\n"                            
-    //   "mrs r0, msp\n"                            
-    //   "b core_0_call_handler\n"                  
-    //   "psp_act:\n"                               
-    //   "mrs r0, psp\n"                            
-    //   "core_0_call_handler:\n"                   
-    //   "b core0_handler \n"                       
-    //                                              );
-    // if (stdio_init_all())
-    //     print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Hardfault at core 0, rebooting");
-    watchdog_enable(1, 1);
+    print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Hardfault at core 0");
+	__asm volatile (
+        "movs r0, #4          		\n" // Check bit 2 of Link Register (LR)
+        "mov r1, lr           		\n"
+        "tst r0, r1           		\n"
+        "beq use_msp_c0       		\n"	 // If bit 2 is 0, crash happened on MSP
+        "mrs r0, psp          		\n" // If bit 2 is 1, crash happened on PSP
+        "b call_c_handler_c0  		\n"
+        "use_msp_c0:          		\n"
+        "mrs r0, msp          		\n"
+        "call_c_handler_c0:   		\n"
+        "ldr r1, handler_addr_c0 	\n" // Load address of our C analyzer
+        "bx r1                		\n"
+		".align 2             		\n"
+        "handler_addr_c0: .word hardfault_analyzer_c \n"
+    );
     while (true) tight_loop_contents();
 }
 
 __attribute__((optimize("O0")))
-void __attribute__((noreturn)) core1_hardfault_handler(void)
+void __attribute__((noreturn)) __time_critical_func(core1_hardfault_handler)(void)
 {
-    // if (stdio_init_all())
-    //     print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Hardfault at core 1, rebooting");
-    watchdog_enable(1, 1);
+    print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Hardfault at core 1");
+	__asm volatile (
+        "movs r0, #4          		\n" // Check bit 2 of Link Register (LR)
+        "mov r1, lr           		\n"
+        "tst r0, r1           		\n"
+        "beq use_msp_c1       		\n"	 // If bit 2 is 0, crash happened on MSP
+        "mrs r0, psp          		\n" // If bit 2 is 1, crash happened on PSP
+        "b call_c_handler_c1  		\n"
+        "use_msp_c1:          		\n"
+        "mrs r0, msp          		\n"
+        "call_c_handler_c1:   		\n"
+        "ldr r1, handler_addr_c1 	\n" // Load address of our C analyzer
+        "bx r1                		\n"
+		".align 2             		\n"
+        "handler_addr_c1: .word hardfault_analyzer_c \n"
+    );
     while (true) tight_loop_contents();
+}
+
+__attribute__((optimize("O0")))
+void hardfault_analyzer_c(StackFrame *frame) 
+{
+    // Crucial debugging info:
+    // uint32_t crashing_instruction_address = frame->pc;
+    // uint32_t caller_function_address = frame->lr;
+
+    printf("--- HARDFAULT DETECTED ---\n");
+    printf("R0  = 0x%08lx\n", frame->r0);
+    printf("R1  = 0x%08lx\n", frame->r1);
+    printf("R2  = 0x%08lx\n", frame->r2);
+    printf("R3  = 0x%08lx\n", frame->r3);
+    printf("R12 = 0x%08lx\n", frame->r12);
+    printf("LR  = 0x%08lx\n", frame->lr);
+    printf("PC  = 0x%08lx\n", frame->pc);
+    printf("PSR = 0x%08lx\n", frame->psr);
+
+    // Stop execution
+    while (1) {
+        __breakpoint(); 
+    }
 }
 
 void error_handler_set_hardfault_core0(void)
@@ -112,7 +124,7 @@ static void error_handler_set(exception_handler_t handle, enum exception_number 
 	}
 	else
 	{
-		print_ser_output(SEVERITY_FATAL, SOURCE_WIFI, SOURCE_NO_SOURCE, "Failed to assign exception handler, resetting device..."); // Failed to assign exception handler
+		print_ser_output(SEVERITY_FATAL, SOURCE_NO_SOURCE, SOURCE_NO_SOURCE, "Failed to assign exception handler, resetting device..."); // Failed to assign exception handler
 		watchdog_enable(1, 1);
 		return;
 	}

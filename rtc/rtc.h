@@ -13,7 +13,7 @@
 #define __RTC_H__
 
 extern datetime_t datetime;
-extern uint8_t datetime_str[30];
+extern char datetime_str[20];
 
 /**
  * @brief Initializes the RTC structures

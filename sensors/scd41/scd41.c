@@ -84,12 +84,6 @@ static int32_t s41_write_config(sensor_config_t* config);
  */
 static inline void s41_power(sensor_t* scd41, bool on);
 
-/**
- * @brief Performs factory reset on the sensor
- * 
- */
-static void s41_factory_reset(void);
-
 
 static inline uint8_t s41_crc(uint8_t* buf, uint32_t len)
 {
@@ -127,7 +121,7 @@ int32_t scd41_read(uint16_t command, uint16_t* buf, uint32_t len)
     if ((ret = i2c_write_timeout_us(I2C_SENSOR, SCD41_ADDR, commandBuf, 2, true, I2C_TIMEOUT_US)) < 0) return ret; // Send command blocking
     busy_wait_ms(1); // Wait between write and read
     if ((ret = i2c_read_timeout_us(I2C_SENSOR, SCD41_ADDR, read_data, (len * 3), false, I2C_TIMEOUT_US)) < 0) return ret; // Read response
-    for (int i = 0; i < len; i++) // Check response crcs
+    for (uint32_t i = 0; i < len; i++) // Check response crcs
     {
         if (s41_crc(&read_data[3 * i], 3) != 0) return SCD41_ERROR_CRC; // Check word CRC
         uint16_t val = ((read_data[3 * i + 1]) << 8) | (read_data[3 * i]);
@@ -383,7 +377,6 @@ int32_t scd41_read_config(sensor_config_t* config, bool single_meas_mode)
 static int32_t s41_write_config(sensor_config_t* config)
 {
     int32_t ret;
-    uint16_t val;
     bool changed = false;
     sensor_config_t read_config;
 
@@ -409,7 +402,7 @@ static int32_t s41_write_config(sensor_config_t* config)
     }
 
     if (config->enable_altitude_comp != read_config.enable_altitude_comp ||
-        config->enable_altitude_comp && (config->altitude != read_config.altitude)) // Check altitude
+        (config->enable_altitude_comp && (config->altitude != read_config.altitude))) // Check altitude
     {
         print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD41, "Config - Writing altitude");
         if (config->enable_altitude_comp) // If altitude compensation should be enabled
@@ -464,7 +457,7 @@ void scd41_reset(void)
     sleep_ms(30);
 }
 
-static void s41_factory_reset(void)
+void s41_factory_reset(void)
 {
     scd41_write_command(CMD_FACTORY_RESET); // Factory reset the sensor
     sleep_ms(1200);

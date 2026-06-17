@@ -249,6 +249,7 @@ int32_t cm1107n_read_config(sensor_config_t* config, bool single_measurement_mod
 {
     int32_t ret;
     uint8_t buf[6];
+    (void)single_measurement_mode;
     config->sensor_type = CM1107N;
     if ((ret = cm1107n_read(CMD_ABC, buf, 6)) != 0) return ret; // Read ABC calibration data
     config->enable_abc = buf[1] != 2; // Check ABC on

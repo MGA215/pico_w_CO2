@@ -30,6 +30,7 @@ if (PICO_SDK_VERSION_STRING VERSION_LESS "1.4.0")
 endif()
 
 project(pico_w_CO2 C CXX ASM)
+add_compile_options(-Wall -Wextra -Wformat=2 -Warray-bounds -Wstringop-overflow)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -111,3 +112,4 @@ pico_add_extra_outputs(pico_w_CO2)
 
 add_custom_command(TARGET pico_w_CO2 POST_BUILD
     COMMAND arm-none-eabi-objdump -S pico_w_CO2.elf > pico_w_CO2.lst)
+

@@ -29,11 +29,7 @@
 static bool wifi = false;
 absolute_time_t send_data_time;
 static absolute_time_t wait_dns;
-static bool data_client_sending = false;
-static uint8_t message_index;
-static uint8_t message_sent_index;
 static bool sending = false;
-static bool retry_send_message = false;
 
 static bool enable_tcp_closing;
 
@@ -49,7 +45,7 @@ extern bool ip_found;
  * @param auth_mode WiFi auth mode
  * @return int Return code
  */
-static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode);
+static int wifi_connect(int32_t timeout_ms, char* ssid, char* password, uint32_t auth_mode);
 
 /**
  * @brief Loop
@@ -66,14 +62,15 @@ static void wifi_init(void);
 
  // Callback function for the wifi scan
 static int scan_result(void *env, const cyw43_ev_scan_result_t *result) {
-    if (result && !strcmp(result->ssid, global_configuration.sta_ssid)) 
+    (void)env;
+    if (result && !strcmp((char*)result->ssid, global_configuration.sta_ssid)) 
     {
         wifi = true;
     }
     return 0;
 }
 
-static int wifi_connect(int32_t timeout_ms, uint8_t* ssid, uint8_t* password, uint32_t auth_mode)
+static int wifi_connect(int32_t timeout_ms, char* ssid, char* password, uint32_t auth_mode)
 {
     absolute_time_t scan_time = nil_time; // Scan time
     absolute_time_t wifi_timeout = make_timeout_time_us(1000 * (uint64_t)timeout_ms); // Wifi timeout time
@@ -179,7 +176,7 @@ void wifi_main()
             continue;
         }
         wifi_wait_next_connect_time = nil_time;
-        tcp_client_init(&retry_send_message); // Initialize TCP client
+        tcp_client_init(); // Initialize TCP client
         tcp_server_init(); // Initialize TCP server structs
 
         send_data_time = make_timeout_time_us(1000 * (uint64_t)global_configuration.soap_int * 4 / 3); // Send data after wifi_send_data_time_ms + initial offset
@@ -241,7 +238,7 @@ static void wifi_loop(void)
             
     if (!ip_found && time_reached(wait_dns)) // Check for dns timeout
     {
-        tcp_client_init(&retry_send_message);
+        tcp_client_init();
         wait_dns = make_timeout_time_us(1000 * (uint64_t)wifi_wait_for_dns); // Reset timeout
     }
 

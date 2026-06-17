@@ -64,6 +64,13 @@ extern int32_t cdm7162_read_config(sensor_config_t* config, bool single_measurem
  */
 extern int32_t cdm7162_reset(void);
 
+/**
+ * @brief Shuts down CDM7162 measurement
+ * 
+ * @return int32_t Return code
+ */
+extern int32_t cdm_deinit(void);
+
 extern sensor_functions_t cdm7162_functions;
 
 #endif

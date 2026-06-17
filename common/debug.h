@@ -116,6 +116,6 @@ extern debug_configuration_t* debug_configuration;
  * @param message Message
  * @param ... Message additional arguments
  */
-extern void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const uint8_t* message, ...);
+extern void print_ser_output(debug_severity_e severity, debug_source_e source, debug_source_e subsource, const char* message, ...);
 
 #endif

@@ -220,7 +220,7 @@ void sensors_run()
 
     sensor->sensor_state = sensor_state;
 
-    sensor_index = (++sensor_index) % CONNECTED_SENSORS; // increment
+    sensor_index = (sensor_index + 1) % CONNECTED_SENSORS; // increment
     return;
 }
 
@@ -583,9 +583,9 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
             if (left->enable_PWM_pin != right->enable_PWM_pin ||
                 left->PWM_range_high != right->PWM_range_high ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                (left->enable_pressure_comp && (left->pressure != right->pressure)) ||
                 left->enable_altitude_comp != right->enable_altitude_comp ||
-                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                (left->enable_altitude_comp && (left->altitude != right->altitude)) ||
                 left->enable_abc != right->enable_abc ||
                 left->enable_alternate_abc != right->enable_alternate_abc ||
                 left->abc_target_value != right->abc_target_value ||
@@ -676,9 +676,9 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
             if (left->meas_period != right->meas_period ||
                 fabs(left->temperature_offset - right->temperature_offset) > 0.01f ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                (left->enable_pressure_comp && (left->pressure != right->pressure)) ||
                 left->enable_altitude_comp != right->enable_altitude_comp ||
-                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                (left->enable_altitude_comp && (left->altitude != right->altitude)) ||
                 left->enable_abc != right->enable_abc)
             {
                 print_ser_output(SEVERITY_WARN, SOURCE_SENSORS, SOURCE_SCD30, "meas_period: %u, %u", left->meas_period, right->meas_period);
@@ -697,9 +697,9 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
             if (left->single_meas_mode != right->single_meas_mode ||
                 fabs(left->temperature_offset - right->temperature_offset) > 0.01f ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                (left->enable_pressure_comp && (left->pressure != right->pressure)) ||
                 left->enable_altitude_comp != right->enable_altitude_comp ||
-                left->enable_altitude_comp && (left->altitude != right->altitude) ||
+                (left->enable_altitude_comp && (left->altitude != right->altitude)) ||
                 left->enable_abc != right->enable_abc ||
                 left->abc_init_period != right->abc_init_period ||
                 left->abc_period != right->abc_period)
@@ -722,7 +722,7 @@ static bool sensors_compare_config(sensor_config_t* left, sensor_config_t* right
             if (left->filter_coeff != right->filter_coeff ||
                 left->enable_PWM_pin != right->enable_PWM_pin ||
                 left->enable_pressure_comp != right->enable_pressure_comp ||
-                left->enable_pressure_comp && (left->pressure != right->pressure) ||
+                (left->enable_pressure_comp && (left->pressure != right->pressure)) ||
                 left->enable_abc != right->enable_abc ||
                 left->abc_init_period != right->abc_init_period ||
                 left->abc_period != right->abc_period ||
